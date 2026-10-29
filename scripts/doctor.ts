@@ -18,6 +18,10 @@ const check = (cond: boolean, level: Exclude<Level, "ok">, bad: string, good: st
 
 // --- Wisp / SSRF invariants (server/server.mjs)
 const server = read("server/server.mjs");
+if (!server) {
+	// the public source snapshot ships the browser only; these invariants live in the backend
+	report("ok", "server/ is not in this checkout: Wisp / SSRF checks skipped");
+} else {
 check(
 	/allow_private_ips\s*=\s*false/.test(server) && /allow_loopback_ips\s*=\s*false/.test(server),
 	"ERROR",
@@ -30,6 +34,7 @@ check(
 	"stream_limit_per_host is set while WISP_IMPL=upstream: wisp-js 0.4.1 crashes the process on it",
 	"stream_limit_per_host is only used where it is safe (the shasta fork, WISP_IMPL=shasta)",
 );
+}
 
 // --- Wisp relay fork (docs/on-device-wisp.md): pinned submodule, upstream stays the fallback
 const wispPin = read("wisp.pin").trim();

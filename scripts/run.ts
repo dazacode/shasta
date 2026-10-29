@@ -268,6 +268,7 @@ if (mode === "build") {
 	await Promise.race([server.exited, tunnel.exited]);
 	stop();
 } else if (mode === "dev") {
+	needServer();
 	await ensureEngine(false);
 	await ensureDeps();
 	// Vite proxies /wisp to this server, so the frontend's same-origin default URL just works.

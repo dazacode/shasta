@@ -18,11 +18,13 @@ import { join, resolve, sep } from "node:path";
 const ROOT = resolve(import.meta.dir, "..");
 const DIST = join(ROOT, "shasta/dist");
 const target = process.argv[2];
-const backend = process.env.SHASTA_BACKEND_URL?.replace(/\/+$/, "");
 const project = process.env.SHASTA_PROJECT ?? "shasta";
 const prod = process.argv.includes("--prod");
 const force = process.argv.includes("--force");
 const STAGED = join(ROOT, ".deploy", "staged.json");
+// --prod ships against the backend staging was checked with, unless one is given
+const stagedBackend = prod && existsSync(STAGED) ? JSON.parse(readFileSync(STAGED, "utf8")).backend : undefined;
+const backend = (process.env.SHASTA_BACKEND_URL ?? stagedBackend)?.replace(/\/+$/, "");
 const PAGES_HOST = process.env.SHASTA_PAGES_HOST ?? "shasta-dtg.pages.dev"; // Cloudflare picks the subdomain when the project is created
 
 if (target !== "vercel" && target !== "cloudflare") {

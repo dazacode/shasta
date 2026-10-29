@@ -10,7 +10,7 @@
 		"build": "bun scripts/run.ts build",
 		"doctor": "bun scripts/doctor.ts",
 		"deploy": "bun scripts/deploy.ts",
-		"check": "cd shasta && bun run typecheck && bun run test && cd ../server && bun test",
+		"check": "bun scripts/check.ts",
 		"engine": "bun scripts/engine.ts",
 		"wisp": "bun scripts/wisp.ts",
 		"shasta": "bun server/cli/shasta.ts",

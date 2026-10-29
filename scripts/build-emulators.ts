@@ -102,7 +102,9 @@ async function v86Runtime(out: string) {
 
 /** EmulatorJS core file (a zip: js + wasm + core.json + licence) and build report for Flycast WASM. */
 async function flycastCore(cores: string) {
-	const { zipSync } = createRequire(path.join(root, 'server/package.json'))('fflate')
+	// fflate comes from the backend when it is part of this checkout, otherwise from the frontend's own deps
+	const from = existsSync(path.join(root, 'server/package.json')) ? 'server/package.json' : 'shasta/package.json'
+	const { zipSync } = createRequire(path.join(root, from))('fflate')
 	const read = async (url: string) => new Uint8Array(readFileSync(await fetchFile(url)))
 	const core = JSON.parse(new TextDecoder().decode(await read(`${FLYCAST_REPO}/config/core.json`)))
 	const tuned = JSON.parse(new TextDecoder().decode(await read(`${FLYCAST_REPO}/config/dreamcast-core-options.json`)))

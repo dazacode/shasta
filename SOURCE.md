@@ -4,7 +4,7 @@
 |---|---|
 | Hosted instance | https://shasta-dtg.pages.dev |
 | Shasta version | 0.2.0 |
-| Published from | commit `1c601c575e2a5f7c3d010b4093c12819e2d5d55d` |
+| Published from | commit `1a08cb2f9de43d3cd7031767e2de030c42fc75d3` |
 | Published on | 2026-10-29 |
 | Scramjet engine | https://github.com/dazacode/shasta-scramjet, tag `shasta-v0.1.3` (submodule `scramjet/`) |
 | Wisp relay | https://github.com/dazacode/shasta-wisp, tag `shasta-v0.1.2` (submodule `wisp/`) |

@@ -38,8 +38,9 @@ bun run build        # builds the engine (Rust) and the browser -> shasta/dist
 cd shasta && bun run preview
 ```
 
-`bun run dev` / `bun run start` also bring up a Wisp server; the full setup additionally expects the
-Store backend, which is why it lives in the same tree during development but is not published here.
+`bun run dev` and `bun run start` additionally start the Store backend and the Wisp relay, which are
+part of the full development tree (`server/`) that is not published here — a source-only checkout
+builds and previews the browser, and needs the backend to browse through the proxy.
 
 ## Licence and credits
 
