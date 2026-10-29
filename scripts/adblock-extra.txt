@@ -1,0 +1,17 @@
+! Shasta's own filters, added to the public lists by scripts/build-adblock.ts (Adblock Plus / uBlock syntax).
+! For ad networks seen on sites in the Store that the public lists do not catch yet. Keep each one narrow.
+
+! Monetag: moves to new random domains every few days; the loaders keep their file names.
+! Seen on fiveplay.lol (GTA 5), 2026-10.
+||alwingulla.com^
+||quge5.com^
+||6opo.com^
+||e2ertt.com^
+||vaimucuvikuwu.net^
+/^https?:\/\/[^\/]+\/(\d+\/)?tag\.min\.js(\?|$)/$script,third-party
+/^https?:\/\/[^\/]+\/ok6\.js(\?|$)/$script,third-party
+! the loaders it fetches next (in-page push, vignette, pop-under), named by zone: ?z=<zone id>
+/^https?:\/\/[^\/]+\/(pfe\/current\/)?(tag|vignette)\.min\.js\?z=\d+$/$script,third-party
+||auqot.com^
+||ekhay.com^
+||b3mny.com^

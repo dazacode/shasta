@@ -1,0 +1,8 @@
+[submodule "scramjet"]
+	path = scramjet
+	url = https://github.com/dazacode/shasta-scramjet.git
+	branch = shasta
+[submodule "wisp"]
+	path = wisp
+	url = https://github.com/dazacode/shasta-wisp.git
+	branch = shasta

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shasta AI</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <aside id="side" aria-label="Conversations">
+    <div class="side-top">
+      <button id="new" class="newchat"><span aria-hidden="true">✎</span> New chat</button>
+    </div>
+    <p class="side-label">Chats</p>
+    <ul id="chats"></ul>
+    <p class="fine">Runs on this device. Chats stay in this browser.</p>
+  </aside>
+  <main id="main">
+    <header>
+      <button id="menu" class="icon" aria-label="Conversations">☰</button>
+      <h1 id="title">Shasta AI</h1>
+      <span id="badge" class="badge" hidden></span>
+    </header>
+    <div id="scroll">
+      <div id="empty">
+        <div class="logo" aria-hidden="true">✦</div>
+        <h2>How can I help?</h2>
+        <div id="examples"></div>
+      </div>
+      <div id="log" role="log" aria-live="polite"></div>
+    </div>
+    <form id="composer">
+      <div class="box">
+        <ul id="attached" aria-label="Attachments"></ul>
+        <textarea id="input" rows="1" placeholder="Ask anything" aria-label="Message"></textarea>
+        <div class="bar">
+          <button type="button" id="attach" class="icon" aria-label="Attach a file, picture, recording or video">＋</button>
+          <input id="file" type="file" hidden multiple accept="image/*,audio/*,video/*,.pdf,.docx,.pptx,.xlsx,.txt,.md,.csv,.json,.html,.js,.ts,.py,.java,.c,.cpp,.css">
+          <span class="grow"></span>
+          <button type="button" id="mic" class="icon" aria-label="Speak your question">🎤</button>
+          <button type="submit" id="send" class="send" aria-label="Send" disabled>↑</button>
+          <button type="button" id="stop" class="send" aria-label="Stop" hidden>■</button>
+        </div>
+      </div>
+      <p class="fine">Shasta AI runs on this device and can make mistakes. Check anything important.</p>
+    </form>
+  </main>
+  <div id="gate" hidden>
+    <div class="card">
+      <div class="logo" aria-hidden="true">✦</div>
+      <h2 id="gate-title">Set up Shasta AI</h2>
+      <p id="gate-text"></p>
+      <div id="gate-device" class="panel"></div>
+      <div id="bar" hidden><div></div></div>
+      <p id="gate-status" class="fine" role="status"></p>
+      <button id="setup" class="primary">Set up for this device</button>
+    </div>
+  </div>
+</div>
+<script src="openui.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+#!/bin/sh
+# Shasta's container network and its firewall: the Docker equivalent of the IPAddressDeny list the systemd service had.
+# Defence in depth against SSRF through the Wisp relay (Wisp itself already refuses private/loopback targets): the
+# container may reach the internet, but not private, link-local, CGNAT or this server's own public address, and it
+# may not open connections to the host at all (sshd, Caddy, cloudflared's metrics). Replies to published ports and to
+# its own outgoing connections still flow. Idempotent: run before every start (shasta.service ExecStartPre).
+# Installed at /usr/local/sbin/shasta-docker-firewall (source: scripts/vps/shasta-docker-firewall).
+set -eu
+NET=shasta
+BRIDGE=br-shasta
+SUBNET=172.30.0.0/24
+OWN_IP=176.100.37.63
+DENY="10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 169.254.0.0/16 100.64.0.0/10 0.0.0.0/8 127.0.0.0/8 224.0.0.0/4 $OWN_IP/32"
+
+# no IPv6 on this network: the container has no v6 route, so the v6 deny list cannot be bypassed
+docker network inspect "$NET" >/dev/null 2>&1 ||
+	docker network create --driver bridge --subnet "$SUBNET" -o com.docker.network.bridge.name="$BRIDGE" "$NET" >/dev/null
+
+# forwarded traffic (container -> elsewhere): DOCKER-USER runs before Docker's own rules
+iptables -N SHASTA-EGRESS 2>/dev/null || iptables -F SHASTA-EGRESS
+iptables -A SHASTA-EGRESS -m conntrack --ctstate RELATED,ESTABLISHED -j RETURN
+for net in $DENY; do iptables -A SHASTA-EGRESS -d "$net" -j DROP; done
+iptables -A SHASTA-EGRESS -j RETURN
+iptables -C DOCKER-USER -i "$BRIDGE" -j SHASTA-EGRESS 2>/dev/null || iptables -I DOCKER-USER 1 -i "$BRIDGE" -j SHASTA-EGRESS
+
+# traffic to the host itself (container -> 172.30.0.1 or any host address): only replies
+iptables -N SHASTA-HOST 2>/dev/null || iptables -F SHASTA-HOST
+iptables -A SHASTA-HOST -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+iptables -A SHASTA-HOST -j DROP
+iptables -C INPUT -i "$BRIDGE" -j SHASTA-HOST 2>/dev/null || iptables -I INPUT 1 -i "$BRIDGE" -j SHASTA-HOST

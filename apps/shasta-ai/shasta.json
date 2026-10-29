@@ -1,0 +1,18 @@
+{
+  "name": "Shasta AI",
+  "developer": "Shasta",
+  "summary": "A private ChatGPT-style assistant that runs entirely on your device.",
+  "description": "Chat with an AI that runs on your own device, with no account. Ask questions, get help writing, attach a picture, PDF, Word or PowerPoint file, a recording or a video, or speak your question. Answers can be tables, steps, charts and quizzes, and for factual questions it can look up the topic on Wikipedia and show the source. Shasta checks your device on first use and downloads the models that suit it, once. Your files, pictures and recordings never leave the device. Small on-device models can make mistakes, so check anything important.",
+  "category": "productivity",
+  "tags": [
+    "ai",
+    "chat",
+    "assistant",
+    "private",
+    "offline",
+    "study"
+  ],
+  "version": "1.2.0",
+  "notes": "Questions typed on the new tab page open here. A ChatGPT-style redesign, answers as tables, steps and quizzes, facts looked up on Wikipedia, and pictures that stay attached for follow-up questions.",
+  "icon": "icon.png"
+}

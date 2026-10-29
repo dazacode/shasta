@@ -1,0 +1,79 @@
+#!/bin/bash
+# Shasta release control (Docker). Installed at /usr/local/bin/shasta-ctl (source: scripts/vps/shasta-ctl).
+# A release is an image shasta:<id>, built from /opt/shasta/build (kept up to date by `bun run release:vps`, which
+# rsyncs only what changed; Docker's layer cache rebuilds only changed layers). shasta:current is live,
+# shasta:previous is what was live before it.
+#   shasta-ctl list                 releases, newest first (* = live)
+#   shasta-ctl build <id>           docker build /opt/shasta/build -> shasta:<id>
+#   shasta-ctl activate <id>        backup db, switch, restart, health-check (auto-reverts on failure)
+#   shasta-ctl rollback             activate the release that was live before the current one
+#   shasta-ctl health               exit 0 when /healthz answers
+#   shasta-ctl backup               consistent SQLite backup, keeps 14
+#   shasta-ctl prune [keep=5]       delete old release images (never the live or previous one)
+set -euo pipefail
+BUILD=/opt/shasta/build
+DATA=/var/lib/shasta/data
+BACKUPS=/var/lib/shasta/backups
+PORT=$(sudo grep -E '^PORT=' /etc/shasta/shasta.env | cut -d= -f2); PORT=${PORT:-8080}
+docker() { sudo /usr/bin/docker "$@"; }
+
+img() { docker image inspect -f '{{.Id}}' "$1" 2>/dev/null || true; }
+ids() { docker image ls shasta --format '{{.Tag}}' | grep -vE '^(current|previous|<none>)$' || true; }
+tag_of() { local want; want=$(img "shasta:$1"); [ -n "$want" ] || return 0; for t in $(ids); do [ "$(img "shasta:$t")" = "$want" ] && { echo "$t"; return 0; }; done; }
+
+health() {
+	for _ in $(seq 1 30); do
+		curl -fsS --max-time 3 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1 && return 0
+		sleep 1
+	done
+	return 1
+}
+
+backup() {
+	sudo install -d -m 0750 -o shasta-app -g shasta-app "$BACKUPS"
+	sudo test -f "$DATA/store.db" || { echo "no store.db yet, nothing to back up"; return 0; }
+	local out="$BACKUPS/store-$(date -u +%Y%m%dT%H%M%SZ).db"
+	sudo -u shasta-app sqlite3 "$DATA/store.db" ".backup '$out'"
+	sudo sh -c "ls -1t '$BACKUPS'/store-*.db | tail -n +15 | xargs -r rm -f"
+	echo "backup: $out"
+}
+
+activate() {
+	local id=$1 old
+	[ -n "$(img "shasta:$id")" ] || { echo "release $id not built (shasta-ctl build $id)"; exit 1; }
+	old=$(tag_of current)
+	backup
+	if [ -n "$old" ] && [ "$old" != "$id" ]; then docker tag "shasta:$old" shasta:previous; fi
+	docker tag "shasta:$id" shasta:current
+	sudo systemctl restart shasta
+	if health; then
+		echo "live: $id"
+	else
+		echo "health check failed for $id"
+		if [ -n "$old" ] && [ "$old" != "$id" ]; then
+			docker tag "shasta:$old" shasta:current
+			sudo systemctl restart shasta
+			health && echo "reverted to $old" || echo "REVERT ALSO UNHEALTHY: check journalctl -u shasta"
+		fi
+		exit 1
+	fi
+}
+
+case "${1:-}" in
+	list) cur=$(tag_of current)
+		docker image ls shasta --format '{{.Tag}}\t{{.CreatedSince}}\t{{.Size}}' | grep -vE '^(current|previous|<none>)\b' | while IFS=$'\t' read -r t c s; do
+			[ "$t" = "$cur" ] && echo "* $t  ($c, $s)" || echo "  $t  ($c, $s)"
+		done ;;
+	build) [ -n "${2:-}" ] || { echo "usage: shasta-ctl build <id>"; exit 1; }
+		sudo DOCKER_BUILDKIT=1 /usr/bin/docker build --pull -t "shasta:$2" "$BUILD" ;;
+	activate) activate "$2" ;;
+	rollback) p=$(tag_of previous); [ -n "$p" ] || { echo "no previous release"; exit 1; }; activate "$p" ;;
+	health) health && echo ok ;;
+	backup) backup ;;
+	prune) keep=${2:-5}; cur=$(tag_of current); p=$(tag_of previous)
+		docker image ls shasta --format '{{.Tag}}' | grep -vE '^(current|previous|<none>)$' | tail -n +$((keep + 1)) | while read -r t; do
+			[ "$t" = "$cur" ] || [ "$t" = "$p" ] || { docker rmi "shasta:$t" >/dev/null && echo "removed $t"; }
+		done
+		docker image prune -f >/dev/null ;;
+	*) sed -n '2,15p' "$0"; exit 1 ;;
+esac

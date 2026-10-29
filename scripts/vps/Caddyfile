@@ -1,0 +1,32 @@
+# Copy of /etc/caddy/Caddyfile on the VPS (installed by hand; `sudo systemctl reload caddy` after editing).
+# `encode zstd gzip` is NOT decoration: a Store app can ship its game data as plain JSON (see the OMORI section in
+# CLAUDE.md) and without it ~60 MB of map data travels incompressible. content.ts must also send a compressible
+# content type for those extensions - Caddy skips application/octet-stream.
+# Public front door for uploaded Store apps ONLY (CONTENT_ORIGIN = https://{key}.176-100-37-63.sslip.io).
+# It proxies to the backend's content-only listener (CONTENT_PORT 8081), which serves app files and nothing else:
+# no Shasta, no Store API, no Wisp. Certificates are issued per app host, only after the backend confirms the host is
+# a real app (/__tls-ask). The main backend (8080) stays private behind the Cloudflare tunnel.
+{
+	on_demand_tls {
+		ask http://127.0.0.1:8081/__tls-ask
+	}
+	servers {
+		protocols h1 h2
+	}
+}
+
+https:// {
+	tls {
+		on_demand
+	}
+	# text assets (a Store app can carry its game data as plain json) travel compressed
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8081
+	log {
+		output discard
+	}
+}
+
+http:// {
+	redir https://{host}{uri} 308
+}

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{NAME}}</title>
+<link rel="stylesheet" href="retro.css">
+<style>:root{--accent:{{ACCENT}};--accent-2:{{ACCENT2}}}</style>
+</head>
+<body>
+<div id="home">
+  <header class="top">
+    <img src="icon.png" alt="" width="56" height="56">
+    <div>
+      <h1>{{NAME}}</h1>
+      <p id="summary" class="muted"></p>
+    </div>
+  </header>
+
+  <section id="drop" class="drop" tabindex="0" aria-label="Open a game file">
+    <p class="big">Drop a game file here</p>
+    <p class="muted">or</p>
+    <button id="pick" class="primary">Choose a file</button>
+    <input id="file" type="file" hidden>
+    <p id="opens" class="muted small"></p>
+    <p id="disc" class="muted small" hidden>Disc games in several files (.cue + .bin): put them in one .zip and open that.</p>
+  </section>
+
+  <p id="notice" class="notice" role="status" hidden></p>
+
+
+  <section id="library" hidden>
+    <h2>Your games</h2>
+    <ul id="games" class="games"></ul>
+  </section>
+
+  <section id="free" hidden>
+    <h2>Free to try</h2>
+    <ul id="free-list" class="games"></ul>
+  </section>
+
+  <section id="bios" hidden>
+    <h2>System files</h2>
+    <p class="muted small">Some systems need the console's own BIOS file. Shasta can't include it: add the one from your console. It stays in this browser.</p>
+    <ul id="bios-list" class="rows"></ul>
+    <input id="bios-file" type="file" hidden>
+  </section>
+
+  <footer>
+    <p class="muted small">Shasta doesn't include games. Play games you own or free homebrew. Your games, saves and save states stay in this browser.</p>
+    <p class="muted small"><span id="usage"></span> <button id="licences" class="link">Emulators and licences</button></p>
+  </footer>
+</div>
+
+<div id="player" hidden>
+  <div class="bar">
+    <button id="back" class="ghost">← Your games</button>
+    <span id="now" class="muted"></span>
+  </div>
+  <div id="stage"><div id="game"></div></div>
+</div>
+
+<dialog id="choose">
+  <form method="dialog">
+    <h2 id="choose-title">Which system is this game for?</h2>
+    <p id="choose-text" class="muted small"></p>
+    <div id="choose-list" class="choices"></div>
+    <div class="actions"><button value="cancel" class="ghost">Cancel</button></div>
+  </form>
+</dialog>
+
+<dialog id="about">
+  <form method="dialog">
+    <h2>Emulators and licences</h2>
+    <div id="about-body" class="small"></div>
+    <div class="actions"><button value="close" class="primary">Close</button></div>
+  </form>
+</dialog>
+
+<script type="module" src="retro.js"></script>
+</body>
+</html>

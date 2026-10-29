@@ -1,0 +1,96 @@
+diff --git a/packages/core/src/client/dom/element.ts b/packages/core/src/client/dom/element.ts
+index e9ec2f9b..d42196c9 100644
+--- a/packages/core/src/client/dom/element.ts
++++ b/packages/core/src/client/dom/element.ts
+@@ -162,7 +162,15 @@ export default function (client: ScramjetClient, self: typeof window) {
+ 			Object_defineProperty(element.prototype, attr, {
+ 				get() {
+ 					if (["src", "data", "href", "action", "formaction"].includes(attr)) {
+-						return unrewriteUrl(descriptor.get.call(this), client.context);
++						const value = descriptor.get.call(this);
++						// a url that was never rewritten (e.g. a document.write'n <script src>) is already real
++						if (
++							/^https?:/.test(value) &&
++							!value.startsWith(client.context.prefix.href)
++						)
++							return value;
++
++						return unrewriteUrl(value, client.context);
+ 					}
+ 
+ 					return descriptor.get.call(this);
+diff --git a/packages/core/src/client/shared/error.ts b/packages/core/src/client/shared/error.ts
+index 111c5409..f023fc10 100644
+--- a/packages/core/src/client/shared/error.ts
++++ b/packages/core/src/client/shared/error.ts
+@@ -23,6 +23,10 @@ export default function (client: ScramjetClient, _self: Self) {
+ 				}
+ 			} catch {}
+ 
++			// frames that already carry a real url (e.g. from a //# sourceURL) are left as they are
++			if (/^https?:/.test(url) && !url.startsWith(client.context.prefix.href))
++				continue;
++
+ 			try {
+ 				newstack = newstack.replaceAll(url, unrewriteUrl(url, client.context));
+ 			} catch {}
+diff --git a/packages/core/src/fetch/fetch.ts b/packages/core/src/fetch/fetch.ts
+index 87e8e3ff..8d30911c 100644
+--- a/packages/core/src/fetch/fetch.ts
++++ b/packages/core/src/fetch/fetch.ts
+@@ -243,6 +243,11 @@ async function handleBlobOrDataUrlFetch(
+ 	let dataUrl = request.rawUrl.pathname.substring(
+ 		handler.context.prefix.pathname.length
+ 	);
++	// the rewriter encodes blob:/data: specifiers in module imports like any other url
++	// (blob%3Ahttps%3A%2F%2F...), so the raw path is not the url itself: use the decoded one
++	if (!dataUrl.startsWith("blob:") && !dataUrl.startsWith("data:")) {
++		dataUrl = parsed.url.href;
++	}
+ 	let response: BareResponse;
+ 
+ 	if (dataUrl.startsWith("blob:")) {
+diff --git a/packages/core/src/shared/rewriters/url.ts b/packages/core/src/shared/rewriters/url.ts
+index 529384f5..f6c7d670 100644
+--- a/packages/core/src/shared/rewriters/url.ts
++++ b/packages/core/src/shared/rewriters/url.ts
+@@ -133,7 +133,13 @@ export function rewriteUrl(
+ 			)
+ 		);
+ 	} else if (String_startsWith(url, "blob:")) {
+-		return context.prefix.href + url;
++		// the worker/module flags have to survive for blob scripts too, otherwise a
++		// module worker made from a blob is wrapped as a classic one (importScripts)
++		const blobParams = new _URLSearchParams();
++		if (options?.isModule) blobParams.set(QP.isModule, "module");
++		if (options?.destination) blobParams.set(QP.destination, options.destination);
++		const blobQuery = blobParams.toString();
++		return context.prefix.href + url + (blobQuery ? "?" + blobQuery : "");
+ 	} else if (String_startsWith(url, "data:")) {
+ 		const URL_MAX_LENGTH = 1024 * 1024 * 2;
+ 		const BUFFER = 1024;
+@@ -236,7 +242,8 @@ export function unrewriteUrl(url: string | URL, context: ScramjetContext) {
+ 			return url;
+ 		}
+ 		if (!String_startsWith(realUrl.href, context.prefix.href)) {
+-			dbg.error("unrewriteurl: unexpected url", url);
++			// already a real url (never rewritten): handing it back is the right answer
++			dbg.debug("unrewriteurl: not a rewritten url", url);
+ 			return url;
+ 		}
+ 		const decodedHash = context.interface.codecDecode(realUrl.hash.slice(1));
+diff --git a/packages/core/src/shared/rewriters/worker.ts b/packages/core/src/shared/rewriters/worker.ts
+index 34e6a43f..5be395f9 100644
+--- a/packages/core/src/shared/rewriters/worker.ts
++++ b/packages/core/src/shared/rewriters/worker.ts
+@@ -26,7 +26,9 @@ export function rewriteWorkers(
+ 		rewritten = TextDecoder_decode(rewritten);
+ 	}
+ 
+-	if (flagEnabled("encapsulateWorkers", context, meta.origin)) {
++	// a module can't be encapsulated in a data: url: its (root-relative) import specifiers
++	// have no base to resolve against there, so every static import would fail to load
++	if (!isModule && flagEnabled("encapsulateWorkers", context, meta.origin)) {
+ 		// TODO: check if there's already a sourceURL/sourcemap before appending another?
+ 		rewritten += `//# sourceURL=${url}`;
+ 		str += script(b64(rewritten as string));

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Windows Apps Emulator</title>
+<link rel="stylesheet" href="../retro.css">
+<style>
+body{background:#000}
+#wrap{position:fixed;inset:0;display:flex;flex-direction:column}
+#stage{flex:1;min-height:0;display:grid;place-items:center;overflow:hidden}
+#canvas{max-width:100%;max-height:100%;image-rendering:pixelated;outline:none}
+#loading{position:absolute;inset:40px 0 0;display:grid;place-content:center;gap:10px;text-align:center;color:var(--muted);pointer-events:none}
+#loading progress{width:240px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div class="bar" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 8px;background:var(--bg);border-bottom:1px solid var(--line);flex:none">
+    <a id="back" href="../index.html" class="ghost" style="color:var(--fg);text-decoration:none;padding:7px 14px;border-radius:10px">← Your games</a>
+    <span id="now" class="muted small"></span>
+  </div>
+  <div id="stage">
+    <div id="dropzone"><canvas id="canvas" tabindex="0" oncontextmenu="event.preventDefault()"></canvas></div>
+  </div>
+</div>
+<div id="loading">
+  <figure id="spinner" style="margin:0"></figure>
+  <div id="status">Downloading Wine…</div>
+  <progress value="0" max="100" id="progress"></progress>
+  <div class="small">The first start downloads about 40 MB and sets Wine up; later starts are quicker.</div>
+</div>
+<!-- elements Boxedwine's own page script expects; Shasta keeps them out of sight -->
+<div class="hidden">
+  <button id="startbtn"></button><button id="uploadbtn"></button><input id="upload" type="file"><button id="downloadbtn"></button>
+  <a id="modalLink" href="#"></a><a id="modalLinkExe" href="#"></a>
+  <span id="sound-checkbox"><input type="checkbox" id="soundToggle" checked></span>
+  <input type="checkbox" id="pointerLock"><input type="checkbox" id="showConsole"><input type="checkbox" id="resize">
+  <textarea id="output"></textarea>
+  <div id="openModal"><input id="selectedItem"><div id="tree"></div><h3 id="loadStatus"></h3></div>
+  <div id="openModalExe"><a id="openModalExeClick" href="#"></a><div id="message"></div><div id="items"></div></div>
+</div>
+<script src="boot.js"></script>
+</body>
+</html>

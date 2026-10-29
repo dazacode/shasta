@@ -1,0 +1,11 @@
+{
+  "files": [],
+  "compilerOptions": { "paths": { "@/*": ["./src/*"],
+      "@mercuryworkshop/scramjet": ["./src/proxy/types/scramjet.d.ts"],
+      "@mercuryworkshop/scramjet-controller": ["./src/proxy/types/controller.d.ts"],
+      "@mercuryworkshop/scramjet-utils": ["./src/proxy/types/utils.d.ts"] } },
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ]
+}
