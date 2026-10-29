@@ -38,7 +38,9 @@ check(
 
 // --- Wisp relay fork (docs/on-device-wisp.md): pinned submodule, upstream stays the fallback
 const wispPin = read("wisp.pin").trim();
-const wispHead = sh(["git", "-C", "wisp", "describe", "--tags", "--always"]).out;
+// without `git clone --recursive` the submodule directory is not a checkout; `git -C wisp` would then
+// answer for the parent repository, so only ask when the submodule is really there
+const wispHead = existsSync(join(ROOT, "wisp", ".git")) ? sh(["git", "-C", "wisp", "describe", "--tags", "--always"]).out : "";
 check(!!wispPin, "WARN", "wisp.pin is missing: the relay fork is unpinned", `wisp fork is pinned (${wispPin})`);
 check(
 	!wispHead || !wispPin || wispHead === wispPin,
