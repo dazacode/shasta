@@ -5,6 +5,12 @@
 //   VITE_WISP_URL=wss://api.example.com/wisp/   -> must be set when BUILDING (`bun run build`), it is baked in
 // On Cloudflare Pages /wisp/ is proxied too (scripts/pages-worker.js), so VITE_WISP_URL is not needed there, and
 // SHASTA_BACKEND_URL can be changed later in the Pages project settings without a rebuild.
+//
+// Cloudflare is staged first (owner decision 2026-10-29): `bun run deploy cloudflare` uploads to the `staging` branch
+// (https://staging.<project>.pages.dev, behind Cloudflare Access with every other preview), the owner looks at it, and
+// only after their go-ahead `bun run deploy cloudflare --prod` ships the SAME build to production (main). --prod
+// refuses a dist that differs from the last staged one (`--force` overrides). `bun run deploy cloudflare --rollback
+// [deployment id]` puts production back on an earlier deployment (default: the one before the current).
 import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
@@ -14,10 +20,18 @@ const DIST = join(ROOT, "shasta/dist");
 const target = process.argv[2];
 const backend = process.env.SHASTA_BACKEND_URL?.replace(/\/+$/, "");
 const project = process.env.SHASTA_PROJECT ?? "shasta";
+const prod = process.argv.includes("--prod");
+const force = process.argv.includes("--force");
+const STAGED = join(ROOT, ".deploy", "staged.json");
+const PAGES_HOST = process.env.SHASTA_PAGES_HOST ?? "shasta-dtg.pages.dev"; // Cloudflare picks the subdomain when the project is created
 
 if (target !== "vercel" && target !== "cloudflare") {
-	console.error("usage: bun run deploy <vercel|cloudflare>   (SHASTA_BACKEND_URL, SHASTA_PROJECT optional)");
+	console.error("usage: bun run deploy <vercel|cloudflare> [--prod [--force] | --rollback [id]]   (SHASTA_BACKEND_URL, SHASTA_PROJECT optional)");
 	process.exit(1);
+}
+if (target === "cloudflare" && process.argv.includes("--rollback")) {
+	await rollback(process.argv.slice(3).find((a) => !a.startsWith("--")));
+	process.exit(0);
 }
 if (!existsSync(join(DIST, "index.html"))) {
 	console.error("shasta/dist is missing: run `bun run build` first");
@@ -81,7 +95,60 @@ if (target === "vercel") {
 		console.log(`staged in ${stage} (SHASTA_DRY_RUN=1: not uploaded)`);
 		process.exit(0);
 	}
-	run(["bunx", "wrangler", "pages", "deploy", ".", "--project-name", project, "--branch", "main", "--commit-dirty=true"]);
+	const built = distHash();
+	if (prod) {
+		const staged = existsSync(STAGED) ? JSON.parse(readFileSync(STAGED, "utf8")) : null;
+		if (staged?.hash !== built && !force) {
+			console.error(
+				staged
+					? `shasta/dist changed since it was staged (${staged.at}): stage it again (\`bun run deploy cloudflare\`), have it checked, then --prod`
+					: "nothing staged yet: `bun run deploy cloudflare` first, have it checked, then --prod",
+			);
+			process.exit(1);
+		}
+	}
+	const branch = prod ? "main" : "staging";
+	run(["bunx", "wrangler", "pages", "deploy", ".", "--project-name", project, "--branch", branch, "--commit-dirty=true"]);
+	if (prod) {
+		console.log(`\nproduction: https://${PAGES_HOST}  (undo: bun run deploy cloudflare --rollback)`);
+		console.log("\x1b[33mpublic source must match what is hosted: run `bun run publish:source` now (AGPL section 13)\x1b[0m");
+	} else {
+		writeFileSync(STAGED, JSON.stringify({ hash: built, at: new Date().toISOString(), backend: backend ?? null }, null, 2));
+		console.log(`\nstaging: https://staging.${PAGES_HOST}  (private; ship it with: bun run deploy cloudflare --prod)`);
+	}
+}
+
+/** Content hash of shasta/dist, so --prod can tell whether it is the build that was staged. */
+function distHash() {
+	const hash = createHash("sha256");
+	for (const file of [...new Bun.Glob("**/*").scanSync({ cwd: DIST, dot: true })].sort()) {
+		hash.update(file + "\0");
+		hash.update(readFileSync(join(DIST, file)));
+	}
+	return hash.digest("hex");
+}
+
+/** Points production back at an earlier production deployment (Cloudflare keeps them all). */
+async function rollback(id?: string) {
+	const token = Bun.spawnSync(["bunx", "wrangler", "auth", "token"], { cwd: ROOT }).stdout.toString().trim().split("\n").pop();
+	const account = process.env.CLOUDFLARE_ACCOUNT_ID ?? "8552691187cf71a442505a28a8e80fa0";
+	const api = (path: string, init?: RequestInit) =>
+		fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/pages/projects/${project}${path}`, {
+			...init,
+			headers: { Authorization: `Bearer ${token}` },
+		}).then((r) => r.json() as Promise<{ success: boolean; errors: unknown[]; result: any }>);
+	const list = await api("/deployments?env=production");
+	if (!list.success) throw new Error(`listing deployments failed: ${JSON.stringify(list.errors)}`);
+	const deployments = list.result as { id: string; short_id: string; created_on: string; url: string }[];
+	const target = id ? deployments.find((d) => d.id === id || d.short_id === id) : deployments[1];
+	if (!target) {
+		console.error(id ? `no production deployment ${id}` : "no earlier production deployment");
+		for (const d of deployments.slice(0, 10)) console.error(`  ${d.short_id}  ${d.created_on}  ${d.url}`);
+		process.exit(1);
+	}
+	const done = await api(`/deployments/${target.id}/rollback`, { method: "POST" });
+	if (!done.success) throw new Error(`rollback failed: ${JSON.stringify(done.errors)}`);
+	console.log(`production is back on ${target.short_id} (${target.created_on})`);
 }
 
 /**
