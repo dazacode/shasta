@@ -117,7 +117,8 @@ async function ensureEngine(force: boolean) {
 }
 
 async function ensureDeps() {
-	for (const dir of [SHASTA, SERVER]) {
+	// wisp/: Shasta bundles files from it (the in-page relay), and they import its own dependencies
+	for (const dir of [SHASTA, SERVER, join(ROOT, "wisp")]) {
 		// the public source snapshot ships only the browser (server/ absent): skip what is not here
 		if (!existsSync(dir)) continue;
 		if (!existsSync(join(dir, "node_modules"))) await run(`bun install (${dir.split("/").pop()})`, ["bun", "install"], dir);
