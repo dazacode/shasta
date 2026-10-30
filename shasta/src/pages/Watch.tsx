@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, Clock, Film, ListVideo, Loader2, Play, Plus, RotateCcw, Search, Star, Trash2, Tv as TvIcon, X } from 'lucide-react'
 import { MEDIA_CORS } from '@/lib/appApi'
 import * as proxy from '@/proxy/scramjetAdapter'
-import { watchApi, WatchError } from '@/watch/api'
+import { artUrl, watchApi, WatchError } from '@/watch/api'
 import { Hero, MediaCard, RowSection, Scroller, SkeletonCard } from '@/watch/components'
 import { Player } from '@/watch/Player'
 import { useWatch } from '@/watch/store'
@@ -359,7 +359,7 @@ function DetailView({ detail, onClose, onNavigate }: { detail: { kind: Kind; id:
 
           <div className="mt-4 flex flex-col gap-5 sm:flex-row">
             <div className="w-full shrink-0 sm:w-44">
-              {title.poster && <img src={title.poster} crossOrigin={MEDIA_CORS} alt="" className="hidden w-full rounded-xl ring-1 ring-white/10 sm:block" />}
+              {title.poster && <img src={artUrl(title.poster)} crossOrigin={MEDIA_CORS} alt="" className="hidden w-full rounded-xl ring-1 ring-white/10 sm:block" />}
               <div className="mt-3 flex flex-wrap gap-2">
                 {candidate && <button onClick={() => setShowTrailer(false)} className="flex items-center gap-1.5 rounded-lg bg-shasta-accent px-3 py-1.5 text-xs font-semibold text-white hover:brightness-110"><Play className="size-3.5 fill-white" /> Play</button>}
                 {title.trailer && <button onClick={() => setShowTrailer((v) => !v)} className="rounded-lg bg-shasta-field px-3 py-1.5 text-xs font-medium hover:text-shasta-fg">Trailer</button>}
@@ -404,7 +404,7 @@ function DetailView({ detail, onClose, onNavigate }: { detail: { kind: Kind; id:
                     const p = progressFor(detail.kind, detail.id, e.number)
                     return (
                       <button key={e.number} onClick={() => { setEpisode(e.number); setShowTrailer(false) }} className={cn('flex items-center gap-3 rounded-lg border p-2 text-left text-xs transition', e.number === episode ? 'border-shasta-accent bg-shasta-field' : 'border-white/10 hover:bg-shasta-field')}>
-                        {e.still ? <img src={e.still} crossOrigin={MEDIA_CORS} alt="" loading="lazy" className="h-12 w-20 shrink-0 rounded object-cover" /> : <span className="grid h-12 w-20 shrink-0 place-items-center rounded bg-shasta-field"><TvIcon className="size-4" /></span>}
+                        {e.still ? <img src={artUrl(e.still)} crossOrigin={MEDIA_CORS} alt="" loading="lazy" className="h-12 w-20 shrink-0 rounded object-cover" /> : <span className="grid h-12 w-20 shrink-0 place-items-center rounded bg-shasta-field"><TvIcon className="size-4" /></span>}
                         <span className="min-w-0 flex-1">
                           <span className="block truncate font-medium">{e.number}. {e.title}</span>
                           {p && <span className="mt-1 block h-0.5 w-full bg-white/10"><span className="block h-full bg-shasta-accent" style={{ width: `${p.duration ? Math.min(100, (p.position / p.duration) * 100) : 0}%` }} /></span>}
@@ -421,7 +421,7 @@ function DetailView({ detail, onClose, onNavigate }: { detail: { kind: Kind; id:
                   <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {title.cast.map((p, i) => (
                       <div key={i} className="w-20 shrink-0 text-center">
-                        {p.image ? <img src={p.image} crossOrigin={MEDIA_CORS} alt="" loading="lazy" className="mx-auto size-20 rounded-full object-cover ring-1 ring-white/10" /> : <span className="mx-auto grid size-20 place-items-center rounded-full bg-shasta-field"><Clock className="size-5 text-shasta-muted" /></span>}
+                        {p.image ? <img src={artUrl(p.image)} crossOrigin={MEDIA_CORS} alt="" loading="lazy" className="mx-auto size-20 rounded-full object-cover ring-1 ring-white/10" /> : <span className="mx-auto grid size-20 place-items-center rounded-full bg-shasta-field"><Clock className="size-5 text-shasta-muted" /></span>}
                         <p className="mt-1 line-clamp-2 text-[11px] font-medium">{p.name}</p>
                         <p className="line-clamp-2 text-[10px] text-shasta-muted">{p.role}</p>
                       </div>

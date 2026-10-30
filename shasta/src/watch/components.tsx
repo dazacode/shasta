@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ChevronLeft, ChevronRight, Film, Info, Play, Plus, Star, Tv as TvIcon, Volume2, VolumeX } from 'lucide-react'
 import { MEDIA_CORS } from '@/lib/appApi'
-import { watchApi } from './api'
+import { artUrl, watchApi } from './api'
 import { useWatch } from './store'
 import type { Card, Featured } from './types'
 import { cn } from '@/lib/utils'
@@ -44,7 +44,7 @@ export function MediaCard({
         <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-shasta-field ring-1 ring-white/5">
           <button data-card onClick={() => onOpen(card)} className="block size-full text-left" aria-label={`${card.title} details`}>
             {card.poster ? (
-              <img src={card.poster} crossOrigin={MEDIA_CORS} loading="lazy" alt="" className="size-full object-cover" />
+              <img src={artUrl(card.poster)} crossOrigin={MEDIA_CORS} loading="lazy" alt="" className="size-full object-cover" />
             ) : (
               <span className="grid size-full place-items-center text-shasta-muted"><TypeIcon className="size-7" /></span>
             )}
@@ -218,7 +218,7 @@ export function Hero({ items, onOpen }: { items: Featured[]; onOpen: (c: Card, p
       <div className="relative h-[46vh] min-h-[320px] w-full overflow-hidden sm:h-[56vh]">
         {items.map((f, idx) => (
           <div key={`${f.kind}:${f.id}`} className={cn('absolute inset-0 transition-opacity duration-700', idx === i ? 'opacity-100' : 'opacity-0')} aria-hidden={idx !== i}>
-            <img src={f.backdrop} crossOrigin={MEDIA_CORS} alt="" className="size-full object-cover" fetchPriority={idx === 0 ? 'high' : 'low'} loading={idx === 0 ? 'eager' : 'lazy'} />
+            <img src={artUrl(f.backdrop)} crossOrigin={MEDIA_CORS} alt="" className="size-full object-cover" fetchPriority={idx === 0 ? 'high' : 'low'} loading={idx === 0 ? 'eager' : 'lazy'} />
           </div>
         ))}
         {/* black-based overlays so white text stays legible on any backdrop; strong at the bottom, soft on the left */}
@@ -231,7 +231,7 @@ export function Hero({ items, onOpen }: { items: Featured[]; onOpen: (c: Card, p
             <span className="text-[11px] uppercase tracking-wide text-white/70">{active.kind === 'anime' ? 'Anime' : active.kind === 'tv' ? 'Series' : 'Film'}</span>
           </div>
           {active.logo ? (
-            <img src={active.logo} crossOrigin={MEDIA_CORS} alt={active.title} className="mt-2 h-12 w-auto max-w-[70%] object-contain object-left drop-shadow-lg sm:h-16" />
+            <img src={artUrl(active.logo)} crossOrigin={MEDIA_CORS} alt={active.title} className="mt-2 h-12 w-auto max-w-[70%] object-contain object-left drop-shadow-lg sm:h-16" />
           ) : (
             <h1 className="mt-1 max-w-2xl text-2xl font-bold text-white drop-shadow-lg sm:text-4xl">{active.title}</h1>
           )}
