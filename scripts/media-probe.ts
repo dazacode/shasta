@@ -39,6 +39,8 @@ const TARGETS = [
 	{ id: "2embed.cc tv", kind: "tv-embed", url: `https://www.2embed.cc/embedtv/${TMDB_TV}&s=1&e=1` },
 	{ id: "multiembed.mov", kind: "movie-embed", url: `https://multiembed.mov/?video_id=${TMDB_MOVIE}&tmdb=1` },
 	{ id: "vidlink.pro", kind: "movie-embed", url: `https://vidlink.pro/movie/${TMDB_MOVIE}`, expect: /jwplayer|player|iframe/i },
+	{ id: "vidcore.net", kind: "movie-embed", url: `https://vidcore.net/movie/${TMDB_MOVIE}` },
+	{ id: "111movies.com", kind: "movie-embed", url: `https://111movies.com/movie/${TMDB_MOVIE}` },
 	{ id: "vidlink.pro tv", kind: "tv-embed", url: `https://vidlink.pro/tv/${TMDB_TV}/1/1` },
 	{ id: "embed.su", kind: "movie-embed", url: `https://embed.su/embed/movie/${TMDB_MOVIE}` },
 	{ id: "autoembed.cc", kind: "movie-embed", url: `https://autoembed.cc/embed/movie/${TMDB_MOVIE}` },

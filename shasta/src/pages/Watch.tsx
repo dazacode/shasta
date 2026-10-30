@@ -352,7 +352,7 @@ function DetailView({ detail, onClose, onNavigate }: { detail: { kind: Kind; id:
               onProgress={onProgress}
               onNext={hasNext ? nextEpisode : undefined}
               onClose={onClose}
-              onFailed={(c) => { const i = sources.findIndex((s) => s.id === c.id); const n = sources[i + 1]; if (n) setCandidate(n) }}
+              onFailed={(c) => { if (sources.length < 2) return; const i = sources.findIndex((s) => s.id === c.id); const n = sources[(i + 1) % sources.length]; if (n && n.id !== c.id) setCandidate(n) }}
             />
           )}
           {!candidate && !error && !loading && <p className="mb-4 rounded-lg bg-shasta-field px-3 py-2 text-sm text-shasta-muted">Discovery only right now — no playable source answered. {title.trailer && <button className="underline" onClick={() => setShowTrailer(true)}>Watch the trailer.</button>}</p>}

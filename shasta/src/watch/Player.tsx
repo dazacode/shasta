@@ -1,7 +1,7 @@
 // The Watch player. One component for every source kind: HLS (hls.js), DASH (dash.js), plain mp4, and proxied
 // embeds. It owns the whole control surface — play/seek/volume/speed, quality, audio tracks, subtitles, fullscreen,
 // picture-in-picture, keyboard, resume and source switching — and moves to the next source on a fatal error.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import {
   ChevronLeft, Gauge, Loader2, Maximize, Minimize, Pause, PictureInPicture2, Play, RotateCcw,
   Settings, SkipForward, Subtitles, Volume2, VolumeX, Zap,
@@ -42,10 +42,9 @@ const fmt = (s: number) => {
 
 /** The embed path: a real player page, run through Shasta's proxy so its ads are stripped and its host stays hidden.
  *  It reports a proxied load failure (the proxy writes a shasta-error marker into the frame) so the player can move on. */
-function EmbedView({ url, title, nonce, direct, onFail }: { url: string; title: string; nonce: number; direct: boolean; onFail: (msg: string) => void }) {
-  const ref = useRef<HTMLIFrameElement>(null)
+function EmbedView({ url, title, nonce, direct, onFail, frameRef }: { url: string; title: string; nonce: number; direct: boolean; onFail: (msg: string) => void; frameRef: RefObject<HTMLIFrameElement | null> }) {
   useEffect(() => {
-    const el = ref.current
+    const el = frameRef.current
     if (!el) return
     if (direct || !proxy.isReady()) {
       el.src = url
@@ -55,7 +54,7 @@ function EmbedView({ url, title, nonce, direct, onFail }: { url: string; title: 
     return () => proxy.releaseSubFrame(id)
   }, [url, nonce, direct])
   useEffect(() => {
-    const el = ref.current
+    const el = frameRef.current
     if (!el) return
     let done = false
     const check = () => {
@@ -79,7 +78,7 @@ function EmbedView({ url, title, nonce, direct, onFail }: { url: string; title: 
     }
   }, [url, nonce, onFail])
   return (
-    <iframe ref={ref} title={title} className="size-full border-0 bg-black" allow="autoplay; fullscreen; encrypted-media; picture-in-picture; clipboard-write" />
+    <iframe ref={frameRef} title={title} className="size-full border-0 bg-black" allow="autoplay; fullscreen; encrypted-media; picture-in-picture; clipboard-write" />
   )
 }
 
@@ -187,7 +186,7 @@ export function Player(props: PlayerProps) {
         if (!mod) return fail('Could not load the player.')
         const H = mod.default
         if (H.isSupported()) {
-          const h = new H({ enableWorker: true, backBufferLength: 60, maxBufferLength: 30 })
+          const h = new H({ enableWorker: true, backBufferLength: 90, maxBufferLength: 45, maxMaxBufferLength: 120, capLevelToPlayerSize: true, abrEwmaDefaultEstimate: 1_000_000 })
           hls.current = h
           h.attachMedia(el)
           h.on(H.Events.MEDIA_ATTACHED, () => h.loadSource(src))
@@ -256,6 +255,10 @@ export function Player(props: PlayerProps) {
       video.current.volume = volume
       video.current.muted = muted
     }
+    if (embedVideoRef.current) {
+      embedVideoRef.current.volume = volume
+      embedVideoRef.current.muted = muted
+    }
   }, [volume, muted])
 
   // external subtitles (hls tracks are handled through hls.subtitleTrack)
@@ -313,6 +316,12 @@ export function Player(props: PlayerProps) {
     el.addEventListener('canplay', onCan)
     el.addEventListener('ended', onEnd)
     el.addEventListener('error', onErr)
+    // start as soon as it can play (a card click is a user gesture, so unmuted autoplay is allowed)
+    const onFirstCanPlay = () => {
+      el.removeEventListener('canplay', onFirstCanPlay)
+      void el.play().catch(() => undefined)
+    }
+    el.addEventListener('canplay', onFirstCanPlay)
     el.addEventListener('waiting', onStall)
     el.addEventListener('stalled', onStall)
     el.addEventListener('playing', clearStall)
@@ -328,6 +337,7 @@ export function Player(props: PlayerProps) {
       el.removeEventListener('canplay', onCan)
       el.removeEventListener('ended', onEnd)
       el.removeEventListener('error', onErr)
+      el.removeEventListener('canplay', onFirstCanPlay)
       el.removeEventListener('waiting', onStall)
       el.removeEventListener('stalled', onStall)
       el.removeEventListener('playing', clearStall)
@@ -346,14 +356,23 @@ export function Player(props: PlayerProps) {
   }, [])
 
   const toggle = useCallback(() => {
-    const el = video.current
+    const el = video.current ?? embedVideoRef.current
     if (!el) return
+    // a muted player is the #1 confusion: the first click/tap unmutes instead of doing nothing
+    if (el.muted || el.volume === 0) {
+      el.muted = false
+      if (el.volume === 0) el.volume = 1
+      setMuted(false)
+      setVolume(1)
+      if (el.paused) void el.play().catch(() => undefined)
+      return
+    }
     if (el.paused) void el.play().catch(() => cb.current.onFailed?.(candidate))
     else el.pause()
   }, [candidate])
 
   const seek = useCallback((to: number) => {
-    const el = video.current
+    const el = video.current ?? embedVideoRef.current
     if (!el) return
     el.currentTime = Math.max(0, Math.min(to, el.duration || 0))
     setTime(el.currentTime)
@@ -393,7 +412,8 @@ export function Player(props: PlayerProps) {
     return () => el.removeEventListener('keydown', onKey)
   }, [toggle, seek, toggleFullscreen, wake, isEmbed])
 
-  const menuBtn = (active = false) => cn('grid size-9 place-items-center rounded-lg text-white/90 transition hover:bg-white/15', active && 'bg-white/15')
+  const menuBtn = (active = false) =>
+    cn('grid size-10 shrink-0 place-items-center rounded-lg text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] transition hover:bg-white/20', active && 'bg-white/20')
   const item = 'flex w-full items-center justify-between gap-3 rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-white/10'
 
   const subChoices = [
@@ -401,6 +421,60 @@ export function Player(props: PlayerProps) {
     ...hlsSubs.map((t, i) => ({ label: t.lang ? `${t.label} (${t.lang})` : t.label, value: i })),
     ...extSubs.map((t, i) => ({ label: t.lang ? `${t.label} (${t.lang})` : t.label, value: 1000 + i })),
   ]
+
+  // An embed's own <video>: proxied Scramjet frames are same-origin, so we can drive its play/mute.
+  const embedFrame = useRef<HTMLIFrameElement | null>(null)
+  const embedVideoRef = useRef<HTMLVideoElement | null>(null)
+  const [embedPlaying, setEmbedPlaying] = useState(false)
+  const [embedTime, setEmbedTime] = useState(0)
+  const [embedDur, setEmbedDur] = useState(0)
+
+  useEffect(() => {
+    if (!isEmbed) {
+      embedVideoRef.current = null
+      return
+    }
+    const find = (doc: Document | null | undefined, depth = 0): HTMLVideoElement | null => {
+      if (!doc || depth > 4) return null
+      const v = doc.querySelector('video')
+      if (v) return v
+      for (const f of Array.from(doc.querySelectorAll('iframe'))) {
+        try {
+          const hit = find(f.contentDocument, depth + 1)
+          if (hit) return hit
+        } catch {
+          /* a nested cross-origin frame in direct mode */
+        }
+      }
+      return null
+    }
+    const tick = () => {
+      try {
+        const v = find(embedFrame.current?.contentDocument)
+        if (!v) return
+        if (embedVideoRef.current !== v) {
+          embedVideoRef.current = v
+          v.volume = 1
+          v.muted = false // embeds often autoplay muted; unmute so audio just works
+          setMuted(false)
+          void v.play().catch(() => undefined)
+        }
+        setEmbedPlaying(!v.paused)
+        setEmbedTime(v.currentTime || 0)
+        setEmbedDur(Number.isFinite(v.duration) ? v.duration : 0)
+      } catch {
+        /* ignore */
+      }
+    }
+    const t = window.setInterval(tick, 1200)
+    tick()
+    return () => clearInterval(t)
+  }, [isEmbed, candidate.id])
+
+  const curPlaying = isEmbed ? embedPlaying : playing
+  const curTime = isEmbed ? embedTime : time
+  const curDur = isEmbed ? embedDur : duration
+  const curBuffered = isEmbed ? embedDur : buffered
 
   const proxyToggle = (
     <button
@@ -416,9 +490,9 @@ export function Player(props: PlayerProps) {
   return (
     <div ref={box} tabIndex={0} onMouseMove={wake} onFocus={wake} className="group relative aspect-video w-full overflow-hidden rounded-xl bg-black outline-none">
       {isEmbed ? (
-        <EmbedView url={src} title={title} nonce={embedNonce} direct={!proxyVideo} onFail={onEmbedFail} />
+        <EmbedView url={src} title={title} nonce={embedNonce} direct={!proxyVideo} onFail={onEmbedFail} frameRef={embedFrame} />
       ) : (
-        <video ref={video} poster={poster ?? undefined} crossOrigin="anonymous" playsInline className="size-full bg-black" onClick={toggle} onDoubleClick={toggleFullscreen}>
+        <video ref={video} poster={poster ?? undefined} crossOrigin="anonymous" playsInline preload="auto" className="size-full bg-black" onClick={toggle} onDoubleClick={toggleFullscreen}>
           {extSubs.map((t, i) => (
             <track key={`${t.url}-${i}`} kind="subtitles" src={subSrc(t.url)} srcLang={t.lang || 'und'} label={t.label} />
           ))}
@@ -429,6 +503,11 @@ export function Player(props: PlayerProps) {
       {!isEmbed && !playing && !waiting && !error && (
         <button onClick={toggle} aria-label="Play" className="absolute inset-0 grid place-items-center">
           <span className="grid size-16 place-items-center rounded-full bg-black/50 backdrop-blur transition hover:scale-105"><Play className="size-7 translate-x-0.5 fill-white text-white" /></span>
+        </button>
+      )}
+      {!isEmbed && muted && playing && !error && (
+        <button onClick={() => setMuted(false)} className="absolute bottom-24 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/75 px-4 py-2 text-sm font-medium text-white shadow-lg backdrop-blur transition hover:bg-black/85">
+          <VolumeX className="size-4" /> Tap to unmute
         </button>
       )}
       {error && (
@@ -460,33 +539,30 @@ export function Player(props: PlayerProps) {
       </div>
 
       {/* bottom bar */}
-      <div className={cn('absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 pb-2 pt-8 transition-opacity', shown || !playing ? 'opacity-100' : 'opacity-0')}>
-        {!isEmbed && (
-          <>
-            <div className="relative mb-1 h-1.5 w-full cursor-pointer" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); seek(((e.clientX - r.left) / r.width) * (duration || 0)) }}>
-              <div className="absolute inset-y-0 left-0 rounded-full bg-white/25" style={{ width: `${duration ? (buffered / duration) * 100 : 0}%` }} />
-              <div className="absolute inset-y-0 left-0 rounded-full bg-shasta-accent" style={{ width: `${duration ? (time / duration) * 100 : 0}%` }} />
-              <div className="absolute top-1/2 size-3 -translate-y-1/2 rounded-full bg-shasta-accent shadow" style={{ left: `calc(${duration ? (time / duration) * 100 : 0}% - 6px)` }} />
-            </div>
-            <div className="flex items-center gap-1 text-white">
-              <button className={menuBtn()} onClick={toggle} aria-label={playing ? 'Pause' : 'Play'}>{playing ? <Pause className="size-5 fill-white" /> : <Play className="size-5 fill-white" />}</button>
-              <div className="group/vol flex items-center">
-                <button className={menuBtn()} onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Unmute' : 'Mute'}>{muted || volume === 0 ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}</button>
-                <input type="range" min={0} max={1} step={0.05} value={muted ? 0 : volume} onChange={(e) => { setVolume(Number(e.target.value)); setMuted(false) }} className="h-1 w-0 cursor-pointer accent-shasta-accent transition-all group-hover/vol:w-20" aria-label="Volume" />
-              </div>
-              <span className="ml-1 text-xs tabular-nums text-white/90">{fmt(time)} <span className="text-white/50">/ {fmt(duration)}</span></span>
-              <div className="ml-auto flex items-center gap-1">
-                {audio.length > 1 && <button className={menuBtn(menu === 'audio')} onClick={() => setMenu(menu === 'audio' ? 'none' : 'audio')} title="Audio" aria-label="Audio track"><Settings className="size-5" /></button>}
-                {subChoices.length > 1 && <button className={menuBtn(menu === 'subs' || subOn >= 0)} onClick={() => setMenu(menu === 'subs' ? 'none' : 'subs')} title="Subtitles" aria-label="Subtitles"><Subtitles className="size-5" /></button>}
-                <button className={menuBtn(menu === 'speed')} onClick={() => setMenu(menu === 'speed' ? 'none' : 'speed')} title="Speed" aria-label="Speed"><Gauge className="size-5" /></button>
-                <button className={menuBtn(menu === 'quality')} onClick={() => setMenu(menu === 'quality' ? 'none' : 'quality')} title="Quality" aria-label="Quality"><span className="text-xs font-semibold">{level < 0 ? 'Auto' : levels.find((l) => l.index === level)?.label ?? 'Auto'}</span></button>
-                {proxyToggle}
-                <button className={menuBtn()} onClick={pip} title="Picture in picture" aria-label="Picture in picture"><PictureInPicture2 className="size-5" /></button>
-                <button className={menuBtn()} onClick={toggleFullscreen} aria-label="Full screen">{fullscreen ? <Minimize className="size-5" /> : <Maximize className="size-5" />}</button>
-              </div>
-            </div>
-          </>
-        )}
+      <div className={cn('absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/65 to-transparent px-3 pb-3 pt-20 transition-opacity duration-200', isEmbed ? 'opacity-100' : shown || !playing || waiting ? 'opacity-100' : 'opacity-0')}>
+        <div className="relative mb-1 h-1.5 w-full cursor-pointer" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); seek(((e.clientX - r.left) / r.width) * (curDur || 0)) }}>
+          <div className="absolute inset-y-0 left-0 rounded-full bg-white/25" style={{ width: `${curDur ? (curBuffered / curDur) * 100 : 0}%` }} />
+          <div className="absolute inset-y-0 left-0 rounded-full bg-shasta-accent" style={{ width: `${curDur ? (curTime / curDur) * 100 : 0}%` }} />
+          <div className="absolute top-1/2 size-3 -translate-y-1/2 rounded-full bg-shasta-accent shadow" style={{ left: `calc(${curDur ? (curTime / curDur) * 100 : 0}% - 6px)` }} />
+        </div>
+        <div className="flex items-center gap-1 text-white">
+          <button className={menuBtn()} onClick={toggle} aria-label={curPlaying ? 'Pause' : 'Play'}>{curPlaying ? <Pause className="size-5 fill-white" /> : <Play className="size-5 fill-white" />}</button>
+          <div className="group/vol flex items-center">
+            <button className={menuBtn()} onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Unmute' : 'Mute'}>{muted || volume === 0 ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}</button>
+            <input type="range" min={0} max={1} step={0.05} value={muted ? 0 : volume} onChange={(e) => { setVolume(Number(e.target.value)); setMuted(false) }} className="h-1.5 w-0 cursor-pointer accent-shasta-accent transition-all group-hover/vol:w-24 sm:w-24" aria-label="Volume" />
+          </div>
+          <span className="ml-1 text-xs tabular-nums text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">{fmt(curTime)} <span className="text-white/60">/ {fmt(curDur)}</span></span>
+          <div className="ml-auto flex items-center gap-1">
+            {!isEmbed && audio.length > 1 && <button className={menuBtn(menu === 'audio')} onClick={() => setMenu(menu === 'audio' ? 'none' : 'audio')} title="Audio" aria-label="Audio track"><Settings className="size-5" /></button>}
+            {!isEmbed && subChoices.length > 1 && <button className={menuBtn(menu === 'subs' || subOn >= 0)} onClick={() => setMenu(menu === 'subs' ? 'none' : 'subs')} title="Subtitles" aria-label="Subtitles"><Subtitles className="size-5" /></button>}
+            {!isEmbed && <button className={menuBtn(menu === 'speed')} onClick={() => setMenu(menu === 'speed' ? 'none' : 'speed')} title="Speed" aria-label="Speed"><Gauge className="size-5" /></button>}
+            {!isEmbed && <button className={menuBtn(menu === 'quality')} onClick={() => setMenu(menu === 'quality' ? 'none' : 'quality')} title="Quality" aria-label="Quality"><span className="text-xs font-semibold">{level < 0 ? 'Auto' : levels.find((l) => l.index === level)?.label ?? 'Auto'}</span></button>}
+            {proxyToggle}
+            {candidates.length > 1 && <button className={menuBtn(menu === 'source')} onClick={() => setMenu(menu === 'source' ? 'none' : 'source')} title="Source" aria-label="Source"><Settings className="size-5" /></button>}
+            {!isEmbed && <button className={menuBtn()} onClick={pip} title="Picture in picture" aria-label="Picture in picture"><PictureInPicture2 className="size-5" /></button>}
+            <button className={menuBtn()} onClick={toggleFullscreen} aria-label="Full screen">{fullscreen ? <Minimize className="size-5" /> : <Maximize className="size-5" />}</button>
+          </div>
+        </div>
 
         {menu !== 'none' && (
           <div className="absolute bottom-12 right-3 max-h-[60%] w-64 overflow-auto rounded-xl border border-white/10 bg-[#16181d]/95 p-1.5 text-white shadow-2xl backdrop-blur">
@@ -522,7 +598,7 @@ export function Player(props: PlayerProps) {
           </div>
         )}
 
-        {isEmbed && <div className="flex justify-end gap-1">{proxyToggle}<button className={menuBtn(menu === 'source')} onClick={() => setMenu(menu === 'source' ? 'none' : 'source')} title="Source" aria-label="Source"><Settings className="size-5" /></button></div>}
+        {isEmbed && <div className="flex justify-end gap-1" />}
       </div>
     </div>
   )
