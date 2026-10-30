@@ -267,11 +267,12 @@ export default function StoreHome() {
       out.forEach((a) => shown.add(a.id))
       return out
     }
+    // the Top 10 is a ranking: it goes first, so a featured or installed app keeps its place in it
+    const top = take(data.trending.length >= 3 ? data.trending : data.popular, 10, Math.min(min, 3))
     const installed = (library?.installed ?? []).filter((i) => i.available && fit(i.app))
     const recent = [...installed].filter((i) => i.lastLaunchedAt).sort((a, b) => (b.lastLaunchedAt ?? 0) - (a.lastLaunchedAt ?? 0)).slice(0, 10).map((i) => i.app)
     installed.forEach((i) => shown.add(i.app.id))
     data.featured.forEach((a) => shown.add(a.id))
-    const top = take(data.trending.length >= 3 ? data.trending : data.popular, 10, Math.min(min, 3))
     const follow = take(feedApps, 12, 1)
     const collections = data.collections.map((c) => ({ ...c, apps: take(c.apps, 16, min) })).filter((c) => c.apps.length)
     const added = take(data.recentlyAdded, 12, min)
