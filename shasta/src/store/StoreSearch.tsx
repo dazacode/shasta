@@ -15,6 +15,12 @@ const SORTS = [
   ['popular', 'Most installed'],
   ['name', 'Name (A–Z)'],
 ] as const
+// `kind` on the API: linked web apps open the site through the proxy, packages are zips uploaded to (and run from) the Store
+const KINDS = [
+  ['', 'Any type', 'Links and downloads'],
+  ['linked', 'Links', 'Web games and apps that open their own site'],
+  ['package', 'Downloads', 'Zipped packages downloaded from the Store'],
+] as const
 
 /**
  * Search results and category / Games / Apps browsing: one page, driven entirely by the address (so back/forward work).
@@ -27,10 +33,11 @@ export default function StoreSearch() {
   const category = route.query.get('category') ?? ''
   const genre = route.query.get('genre') ?? ''
   const group = route.query.get('group') ?? ''
+  const kind = route.query.get('kind') ?? ''
   const sortParam = route.query.get('sort') ?? ''
   const sort = q ? (sortParam || 'relevance') : sortParam === 'relevance' ? 'newest' : sortParam || 'newest'
   const cats = useApi<{ categories: CategoryRef[]; genres?: GenreCount[] }>('/api/catalog/categories')
-  const query = useMemo(() => appsQuery({ sort, q, category, genre, group }), [q, category, genre, group, sort])
+  const query = useMemo(() => appsQuery({ sort, q, category, genre, group, kind }), [q, category, genre, group, kind, sort])
   const list = usePagedApps(query)
 
   const facets = useMemo(() => facetsOf(cats.data?.categories ?? [], cats.data?.genres, (group || 'all') as Kind), [cats.data, group])
@@ -41,11 +48,11 @@ export default function StoreSearch() {
   }, [tabId, title])
 
   const to = (patch: Record<string, string>) => {
-    const p = new URLSearchParams({ ...(q && { q }), ...(category && { category }), ...(genre && { genre }), ...(group && { group }), ...(sortParam && { sort: sortParam }) })
+    const p = new URLSearchParams({ ...(q && { q }), ...(category && { category }), ...(genre && { genre }), ...(group && { group }), ...(kind && { kind }), ...(sortParam && { sort: sortParam }) })
     for (const [k, v] of Object.entries(patch)) v ? p.set(k, v) : p.delete(k)
     go(`/search?${p}`)
   }
-  const filtered = !!(q || category || genre)
+  const filtered = !!(q || category || genre || kind)
   const active = (f: Facet) => (f.param === 'genre' ? genre : category) === f.id
 
   return (
@@ -63,18 +70,34 @@ export default function StoreSearch() {
         </label>
       </div>
 
-      <div className="mb-4 inline-flex rounded-full bg-shasta-field p-1 ring-1 ring-shasta-line" role="group" aria-label="Show games, apps or both">
-        {([['', 'All'], ['games', 'Games'], ['apps', 'Apps']] as const).map(([v, l]) => (
-          <button
-            key={v}
-            type="button"
-            aria-pressed={group === v}
-            onClick={() => to({ group: v, category: '', genre: '' })}
-            className={cn('h-8 rounded-full px-4 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-shasta-accent', group === v ? 'bg-shasta-accent text-shasta-accent-fg' : 'text-shasta-muted hover:text-shasta-fg')}
-          >
-            {l}
-          </button>
-        ))}
+      <div className="mb-4 flex flex-wrap gap-2">
+        <div className="inline-flex rounded-full bg-shasta-field p-1 ring-1 ring-shasta-line" role="group" aria-label="Show games, apps or both">
+          {([['', 'All'], ['games', 'Games'], ['apps', 'Apps']] as const).map(([v, l]) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={group === v}
+              onClick={() => to({ group: v, category: '', genre: '' })}
+              className={cn('h-8 rounded-full px-4 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-shasta-accent', group === v ? 'bg-shasta-accent text-shasta-accent-fg' : 'text-shasta-muted hover:text-shasta-fg')}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+        <div className="inline-flex rounded-full bg-shasta-field p-1 ring-1 ring-shasta-line" role="group" aria-label="Show links, downloads or both">
+          {KINDS.map(([v, l, hint]) => (
+            <button
+              key={v}
+              type="button"
+              title={hint}
+              aria-pressed={kind === v}
+              onClick={() => to({ kind: v })}
+              className={cn('h-8 rounded-full px-4 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-shasta-accent', kind === v ? 'bg-shasta-accent text-shasta-accent-fg' : 'text-shasta-muted hover:text-shasta-fg')}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
       </div>
 
       {facets.length > 0 && (
