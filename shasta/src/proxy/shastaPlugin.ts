@@ -10,6 +10,7 @@ import { forceFocus, forcePointerLock, gameControl } from '@/lib/gameControl'
 import { blockPolicy, blockedResponseHeaders, loadAdBlocker, matchAd, shouldBlockPopup } from '@/lib/adBlock'
 import { applyAdCosmetics } from './adCosmetics'
 import { watchCrashes } from './crashWatch'
+import { captureConsole } from '@/lib/consoleCapture'
 import { diagnoseCrash } from '@/lib/browserSupport'
 import { ERROR_META, TENTATIVE_NAV_MS, armNavTimer, byTab, clearNavTimer, emit, log, scheduleProbe, type Entry } from './scramjetAdapter'
 
@@ -138,6 +139,14 @@ class ShastaPlugin extends ManagedPlugin {
         },
         { capture: true },
       )
+      // the page's console output and errors, readable in Settings -> Advanced -> Console (lib/consoleCapture.ts)
+      captureConsole(ctx.window, () => {
+        try {
+          return ctx.client.url.hostname || 'page'
+        } catch {
+          return 'page'
+        }
+      })
       // a crash from a feature this Chrome lacks becomes a notice instead of a black screen (lib/browserSupport.ts)
       watchCrashes(ctx.window, (message) => {
         void diagnoseCrash(message).then((feature) => {

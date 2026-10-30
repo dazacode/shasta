@@ -28,6 +28,7 @@ import { Row, Toggle, Segmented, selectCls } from './settingsParts'
 import { AiSection } from './AiSettings'
 import { SupporterSection } from './SupporterSettings'
 import { OfflineSection } from './OfflineSettings'
+import { ConsoleSection } from './ConsoleSection'
 import { SupporterBadge } from '@/components/SupporterBadge'
 
 /** where this build's source is offered (AGPL section 13); required for a public host, see NOTICE.md */
@@ -439,6 +440,8 @@ function Advanced() {
         <Button variant="ghost" onClick={() => { setWisp(proxy.defaultWispUrl()); setTransport(defaultSettings().transport) }}>Reset to default</Button>
         <Button disabled={!dirty} onClick={() => void save()}>Apply</Button>
       </div>
+
+      <ConsoleSection />
 
       <section className="border-t border-shasta-line py-4" aria-label="Diagnostic log">
         <div className="mb-2 flex items-center justify-between">
