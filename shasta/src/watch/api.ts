@@ -38,6 +38,13 @@ export function apiUrl(path: string): string {
   return APP_API_ORIGIN && path.startsWith('/api/') ? APP_API_ORIGIN + path : path
 }
 
+/** Artwork via the proxy too, so a school filter never sees image.tmdb.org / s4.anilist.co either. */
+export function artUrl(url?: string | null): string | undefined {
+  if (!url) return undefined
+  if (url.startsWith('/api/')) return apiUrl(url)
+  return apiUrl(streamUrl(url))
+}
+
 export const watchApi = {
   check: () => get<{ enabled: boolean; tmdb: boolean; kuhi: boolean }>('/api/watch/check'),
   home: (scope: Scope) => get<{ enabled: boolean; tmdb: boolean; rows: Row[] }>(`/api/watch/home?kind=${scope}`),

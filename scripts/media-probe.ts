@@ -9,6 +9,8 @@
 //
 // Exit code is 1 when fewer than --min (default 2) embed sources answer, so it can gate a release.
 
+import { connect as tlsConnect } from "node:tls";
+
 type Kind = "movie-embed" | "tv-embed" | "anime-embed" | "anime-resolver" | "metadata";
 
 interface Target {
@@ -86,7 +88,7 @@ async function probe(t: Target & { post?: boolean }): Promise<Result> {
 			...(t.post ? { method: "POST", body: JSON.stringify({ query: "{Media(id:21){id title{romaji}}}" }), headers: { "user-agent": UA, "content-type": "application/json" } as Record<string, string> } : {}),
 		});
 	} catch (e) {
-		base.note = (e as Error).name === "TimeoutError" ? "timeout" : "unreachable (DNS/conn)";
+		base.note = (e as Error).name === "TimeoutError" ? "timeout" : "unreachable (DNS/conn/TLS)";
 		return base;
 	}
 	const xfo = hdr(res.headers, "x-frame-options");
@@ -121,12 +123,30 @@ if (!targets.length) targets.push(...TARGETS);
 const results = await Promise.all(targets.map(probe));
 results.sort((a, b) => a.kind.localeCompare(b.kind) || a.id.localeCompare(b.id));
 
+// TLS chains: the proxy transport is libcurl, which does NOT chase a missing issuer (AIA). A host with an
+// incomplete chain fails inside the proxied iframe with "error code 60" even though it answers curl fine.
+function tlsCheck(host: string): Promise<{ ok: boolean; err?: string }> {
+	return new Promise((resolve) => {
+		const s = tlsConnect({ host, port: 443, servername: host, timeout: 8000, rejectUnauthorized: false }, () => {
+			const authorized = (s as unknown as { authorized: boolean }).authorized;
+			const err = (s as unknown as { authorizationError?: unknown }).authorizationError;
+			s.end();
+			resolve({ ok: !!authorized, err: err ? String(err) : undefined });
+		});
+		s.on("error", (e) => resolve({ ok: false, err: e.message }));
+		s.on("timeout", () => (s.destroy(), resolve({ ok: false, err: "timeout" })));
+	});
+}
+const hosts = [...new Set(targets.map((t) => { try { return new URL(t.url).hostname; } catch { return ""; } }).filter((h) => h && h.includes(".")))];
+const chains = new Map<string, { ok: boolean; err?: string }>();
+await Promise.all(hosts.map(async (h) => chains.set(h, await tlsCheck(h))));
+
 const embeds = results.filter((r) => r.kind.endsWith("embed"));
 const okEmbeds = embeds.filter((r) => r.ok);
 const blocked = embeds.filter((r) => r.framable === false);
 
 if (json) {
-	console.log(JSON.stringify({ at: new Date().toISOString(), okEmbeds: okEmbeds.length, blocked, results }, null, 2));
+	console.log(JSON.stringify({ at: new Date().toISOString(), okEmbeds: okEmbeds.length, blocked, chains: Object.fromEntries(chains), results }, null, 2));
 } else {
 	const pad = (s: string, n: number) => s + " ".repeat(Math.max(0, n - s.length));
 	console.log(`\nmedia probes — ${new Date().toISOString()}\n`);
@@ -140,7 +160,10 @@ if (json) {
 		const frame = r.framable === false ? "NOT-EMBEDDABLE" : r.framesTo ? `→ frames ${r.framesTo.replace(/^https?:\/\//, "").slice(0, 48)}` : "";
 		console.log(`    ${mark} ${pad(r.id, 20)} ${pad(String(r.status), 4)} ${pad(r.bytes + "b", 9)} ${r.note || frame}`);
 	}
-	console.log(`\n  ${okEmbeds.length}/${embeds.length} embed sources answered; ${blocked.length} refuse framing (they must be opened in a tab, not an iframe).`);
+	console.log(`\n  TLS chains — an incomplete chain passes curl but FAILS in the proxied iframe (libcurl, error 60):`);
+	for (const [h, c] of [...chains].sort()) console.log(`    ${c.ok ? "ok  " : "BAD "} ${h}${c.ok ? "" : ` — ${c.err}`}`);
+	const badChains = [...chains].filter(([, c]) => !c.ok).length;
+	console.log(`\n  ${okEmbeds.length}/${embeds.length} embed sources answered; ${blocked.length} refuse framing; ${badChains} host(s) with a broken TLS chain.`);
 }
 
 process.exit(okEmbeds.length >= (only ? 1 : min) ? 0 : 1);
