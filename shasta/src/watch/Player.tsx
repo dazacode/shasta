@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ChevronLeft, Gauge, Loader2, Maximize, Minimize, Pause, PictureInPicture2, Play, RotateCcw,
-  Settings, SkipForward, Subtitles, Volume2, VolumeX,
+  Settings, SkipForward, Subtitles, Volume2, VolumeX, Zap,
 } from 'lucide-react'
 import type Hls from 'hls.js'
 import * as proxy from '@/proxy/scramjetAdapter'
@@ -42,18 +42,18 @@ const fmt = (s: number) => {
 
 /** The embed path: a real player page, run through Shasta's proxy so its ads are stripped and its host stays hidden.
  *  It reports a proxied load failure (the proxy writes a shasta-error marker into the frame) so the player can move on. */
-function EmbedView({ url, title, nonce, onFail }: { url: string; title: string; nonce: number; onFail: (msg: string) => void }) {
+function EmbedView({ url, title, nonce, direct, onFail }: { url: string; title: string; nonce: number; direct: boolean; onFail: (msg: string) => void }) {
   const ref = useRef<HTMLIFrameElement>(null)
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    if (!proxy.isReady()) {
+    if (direct || !proxy.isReady()) {
       el.src = url
       return
     }
     const id = proxy.proxySubFrame(el, url)
     return () => proxy.releaseSubFrame(id)
-  }, [url, nonce])
+  }, [url, nonce, direct])
   useEffect(() => {
     const el = ref.current
     if (!el) return
@@ -86,6 +86,7 @@ function EmbedView({ url, title, nonce, onFail }: { url: string; title: string; 
 export function Player(props: PlayerProps) {
   const { candidate, title, sub, poster, startAt = 0, candidates } = props
   const proxyVideo = useSettings((s) => s.settings.watchProxy)
+  const updateSettings = useSettings((s) => s.update)
   // callbacks live in a ref so changing them never tears down the media engine
   const cb = useRef(props)
   cb.current = props
@@ -284,6 +285,19 @@ export function Player(props: PlayerProps) {
     const onWait = () => setWaiting(true)
     const onCan = () => setWaiting(false)
     const onEnd = () => cb.current.onEnded?.()
+    // a source that stalls before anything plays is worse than a dead one: advance after 12s
+    let stall = 0
+    const clearStall = () => clearTimeout(stall)
+    const onStall = () => {
+      clearStall()
+      if (el.currentTime > 0.5) return
+      stall = window.setTimeout(() => {
+        if (errored.current || cb.current.candidates.length <= 1) return
+        errored.current = true
+        setError('Buffering — trying another source…')
+        cb.current.onFailed?.(candidate)
+      }, 12_000)
+    }
     const onErr = () => {
       if (!el.error?.code) return
       setError('This source could not be played.')
@@ -299,6 +313,10 @@ export function Player(props: PlayerProps) {
     el.addEventListener('canplay', onCan)
     el.addEventListener('ended', onEnd)
     el.addEventListener('error', onErr)
+    el.addEventListener('waiting', onStall)
+    el.addEventListener('stalled', onStall)
+    el.addEventListener('playing', clearStall)
+    el.addEventListener('canplay', clearStall)
     return () => {
       el.removeEventListener('timeupdate', onTime)
       el.removeEventListener('durationchange', onDur)
@@ -310,6 +328,11 @@ export function Player(props: PlayerProps) {
       el.removeEventListener('canplay', onCan)
       el.removeEventListener('ended', onEnd)
       el.removeEventListener('error', onErr)
+      el.removeEventListener('waiting', onStall)
+      el.removeEventListener('stalled', onStall)
+      el.removeEventListener('playing', clearStall)
+      el.removeEventListener('canplay', clearStall)
+      clearStall()
     }
   }, [isEmbed, candidate])
 
@@ -379,10 +402,21 @@ export function Player(props: PlayerProps) {
     ...extSubs.map((t, i) => ({ label: t.lang ? `${t.label} (${t.lang})` : t.label, value: 1000 + i })),
   ]
 
+  const proxyToggle = (
+    <button
+      className={menuBtn(proxyVideo)}
+      onClick={() => updateSettings({ watchProxy: !proxyVideo })}
+      title={proxyVideo ? 'Playing through Shasta (survives a school filter). Click to go direct — faster.' : 'Playing directly (fast). Click to go through Shasta — survives a school filter.'}
+      aria-label={proxyVideo ? 'Switch to direct playback' : 'Switch to proxied playback'}
+    >
+      <Zap className="size-5" />
+    </button>
+  )
+
   return (
     <div ref={box} tabIndex={0} onMouseMove={wake} onFocus={wake} className="group relative aspect-video w-full overflow-hidden rounded-xl bg-black outline-none">
       {isEmbed ? (
-        <EmbedView url={src} title={title} nonce={embedNonce} onFail={onEmbedFail} />
+        <EmbedView url={src} title={title} nonce={embedNonce} direct={!proxyVideo} onFail={onEmbedFail} />
       ) : (
         <video ref={video} poster={poster ?? undefined} crossOrigin="anonymous" playsInline className="size-full bg-black" onClick={toggle} onDoubleClick={toggleFullscreen}>
           {extSubs.map((t, i) => (
@@ -446,6 +480,7 @@ export function Player(props: PlayerProps) {
                 {subChoices.length > 1 && <button className={menuBtn(menu === 'subs' || subOn >= 0)} onClick={() => setMenu(menu === 'subs' ? 'none' : 'subs')} title="Subtitles" aria-label="Subtitles"><Subtitles className="size-5" /></button>}
                 <button className={menuBtn(menu === 'speed')} onClick={() => setMenu(menu === 'speed' ? 'none' : 'speed')} title="Speed" aria-label="Speed"><Gauge className="size-5" /></button>
                 <button className={menuBtn(menu === 'quality')} onClick={() => setMenu(menu === 'quality' ? 'none' : 'quality')} title="Quality" aria-label="Quality"><span className="text-xs font-semibold">{level < 0 ? 'Auto' : levels.find((l) => l.index === level)?.label ?? 'Auto'}</span></button>
+                {proxyToggle}
                 <button className={menuBtn()} onClick={pip} title="Picture in picture" aria-label="Picture in picture"><PictureInPicture2 className="size-5" /></button>
                 <button className={menuBtn()} onClick={toggleFullscreen} aria-label="Full screen">{fullscreen ? <Minimize className="size-5" /> : <Maximize className="size-5" />}</button>
               </div>
@@ -487,7 +522,7 @@ export function Player(props: PlayerProps) {
           </div>
         )}
 
-        {isEmbed && <div className="flex justify-end"><button className={menuBtn(menu === 'source')} onClick={() => setMenu(menu === 'source' ? 'none' : 'source')} title="Source" aria-label="Source"><Settings className="size-5" /></button></div>}
+        {isEmbed && <div className="flex justify-end gap-1">{proxyToggle}<button className={menuBtn(menu === 'source')} onClick={() => setMenu(menu === 'source' ? 'none' : 'source')} title="Source" aria-label="Source"><Settings className="size-5" /></button></div>}
       </div>
     </div>
   )
