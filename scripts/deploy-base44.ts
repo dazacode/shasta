@@ -39,9 +39,10 @@ const env: Record<string, string | undefined> = {
 	// share links and the canonical address name the full site, where a shared Store link actually opens
 	VITE_SHARE_ORIGIN: FULL,
 	VITE_SITE_ORIGIN: FULL,
-	// the stats dashboard (Umami on the VPS, lib/stats.ts): same website as the full site, told apart by hostname
+	// the stats dashboard (Umami on the VPS, lib/stats.ts): Lite is its own website there ("Shasta Lite (Base44)"),
+	// never the full site's id from .env, so the two show up side by side
 	VITE_STATS_URL: process.env.VITE_STATS_URL || "https://stats.176-100-37-63.sslip.io",
-	VITE_STATS_WEBSITE_ID: process.env.VITE_STATS_WEBSITE_ID || "815aab28-2473-4c4e-8183-eb61deae5ed5",
+	VITE_STATS_WEBSITE_ID: "ade53419-c9b4-4690-83e5-c232bab531e3",
 };
 // production rules: devtools shortcuts blocked, obfuscated chunks
 delete env.VITE_ALLOW_DEVTOOLS;
