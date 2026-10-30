@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { AlertTriangle, AppWindow, Bookmark, Download, Globe, HeartHandshake, History, Library as LibraryIcon, MessagesSquare, Settings, Sparkles, Store } from 'lucide-react'
+import { AlertTriangle, AppWindow, Bookmark, Download, Film, Globe, HeartHandshake, History, Library as LibraryIcon, MessagesSquare, Settings, Sparkles, Store } from 'lucide-react'
 import { Logo } from '@/components/Logo'
 import { internalPage, originOf } from '@/lib/url'
 import { useLibrary } from '@/stores/libraryStore'
 import { cn } from '@/lib/utils'
 import { MEDIA_CORS } from '@/lib/appApi'
 
-const INTERNAL_ICONS = { newtab: Logo, history: History, bookmarks: Bookmark, downloads: Download, settings: Settings, store: Store, library: LibraryIcon, app: AppWindow, support: HeartHandshake, 'get-app': Download, chat: MessagesSquare, discord: MessagesSquare, 'whats-new': Sparkles } as const
+const INTERNAL_ICONS = { newtab: Logo, history: History, bookmarks: Bookmark, downloads: Download, settings: Settings, store: Store, library: LibraryIcon, watch: Film, app: AppWindow, support: HeartHandshake, 'get-app': Download, chat: MessagesSquare, discord: MessagesSquare, 'whats-new': Sparkles } as const
 
 interface Props {
   url: string

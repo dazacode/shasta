@@ -1,0 +1,14 @@
+#!/bin/sh
+# /usr/local/sbin/umami-api (source: scripts/vps/umami-api), called by `bun run stats` over ssh:
+#   sudo umami-api METHOD /api/path   (JSON body on stdin for POST)
+# Signs in as admin with the password in /etc/shasta/umami-admin, ON the VPS, so it never travels; then calls Umami on
+# loopback and prints the JSON answer. Exit 1 on an HTTP error (the body is still printed).
+set -eu
+METHOD="$1"; PATH_="$2"; B=http://127.0.0.1:3000
+PW=$(sed -n 's/^password: //p' /etc/shasta/umami-admin)
+TOK=$(printf '{"username":"admin","password":"%s"}' "$PW" | curl -sf -X POST "$B/api/auth/login" -H "content-type: application/json" --data @- | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')
+if [ "$METHOD" = "GET" ]; then
+	curl -s -w '\n%{http_code}' -H "authorization: Bearer $TOK" "$B$PATH_"
+else
+	curl -s -w '\n%{http_code}' -X "$METHOD" -H "authorization: Bearer $TOK" -H "content-type: application/json" --data @- "$B$PATH_"
+fi | awk 'NR>1{print prev} {prev=$0} END{if (prev !~ /^2/) exit 1}'

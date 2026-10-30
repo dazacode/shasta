@@ -11,7 +11,7 @@ export type SearchEngine = keyof typeof SEARCH_ENGINES
 
 /** Shasta's own pages, rendered by the shell rather than by the proxy. */
 export const INTERNAL_SCHEME = 'shasta://'
-export const INTERNAL_PAGES = ['newtab', 'history', 'bookmarks', 'downloads', 'settings', 'store', 'library', 'app', 'support', 'get-app', 'chat', 'discord', 'whats-new'] as const
+export const INTERNAL_PAGES = ['newtab', 'history', 'bookmarks', 'downloads', 'settings', 'store', 'library', 'watch', 'app', 'support', 'get-app', 'chat', 'discord', 'whats-new'] as const
 export type InternalPage = (typeof INTERNAL_PAGES)[number]
 export const NEW_TAB_URL = `${INTERNAL_SCHEME}newtab`
 
@@ -171,6 +171,7 @@ export function titleFor(url: string): string {
   const page = internalPage(url)
   if (page === 'newtab') return 'New Tab'
   if (page === 'store') return 'Shasta Store'
+  if (page === 'watch') return 'Watch'
   if (page === 'support') return 'Support Shasta'
   if (page === 'get-app') return 'Get the Shasta app'
   if (page === 'chat') return 'Chat'

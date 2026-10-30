@@ -121,6 +121,8 @@ export interface Settings {
   usageStats: boolean
   /** "Picked for you" in the Store, from a taste profile kept only in this browser (store/taste.ts) */
   storeForYou: boolean
+  /** Watch: route video through Shasta's server (unblocked + ad-free embeds) instead of fetching it directly */
+  watchProxy: boolean
   // performance
   suspendTabs: boolean
   suspendAfterMinutes: number
@@ -207,6 +209,7 @@ export const defaultSettings = (): Settings => liteSettings({
   blockPopups: true,
   usageStats: true,
   storeForYou: true,
+  watchProxy: true,
   pageAccess: { camera: false, microphone: false, location: false, clipboard: false, devices: false },
   suspendTabs: true,
   suspendAfterMinutes: 15,

@@ -629,6 +629,32 @@ function ensureTitlePolling() {
 }
 
 /**
+ * Proxies an <iframe> that lives inside one of Shasta's own pages (e.g. a Watch embed player) rather than filling a
+ * tab. It is a full proxied frame with its own plugin instance, so adblock and the ad cosmetics apply to it too.
+ * `id` is a synthetic frame id: pass it to `releaseSubFrame` when the element goes away.
+ */
+let subSeq = 0
+const SUB_EVENTS: FrameEvents = {
+  navStart: () => {},
+  url: () => {},
+  title: () => {},
+  favicon: () => {},
+  loaded: () => {},
+  failed: () => {},
+  key: () => {},
+  contextMenu: () => {},
+}
+
+export function proxySubFrame(iframe: HTMLIFrameElement, url: string): string {
+  const id = `sub:${++subSeq}`
+  attach(id, iframe, SUB_EVENTS)
+  go(id, url)
+  return id
+}
+
+export const releaseSubFrame = (id: string) => detach(id)
+
+/**
  * Binds a proxied frame to an <iframe>. Returns true when a new frame was created (the caller
  * should then navigate it), false when the iframe was already bound (e.g. React StrictMode remount).
  */

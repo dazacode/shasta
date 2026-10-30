@@ -12,7 +12,7 @@ import { useTabs } from '@/stores/tabsStore'
 import { useConnection } from '@/stores/connectionStore'
 import { tabUrl, type Tab } from '@/lib/tabModel'
 import { handleKeydown } from '@/lib/shortcuts'
-import { appKeyOf, hostOf, internalPage, isInternalUrl } from '@/lib/url'
+import { appKeyOf, hostOf, internalPage, internalSection, isInternalUrl } from '@/lib/url'
 import { cn } from '@/lib/utils'
 import { useSettings, type PageAccess } from '@/stores/settingsStore'
 import { useUi } from '@/stores/uiStore'
@@ -31,6 +31,7 @@ const DiscordPage = lazy(() => import('@/pages/Discord'))
 const WhatsNewPage = lazy(() => import('@/pages/WhatsNew'))
 const ChatPage = lazy(() => import('@/pages/Chat'))
 const StorePage = lazy(() => import('@/store/StorePage').then((m) => ({ default: m.StorePage })))
+const WatchPage = lazy(() => import('@/pages/Watch').then((m) => ({ default: m.Watch })))
 
 // Permissions policy for proxied pages. Everything powerful is blocked unless the user opted in under
 // Settings → Privacy (the browser still asks before anything is granted).
@@ -161,7 +162,15 @@ const TabView = memo(function TabView({ tab, active }: { tab: Tab; active: boole
           </PageBoundary>
         </div>
       )}
-      {active && page && page !== 'app' && page !== 'chat' && (
+      {/* Watch keeps playing while another tab is in front, so it renders always and hides when inactive */}
+      {page === 'watch' && (
+        <div className={cn('absolute inset-0 z-10 overflow-auto bg-shasta-bg', !active && 'pointer-events-none invisible')}>
+          <PageBoundary resetKey={url}>
+            <Suspense fallback={null}><WatchPage tabId={tab.id} initial={internalSection(url)} /></Suspense>
+          </PageBoundary>
+        </div>
+      )}
+      {active && page && page !== 'app' && page !== 'chat' && page !== 'watch' && (
         <div className="absolute inset-0 z-10 overflow-auto bg-shasta-bg">
           <PageBoundary resetKey={url}>
           <Suspense fallback={null}>

@@ -1,0 +1,4 @@
+[
+	{ "name": "Shasta (pages.dev)", "short": "pages.dev", "domain": "shasta-dtg.pages.dev", "id": "815aab28-2473-4c4e-8183-eb61deae5ed5", "main": true },
+	{ "name": "Shasta Lite (Base44)", "short": "Lite", "domain": "shasta-lte.base44.app", "id": "ade53419-c9b4-4690-83e5-c232bab531e3" }
+]

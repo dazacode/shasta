@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { Bookmark as BookmarkIcon, Mic, Pencil, Plus, Search, SlidersHorizontal, Square, Store, Trash2 } from 'lucide-react'
+import { Bookmark as BookmarkIcon, Film, Mic, Pencil, Plus, Search, SlidersHorizontal, Square, Store, Trash2 } from 'lucide-react'
 import { RibbonWallpaper } from '@/components/RibbonWallpaper'
 import { WALLPAPERS, effectiveWallpaper, wallpaperBackground } from '@/lib/wallpaper'
 import { useSupporter } from '@/stores/supporterStore'
@@ -299,6 +299,12 @@ export function NewTab({ tabId }: { tabId: string }) {
             <Store className="size-7 text-shasta-accent" />
           </span>
           Store
+        </button>
+        <button onClick={() => openInternal('watch')} className="flex w-28 flex-col items-center gap-2 rounded-2xl p-2 text-sm text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg">
+          <span className="grid size-14 place-items-center rounded-2xl bg-shasta-accent/15">
+            <Film className="size-7 text-shasta-accent" />
+          </span>
+          Watch
         </button>
         {settings.shortcuts.length < 12 && (
           <button onClick={() => setEditing('new')} className="flex w-28 flex-col items-center gap-2 rounded-2xl p-2 text-sm text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg">

@@ -19,6 +19,8 @@ docker network inspect "$NET" >/dev/null 2>&1 ||
 # forwarded traffic (container -> elsewhere): DOCKER-USER runs before Docker's own rules
 iptables -N SHASTA-EGRESS 2>/dev/null || iptables -F SHASTA-EGRESS
 iptables -A SHASTA-EGRESS -m conntrack --ctstate RELATED,ESTABLISHED -j RETURN
+# sibling containers on THIS trusted bridge (e.g. the Kuhi resolver) are allowed, even though 172.16/12 is denied above
+iptables -A SHASTA-EGRESS -d "$SUBNET" -j RETURN
 for net in $DENY; do iptables -A SHASTA-EGRESS -d "$net" -j DROP; done
 iptables -A SHASTA-EGRESS -j RETURN
 iptables -C DOCKER-USER -i "$BRIDGE" -j SHASTA-EGRESS 2>/dev/null || iptables -I DOCKER-USER 1 -i "$BRIDGE" -j SHASTA-EGRESS

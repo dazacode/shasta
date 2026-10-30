@@ -1,0 +1,32 @@
+# /etc/systemd/system/kuhi.service (source: scripts/vps/kuhi.service)
+# Kuhi — the self-hosted anime resolver behind Shasta Watch (docs/streaming-sources.md). Pure Python (FastAPI),
+# races ten providers and returns HLS + subtitles. The public consumet/anify instances are unreliable, so we run ours.
+#
+# Built and tagged by hand: docker build -t kuhi:current scripts/vps/kuhi/  (see scripts/vps/kuhi.md).
+# Runs on the private `shasta` docker network ONLY (no published port): the backend reaches it at
+# http://kuhi:8090, set KUHI_URL=http://kuhi:8090 in /etc/shasta/shasta.env. Network egress is needed (the providers
+# are on the open web); a version bump = rebuild the image + systemctl restart kuhi.
+[Unit]
+Description=Kuhi anime resolver (Shasta Watch)
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+[Service]
+Type=simple
+ExecStartPre=-/usr/bin/docker rm -f kuhi
+ExecStart=/usr/bin/docker run --rm --name kuhi --network shasta \
+	--cap-drop ALL --security-opt no-new-privileges \
+	--memory 1g --memory-reservation 512m \
+	--tmpfs /tmp:rw,nosuid,nodev,size=256m \
+	--log-opt max-size=10m --log-opt max-file=3 \
+	kuhi:current
+ExecStop=/usr/bin/docker stop -t 10 kuhi
+Restart=always
+RestartSec=5
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target

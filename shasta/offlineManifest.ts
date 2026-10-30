@@ -40,6 +40,8 @@ export function classify(rel: string): OfflineGroup | null {
   if (/^scramjet\/(scramjet_bundled\.m?js|scramjet-external\.mjs|scramjet\.mjs)$/.test(rel)) return null
   // every browser Shasta supports picks the .woff2 listed first in each @font-face
   if (rel.endsWith('.woff')) return null
+  // dash.js (1.7 MB) is only used by the rare DASH source in Watch, and playback needs the network anyway
+  if (/^assets\/dash\.all\.min-/.test(rel)) return null
   return 'core'
 }
 

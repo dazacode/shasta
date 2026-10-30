@@ -1,4 +1,4 @@
-import { Flag, Gamepad2, HeartHandshake, MessagesSquare, RefreshCw, Share, Sparkles, VenetianMask, Library, Store, ArrowLeft, Gauge, ArrowRight, Download, Home, Keyboard, MoreVertical, Printer, RotateCw, X } from 'lucide-react'
+import { Flag, Gamepad2, HeartHandshake, MessagesSquare, RefreshCw, Share, Sparkles, VenetianMask, Film, Library, Store, ArrowLeft, Gauge, ArrowRight, Download, Home, Keyboard, MoreVertical, Printer, RotateCw, X } from 'lucide-react'
 import { shouldSuggestApp } from '@/lib/shastaApp'
 import { IconButton } from './IconButton'
 import { Omnibox } from './Omnibox'
@@ -85,6 +85,9 @@ export function Toolbar() {
       <IconButton label="Library" onClick={() => openInternal('library')}>
         <Library className="size-[18px]" />
       </IconButton>
+      <IconButton label="Watch" onClick={() => openInternal('watch')}>
+        <Film className="size-[18px]" />
+      </IconButton>
       {settings.ai.enabled && (
         <IconButton label="Shasta AI" shortcut={keysFor('toggleAssistant')} onClick={() => useUi.getState().toggleAssistant()} aria-pressed={assistantOpen}>
           <Sparkles className={`size-[18px] ${assistantOpen ? 'text-shasta-accent' : ''}`} />
@@ -144,6 +147,9 @@ export function Toolbar() {
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => openInternal('library')}>
             <Library /> Library
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => openInternal('watch')}>
+            <Film /> Watch
           </DropdownMenuItem>
           {tab?.app && (
             <DropdownMenuItem onClick={() => openReport({ appId: tab.app!.id, name: tab.app!.name, isGame: tab.app!.scheme === 'game', kind: tab.app!.kind, error: tab.error?.message ?? null })}>
