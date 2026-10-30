@@ -1,0 +1,10 @@
+# /etc/systemd/system/umami-backup.timer (source: scripts/vps/umami-backup.timer)
+[Unit]
+Description=Daily Umami stats backup
+
+[Timer]
+OnCalendar=*-*-* 03:45:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

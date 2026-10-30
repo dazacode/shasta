@@ -15,6 +15,16 @@
 	}
 }
 
+# The stats dashboard (Umami, scripts/vps/umami.service): its own name, so it gets an ordinary certificate and never
+# reaches the app content listener. Serves the tracker (/s.js), collection (/api/e), the dashboard and /mcp.
+stats.176-100-37-63.sslip.io {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:3000
+	log {
+		output discard
+	}
+}
+
 https:// {
 	tls {
 		on_demand

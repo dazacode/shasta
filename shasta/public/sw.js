@@ -30,9 +30,19 @@ importScripts("/controller/controller.sw.js");
 // - Response headers are kept as the server sent them (COOP/COEP included), so a launch from the cache is
 //   cross-origin isolated exactly when a launch from the server is.
 const SHELL_VERSION = "__SHASTA_SHELL_VERSION__";
+// Shasta Lite (scripts/deploy-base44.ts stamps "yes" here): its host cannot send headers, so this worker gives Shasta's
+// own pages the cross-origin isolation the full site's server sends (threaded wasm games need it). Same policy as the
+// server, on every same-origin page it serves: a document with a different policy would cut the shell off from it.
+// Lite has no offline shell (the host rewrites index.html, so its checksums never match).
+const LITE_BUILD = "__SHASTA_LITE__" === "yes";
+const ISOLATION = {
+	"Cross-Origin-Opener-Policy": "same-origin",
+	"Cross-Origin-Embedder-Policy": "credentialless",
+	"Document-Isolation-Policy": "isolate-and-credentialless",
+};
 // Off in the installed app (an Isolated Web App): its files already come from the signed bundle on disk, which
 // Chrome updates as a whole, so a cached copy on top would only serve the previous version.
-const SHELL_ON = !SHELL_VERSION.startsWith("__") && location.protocol !== "isolated-app:";
+const SHELL_ON = !SHELL_VERSION.startsWith("__") && location.protocol !== "isolated-app:" && !LITE_BUILD;
 const SHELL_PREFIX = "shasta-shell-";
 const SHELL_CACHE = SHELL_PREFIX + SHELL_VERSION;
 const MANIFEST_URL = "/offline-manifest.json";
@@ -44,6 +54,10 @@ const SHELL_PATHS = /^\/(assets|scramjet|controller|ort)\/[^/]+$|^\/[^/]+\.(webm
 addEventListener("fetch", (e) => {
 	if ($scramjetController.shouldRoute(e)) {
 		e.respondWith($scramjetController.route(e));
+		return;
+	}
+	if (LITE_BUILD && e.request.mode === "navigate" && new URL(e.request.url).origin === location.origin) {
+		e.respondWith(isolated(e.request));
 		return;
 	}
 	if (!SHELL_ON) return;
@@ -67,6 +81,16 @@ addEventListener("message", (e) => {
 		handleMessage(msg.$shastaOffline, port).catch((err) => port.postMessage({ type: "error", ...describeError(err) }))
 	);
 });
+
+/** Shasta Lite: the page from the network, with the isolation headers its host cannot send. */
+async function isolated(request) {
+	const response = await fetch(request);
+	// a redirect (opaque) or an error page passes as it is
+	if (response.type === "opaqueredirect" || response.status === 0) return response;
+	const headers = new Headers(response.headers);
+	for (const [k, v] of Object.entries(ISOLATION)) headers.set(k, v);
+	return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
 
 /** The cache key for a request the shell may answer, or null to leave the request alone. */
 function shellKey(request) {

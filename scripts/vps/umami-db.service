@@ -1,0 +1,25 @@
+# /etc/systemd/system/umami-db.service (source: scripts/vps/umami-db.service)
+# PostgreSQL for the stats dashboard (Umami, see umami.service). Only on the private Docker network `umami`: no port
+# is published, not even on loopback. Secrets in /etc/shasta/umami.env (root 0600, never in git).
+[Unit]
+Description=Umami stats database (PostgreSQL) in Docker
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+ExecStartPre=-/usr/bin/docker network create umami
+ExecStartPre=-/usr/bin/docker rm -f umami-db
+ExecStart=/usr/bin/docker run --rm --name umami-db --network umami \
+	--env-file /etc/shasta/umami.env \
+	-v /var/lib/umami/pg:/var/lib/postgresql/data \
+	--security-opt no-new-privileges --memory 2g \
+	--log-opt max-size=20m --log-opt max-file=3 \
+	postgres:17-alpine
+ExecStop=/usr/bin/docker stop -t 30 umami-db
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

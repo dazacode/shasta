@@ -1,0 +1,10 @@
+# /etc/systemd/system/umami-backup.service (source: scripts/vps/umami-backup.service), run daily by umami-backup.timer.
+# Dumps the stats database next to the Store backups and keeps 14 days.
+[Unit]
+Description=Back up the Umami stats database
+Requires=umami-db.service
+After=umami-db.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'set -e; f=/var/lib/shasta/backups/umami-$(date +%%F).sql.gz; /usr/bin/docker exec umami-db pg_dump -U umami umami | gzip > "$f.tmp"; mv "$f.tmp" "$f"; find /var/lib/shasta/backups -name "umami-*.sql.gz" -mtime +14 -delete'

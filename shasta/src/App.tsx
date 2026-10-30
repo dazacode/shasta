@@ -29,6 +29,7 @@ import { useOffline } from '@/stores/offlineStore'
 import { useUi } from '@/stores/uiStore'
 import { tabTitle } from '@/lib/tabModel'
 import { startResourceGuard } from '@/lib/resourceGuard'
+import { startStats } from '@/lib/stats'
 import { startMaintenance } from '@/lib/maintenance'
 import { openSharedLink } from '@/lib/shareLink'
 import { showWhatsNewOnce } from '@/lib/whatsNew'
@@ -46,6 +47,7 @@ function useBootstrap() {
     // offline application shell: background download, update notices (lib/offline.ts)
     useOffline.getState().boot()
     startResourceGuard()
+    startStats()
     startMaintenance()
     // a link someone shared (https://<site>/?app=<slug>) opens that Store page
     // first open (and after a big change): the welcome tour and beta notice, before a shared link so that one ends up in front

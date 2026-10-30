@@ -6,10 +6,10 @@
 //   - the Store, chat and the rest of /api go to the full site's backend across origins (lib/appApi.ts), which must
 //     list this host in APP_ORIGINS (VPS /etc/shasta/shasta.env); always anonymous, so no staff sign-in here;
 //   - the ONNX Runtime wasm (on-device AI, 26 MB twice) is left out, which is what makes it fit.
-// No cross-origin isolation (Base44 cannot send COOP/COEP): threaded-wasm games need the full site anyway.
+// Base44 cannot send COOP/COEP, so the service worker adds them (sw.js LITE_BUILD; first visit reloads once).
 // It builds into .deploy/base44/site, never shasta/dist, so the Cloudflare staged build is untouched.
 // Base44 project: .deploy/base44/base44/{config.jsonc,.app.jsonc} (`npx base44 create` / `link` once; gitignored).
-import { existsSync, readdirSync, rmSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dir, "..");
@@ -39,12 +39,24 @@ const env: Record<string, string | undefined> = {
 	// share links and the canonical address name the full site, where a shared Store link actually opens
 	VITE_SHARE_ORIGIN: FULL,
 	VITE_SITE_ORIGIN: FULL,
+	// the stats dashboard (Umami on the VPS, lib/stats.ts): same website as the full site, told apart by hostname
+	VITE_STATS_URL: process.env.VITE_STATS_URL || "https://stats.176-100-37-63.sslip.io",
+	VITE_STATS_WEBSITE_ID: process.env.VITE_STATS_WEBSITE_ID || "815aab28-2473-4c4e-8183-eb61deae5ed5",
 };
 // production rules: devtools shortcuts blocked, obfuscated chunks
 delete env.VITE_ALLOW_DEVTOOLS;
 delete env.VITE_OBFUSCATE;
 
 run(["bunx", "vite", "build", "--outDir", OUT, "--emptyOutDir"], join(ROOT, "shasta"), env);
+
+// the host sends no COOP/COEP: the service worker adds them to Shasta's own pages (public/sw.js LITE_BUILD)
+const swPath = join(OUT, "sw.js");
+const sw = readFileSync(swPath, "utf8");
+if (!sw.includes('"__SHASTA_LITE__"')) {
+	console.error("sw.js has no __SHASTA_LITE__ marker: cannot turn on isolation for Lite");
+	process.exit(1);
+}
+writeFileSync(swPath, sw.replace('"__SHASTA_LITE__"', '"yes"'));
 
 // on-device AI is off in the lite edition: its runtime is most of the size and is never requested
 rmSync(join(OUT, "ort"), { recursive: true, force: true });

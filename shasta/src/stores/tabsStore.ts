@@ -27,6 +27,7 @@ import { ACCENTS, getSettings, type AccentName } from './settingsStore'
 import { useLibrary } from './libraryStore'
 import { useUi } from './uiStore'
 import { trackEvent, trackSite } from '@/lib/usage'
+import { trackPage } from '@/lib/stats'
 
 const CLOSED_LIMIT = 25
 const SESSION_KEY = 'shasta-session'
@@ -491,6 +492,7 @@ export const useTabs = create<TabsState>()((set, get) => {
         else {
           const page = internalPage(url)
           if (page && page !== 'newtab') trackEvent(`page.${page}`)
+          if (page) trackPage(`/${page}`)
         }
       }
       const next = pushEntry(tab, url, titleFor(url))

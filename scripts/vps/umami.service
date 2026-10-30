@@ -1,0 +1,31 @@
+# /etc/systemd/system/umami.service (source: scripts/vps/umami.service)
+# The stats dashboard: Umami (MIT, https://umami.is), self-hosted. Published on loopback only; Caddy is its public front
+# door (stats.176-100-37-63.sslip.io, see Caddyfile). Pinned version: bump the tag on purpose, never `latest`.
+#   TRACKER_SCRIPT_NAME / COLLECT_API_ENDPOINT: neutral names, so generic ad-block rules for "umami" miss them
+#   TRUSTED_PROXIES=private: Caddy reaches the container through Docker's bridge, so the visitor IP comes from its
+#     X-Forwarded-For (Caddy overwrites whatever the client sent). The IP is only used for the location and the
+#     salted session hash (SALT_ROTATION, default month); Umami does not store it.
+#   MCP_ENABLED: read-only MCP at /mcp (API key as a bearer token), used by Claude Code
+[Unit]
+Description=Umami stats dashboard in Docker
+After=umami-db.service
+Requires=umami-db.service docker.service
+
+[Service]
+Type=simple
+ExecStartPre=-/usr/bin/docker rm -f umami
+ExecStart=/usr/bin/docker run --rm --name umami --network umami -p 127.0.0.1:3000:3000 \
+	--env-file /etc/shasta/umami.env \
+	-e DISABLE_TELEMETRY=1 -e DISABLE_UPDATES=1 -e MCP_ENABLED=1 \
+	-e TRACKER_SCRIPT_NAME=s.js -e COLLECT_API_ENDPOINT=/api/e \
+	-e TRUSTED_PROXIES=private \
+	--cap-drop ALL --security-opt no-new-privileges --memory 2g \
+	--log-opt max-size=20m --log-opt max-file=3 \
+	ghcr.io/umami-software/umami:3.4.1
+ExecStop=/usr/bin/docker stop -t 15 umami
+Restart=always
+RestartSec=3
+TimeoutStartSec=180
+
+[Install]
+WantedBy=multi-user.target
