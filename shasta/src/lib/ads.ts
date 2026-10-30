@@ -30,8 +30,8 @@ export const ADSENSE_SLOT = str(import.meta.env.VITE_ADSENSE_SLOT)
 const MONETAG_ZONE = str(import.meta.env.VITE_MONETAG_ZONE)
 const MONETAG_SDK = str(import.meta.env.VITE_MONETAG_SDK) || `show_${MONETAG_ZONE}`
 const MONETAG_SRC = str(import.meta.env.VITE_MONETAG_SRC) || 'https://libtl.com/sdk.js'
-/** The exact tag URL from the dashboard (`VITE_MONETAG_TAG`), when Monetag gives the classic per-account delivery
- *  URL (`//<their-domain>/5/<zone>`). The tag is self-contained, so no zone attr is added for this form. */
+/** The exact tag URL from the dashboard (`VITE_MONETAG_TAG`): the classic delivery URL (`//<their-domain>/5/<zone>`,
+ *  self-contained) or the Multitag (`https://<their-domain>/88/tag.min.js` + `data-zone`, give VITE_MONETAG_ZONE too). */
 const MONETAG_TAG = str(import.meta.env.VITE_MONETAG_TAG)
 
 /** A provider is configured at all. */
@@ -67,7 +67,7 @@ function loadProviders() {
   if (ADSENSE_CLIENT) addScript(`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(ADSENSE_CLIENT)}`, { crossorigin: 'anonymous' })
   // data-cfasync="false" is Monetag's own instruction: Cloudflare Rocket Loader must leave their tag alone. Harmless
   // where Rocket Loader is off.
-  if (MONETAG_TAG) addScript(MONETAG_TAG, { 'data-cfasync': 'false' })
+  if (MONETAG_TAG) addScript(MONETAG_TAG, { ...(MONETAG_ZONE && { 'data-zone': MONETAG_ZONE }), 'data-cfasync': 'false' })
   else if (MONETAG_ZONE) addScript(MONETAG_SRC, { 'data-zone': MONETAG_ZONE, 'data-sdk': MONETAG_SDK, 'data-cfasync': 'false' })
 }
 
