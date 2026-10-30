@@ -428,6 +428,9 @@ export function Player(props: PlayerProps) {
   const [embedPlaying, setEmbedPlaying] = useState(false)
   const [embedTime, setEmbedTime] = useState(0)
   const [embedDur, setEmbedDur] = useState(0)
+  // the embed's own frame swallows key events, so our shortcuts are bound inside its document too
+  const actions = useRef({ toggle: () => {}, nudge: (_: number) => {}, mute: () => {}, fullscreen: () => {} })
+  const keysBound = useRef(new WeakSet<Document>())
 
   useEffect(() => {
     if (!isEmbed) {
@@ -448,9 +451,23 @@ export function Player(props: PlayerProps) {
       }
       return null
     }
+    const attachKeys = (doc: Document) => {
+      if (keysBound.current.has(doc)) return
+      keysBound.current.add(doc)
+      doc.addEventListener('keydown', (ev: KeyboardEvent) => {
+        const k = ev.key.toLowerCase()
+        if (k === ' ' || k === 'k') { ev.preventDefault(); actions.current.toggle() }
+        else if (k === 'arrowright') { ev.preventDefault(); actions.current.nudge(10) }
+        else if (k === 'arrowleft') { ev.preventDefault(); actions.current.nudge(-10) }
+        else if (k === 'm') actions.current.mute()
+        else if (k === 'f') actions.current.fullscreen()
+      })
+    }
     const tick = () => {
       try {
-        const v = find(embedFrame.current?.contentDocument)
+        const doc = embedFrame.current?.contentDocument
+        if (doc) attachKeys(doc)
+        const v = find(doc)
         if (!v) return
         if (embedVideoRef.current !== v) {
           embedVideoRef.current = v
@@ -475,6 +492,15 @@ export function Player(props: PlayerProps) {
   const curTime = isEmbed ? embedTime : time
   const curDur = isEmbed ? embedDur : duration
   const curBuffered = isEmbed ? embedDur : buffered
+  actions.current = {
+    toggle,
+    nudge: (d: number) => {
+      const el = video.current ?? embedVideoRef.current
+      if (el) seek(el.currentTime + d)
+    },
+    mute: () => setMuted((m) => !m),
+    fullscreen: toggleFullscreen,
+  }
 
   const proxyToggle = (
     <button
