@@ -40,8 +40,9 @@ const fmt = (s: number) => {
   return `${h ? `${h}:${String(m).padStart(2, '0')}` : m}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 }
 
-/** The embed path: a real player page, run through Shasta's proxy so its ads are stripped and its host stays hidden. */
-function EmbedView({ url, title }: { url: string; title: string }) {
+/** The embed path: a real player page, run through Shasta's proxy so its ads are stripped and its host stays hidden.
+ *  It reports a proxied load failure (the proxy writes a shasta-error marker into the frame) so the player can move on. */
+function EmbedView({ url, title, nonce, onFail }: { url: string; title: string; nonce: number; onFail: (msg: string) => void }) {
   const ref = useRef<HTMLIFrameElement>(null)
   useEffect(() => {
     const el = ref.current
@@ -52,7 +53,31 @@ function EmbedView({ url, title }: { url: string; title: string }) {
     }
     const id = proxy.proxySubFrame(el, url)
     return () => proxy.releaseSubFrame(id)
-  }, [url])
+  }, [url, nonce])
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    let done = false
+    const check = () => {
+      if (done) return
+      try {
+        const meta = el.contentDocument?.querySelector<HTMLMetaElement>('meta[name="shasta-error"]')
+        if (meta?.content) {
+          done = true
+          onFail(meta.content)
+        }
+      } catch {
+        /* not same-origin yet: the load event will come again */
+      }
+    }
+    const onLoad = () => window.setTimeout(check, 250)
+    el.addEventListener('load', onLoad)
+    const t = window.setTimeout(check, 15_000) // an embed that never finishes loading
+    return () => {
+      el.removeEventListener('load', onLoad)
+      clearTimeout(t)
+    }
+  }, [url, nonce, onFail])
   return (
     <iframe ref={ref} title={title} className="size-full border-0 bg-black" allow="autoplay; fullscreen; encrypted-media; picture-in-picture; clipboard-write" />
   )
@@ -90,6 +115,7 @@ export function Player(props: PlayerProps) {
   const [hlsSubs, setHlsSubs] = useState<Track[]>([])
   const [subOn, setSubOn] = useState(-1)
   const [error, setError] = useState('')
+  const [embedNonce, setEmbedNonce] = useState(0)
 
   const isEmbed = candidate.kind === 'embed'
   const extSubs = useMemo(() => candidate.subtitles ?? [], [candidate])
@@ -110,6 +136,27 @@ export function Player(props: PlayerProps) {
     document.addEventListener('fullscreenchange', on)
     return () => document.removeEventListener('fullscreenchange', on)
   }, [])
+
+  // a new source (or a manual retry) clears the previous failure
+  useEffect(() => {
+    errored.current = false
+    setError('')
+  }, [candidate.id, embedNonce])
+
+  // an embed that fails (the proxy writes a shasta-error marker) surfaces it and hops to the next source
+  const onEmbedFail = useCallback(
+    (msg: string) => {
+      if (errored.current) return
+      errored.current = true
+      setError(msg || 'This source failed to load.')
+      if (candidates.length <= 1) return
+      const id = candidate.id
+      window.setTimeout(() => {
+        if (errored.current && cb.current.candidate.id === id) cb.current.onFailed?.(candidate)
+      }, 1400)
+    },
+    [candidates.length, candidate],
+  )
 
   // ---- set up the media engine when the source changes ----
   useEffect(() => {
@@ -335,7 +382,7 @@ export function Player(props: PlayerProps) {
   return (
     <div ref={box} tabIndex={0} onMouseMove={wake} onFocus={wake} className="group relative aspect-video w-full overflow-hidden rounded-xl bg-black outline-none">
       {isEmbed ? (
-        <EmbedView url={src} title={title} />
+        <EmbedView url={src} title={title} nonce={embedNonce} onFail={onEmbedFail} />
       ) : (
         <video ref={video} poster={poster ?? undefined} crossOrigin="anonymous" playsInline className="size-full bg-black" onClick={toggle} onDoubleClick={toggleFullscreen}>
           {extSubs.map((t, i) => (
@@ -355,7 +402,7 @@ export function Player(props: PlayerProps) {
           <div>
             <p className="text-sm text-white/90">{error}</p>
             <div className="mt-3 flex justify-center gap-2">
-              <button onClick={() => { errored.current = false; setError(''); video.current?.load(); void video.current?.play().catch(() => undefined) }} className="rounded-lg bg-white/15 px-3 py-1.5 text-sm text-white hover:bg-white/25"><RotateCcw className="mr-1 inline size-4" /> Retry</button>
+              <button onClick={() => { errored.current = false; setError(''); if (isEmbed) setEmbedNonce((n) => n + 1); else { video.current?.load(); void video.current?.play().catch(() => undefined) } }} className="rounded-lg bg-white/15 px-3 py-1.5 text-sm text-white hover:bg-white/25"><RotateCcw className="mr-1 inline size-4" /> Retry</button>
               {candidates.length > 1 && <button onClick={() => setMenu('source')} className="rounded-lg bg-white/15 px-3 py-1.5 text-sm text-white hover:bg-white/25">Try another source</button>}
             </div>
           </div>
