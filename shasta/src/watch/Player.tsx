@@ -400,7 +400,7 @@ export function Player(props: PlayerProps) {
       {error && (
         <div className="absolute inset-0 grid place-items-center bg-black/70 p-6 text-center">
           <div>
-            <p className="text-sm text-white/90">{error}</p>
+            <p className="text-sm text-white/90">{error}{candidates.length > 1 ? <span className="text-white/60"> Trying another source…</span> : null}</p>
             <div className="mt-3 flex justify-center gap-2">
               <button onClick={() => { errored.current = false; setError(''); if (isEmbed) setEmbedNonce((n) => n + 1); else { video.current?.load(); void video.current?.play().catch(() => undefined) } }} className="rounded-lg bg-white/15 px-3 py-1.5 text-sm text-white hover:bg-white/25"><RotateCcw className="mr-1 inline size-4" /> Retry</button>
               {candidates.length > 1 && <button onClick={() => setMenu('source')} className="rounded-lg bg-white/15 px-3 py-1.5 text-sm text-white hover:bg-white/25">Try another source</button>}
