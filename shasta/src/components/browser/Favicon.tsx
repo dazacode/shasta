@@ -4,6 +4,7 @@ import { Logo } from '@/components/Logo'
 import { internalPage, originOf } from '@/lib/url'
 import { useLibrary } from '@/stores/libraryStore'
 import { cn } from '@/lib/utils'
+import { MEDIA_CORS } from '@/lib/appApi'
 
 const INTERNAL_ICONS = { newtab: Logo, history: History, bookmarks: Bookmark, downloads: Download, settings: Settings, store: Store, library: LibraryIcon, app: AppWindow, support: HeartHandshake, 'get-app': Download, chat: MessagesSquare, discord: MessagesSquare, 'whats-new': Sparkles } as const
 
@@ -32,7 +33,8 @@ export function Favicon({ url, loading, error, className, appIcon }: Props) {
       </svg>
     )
   }
-  if (appIcon && !error) return <img src={appIcon} alt="" className={cn(size, 'rounded-[4px] object-cover')} draggable={false} />
+  // a Store icon comes from the backend, another origin in the installed app and Shasta Lite: CORS mode, like the Store's own <img>
+  if (appIcon && !error) return <img src={appIcon} crossOrigin={MEDIA_CORS} alt="" className={cn(size, 'rounded-[4px] object-cover')} draggable={false} />
   if (error) return <AlertTriangle className={cn(size, 'text-shasta-warn')} aria-hidden />
   if (page) {
     const Icon = INTERNAL_ICONS[page]

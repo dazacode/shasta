@@ -1,5 +1,6 @@
 // Fetch wrapper for the Store backend. Every failure becomes an ApiError with a message that is safe to show people.
 import { APP_API_ORIGIN } from '@/lib/appApi'
+import { FULL_SITE, LITE } from '@/lib/edition'
 
 /**
  * In the installed app the backend is another origin (lib/appApi.ts): the `/api/media/...` addresses in responses
@@ -9,6 +10,17 @@ function absoluteMedia(v: unknown): unknown {
   if (typeof v === 'string') return v.startsWith('/api/media/') ? APP_API_ORIGIN + v : v
   if (Array.isArray(v)) return v.map(absoluteMedia)
   if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, absoluteMedia(x)]))
+  return v
+}
+
+// Shasta Lite ships no on-device AI runtime, so the Shasta AI app (slug from ai/bridge.ts, not imported: that module
+// pulls in the whole AI engine) is left out of every Store answer there, and opening it says where it works.
+const LITE_HIDDEN = 'shasta-ai'
+const hasHiddenSlug = (v: unknown) => !!v && typeof v === 'object' && (v as { slug?: unknown }).slug === LITE_HIDDEN
+
+function withoutLiteHidden(v: unknown): unknown {
+  if (Array.isArray(v)) return v.filter((x) => !hasHiddenSlug(x)).map(withoutLiteHidden)
+  if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, withoutLiteHidden(x)]))
   return v
 }
 
@@ -65,6 +77,13 @@ async function request<T>(method: string, path: string, { body, signal, headers 
   if (!res.ok) {
     const err = (json as { error?: { code?: string; message?: string; details?: unknown } } | null)?.error
     throw new ApiError(res.status, err?.message ?? (res.status >= 500 ? 'The Store server had a problem. Try again in a moment.' : `Request failed (${res.status}).`), err?.code, err?.details)
+  }
+  if (LITE) {
+    // the listing or launch of the hidden app itself (an old link, a typed app:// address, an earlier install)
+    if (hasHiddenSlug(json) || hasHiddenSlug((json as { app?: unknown } | null)?.app)) {
+      throw new ApiError(409, `Shasta AI needs the full Shasta: ${FULL_SITE}`, 'lite_unavailable')
+    }
+    json = withoutLiteHidden(json)
   }
   return (APP_API_ORIGIN ? absoluteMedia(json) : json) as T
 }
