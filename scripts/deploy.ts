@@ -24,7 +24,7 @@ const force = process.argv.includes("--force");
 const STAGED = join(ROOT, ".deploy", "staged.json");
 // --prod ships against the backend staging was checked with, unless one is given
 const stagedBackend = prod && existsSync(STAGED) ? JSON.parse(readFileSync(STAGED, "utf8")).backend : undefined;
-const backend = (process.env.SHASTA_BACKEND_URL ?? stagedBackend)?.replace(/\/+$/, "");
+let backend = (process.env.SHASTA_BACKEND_URL ?? stagedBackend)?.replace(/\/+$/, "");
 const PAGES_HOST = process.env.SHASTA_PAGES_HOST ?? "shasta-dtg.pages.dev"; // Cloudflare picks the subdomain when the project is created
 
 if (target !== "vercel" && target !== "cloudflare") {
@@ -50,8 +50,28 @@ for (const name of ["VITE_APP_BUNDLE_URL", "VITE_APP_UPDATE_MANIFEST_URL"]) {
 		process.exit(1);
 	}
 }
+// Preview deployments (staging) have no SHASTA_BACKEND_URL in the Pages settings, so without a baked backend
+// staging loads with browsing and the Store dead. Ask the VPS for its current quick tunnel instead.
+if (!backend && target === "cloudflare" && !prod) {
+	backend = vpsTunnel();
+	if (backend) console.log(`backend: ${backend} (the VPS's current tunnel)`);
+	else if (process.env.SHASTA_DRY_RUN !== "1") {
+		console.error("staging needs a backend: set SHASTA_BACKEND_URL (could not read the tunnel with `ssh shasta`)");
+		process.exit(1);
+	}
+}
 if (!backend) {
 	console.warn("\x1b[33mSHASTA_BACKEND_URL not set: the site will load but browsing and the Store need a backend.\x1b[0m");
+}
+
+function vpsTunnel(): string | undefined {
+	const ssh = Bun.spawnSync(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "shasta", "curl -s 127.0.0.1:20241/quicktunnel"], { stderr: "ignore" });
+	try {
+		const host = JSON.parse(ssh.stdout.toString()).hostname;
+		return typeof host === "string" && host ? `https://${host}` : undefined;
+	} catch {
+		return undefined;
+	}
 }
 
 // Same policy as server/server.mjs: isolation headers everywhere, /assets/ immutable, the rest revalidated.
