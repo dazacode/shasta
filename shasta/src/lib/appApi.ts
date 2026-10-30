@@ -3,6 +3,8 @@
 // server instead (it allows the app's origin, see APP_ORIGINS in .env.example), always without credentials: the app
 // uses the anonymous API. Imported first in main.tsx, before anything can fetch. A normal tab is never touched.
 
+import { FULL_SITE, LITE } from './edition'
+
 const origin = (v: unknown): string => {
   if (typeof v !== 'string') return ''
   try {
@@ -14,8 +16,11 @@ const origin = (v: unknown): string => {
   }
 }
 
-/** The backend the installed app talks to, or '' (in a normal tab, or when the build names none). */
-export const APP_API_ORIGIN = location.protocol === 'isolated-app:' ? origin(import.meta.env.VITE_APP_API_ORIGIN) : ''
+/**
+ * The backend the installed app (or Shasta Lite, lib/edition.ts, on a host without one) talks to, or '' (in a normal
+ * tab, or when the build names none).
+ */
+export const APP_API_ORIGIN = location.protocol === 'isolated-app:' ? origin(import.meta.env.VITE_APP_API_ORIGIN) : LITE ? origin(FULL_SITE) : ''
 
 /**
  * `crossOrigin` for Store artwork: in the app it comes from the backend, and only a CORS-mode image load passes the

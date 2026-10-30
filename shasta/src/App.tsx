@@ -7,6 +7,7 @@ import { Toolbar } from '@/components/browser/Toolbar'
 import { BookmarksBar } from '@/components/browser/BookmarksBar'
 import { BrowserView } from '@/components/browser/BrowserView'
 import { ConnectionBanner } from '@/components/browser/ConnectionBanner'
+import { LiteBanner } from '@/components/browser/LiteBanner'
 import { ShortcutsDialog } from '@/components/browser/ShortcutsDialog'
 import { Toasts } from '@/components/browser/Toasts'
 import { PrivateTabDialog } from '@/components/browser/PrivateTabDialog'
@@ -96,6 +97,7 @@ export default function App() {
                 {showBar && <BookmarksBar />}
               </>
             )}
+            <LiteBanner />
             <ConnectionBanner />
             <div className="relative flex min-h-0 flex-1">
               <BrowserView />

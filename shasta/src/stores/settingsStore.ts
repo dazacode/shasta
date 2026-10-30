@@ -6,6 +6,7 @@ import { available as directAvailable } from '@/proxy/directFrame'
 import type { WallpaperName } from '@/lib/wallpaper'
 import type { Tier } from '@/ai/catalog'
 import { sanitizeRecord, type SupporterRecord } from '@/lib/supporter'
+import { LITE } from '@/lib/edition'
 
 export type ThemeMode = 'system' | 'light' | 'dark'
 export type AccentName = 'sky' | 'violet' | 'emerald' | 'amber' | 'rose' | 'orange'
@@ -169,7 +170,7 @@ export const DEFAULT_SHORTCUTS: Shortcut[] = [
   { id: 'ddg', title: 'DuckDuckGo', url: 'https://duckduckgo.com/' },
 ]
 
-export const defaultSettings = (): Settings => ({
+export const defaultSettings = (): Settings => liteSettings({
   theme: 'system',
   accent: 'sky',
   density: 'comfortable',
@@ -223,6 +224,15 @@ export const defaultSettings = (): Settings => ({
   wispUrls: [],
 })
 
+/**
+ * Shasta Lite (lib/edition.ts): on-device AI (its runtime is not shipped there) and the offline shell (the host rewrites
+ * index.html, so its checksums never match) are off and stay off. A normal build returns the settings unchanged.
+ */
+function liteSettings(s: Settings): Settings {
+  if (!LITE) return s
+  return { ...s, ai: { ...s.ai, enabled: false }, offlineShell: false, offlineAiRuntime: false }
+}
+
 interface SettingsState {
   settings: Settings
   update: (patch: Partial<Settings>) => void
@@ -266,7 +276,7 @@ export function mergeSettings(persisted: unknown, current: SettingsState): Setti
   settings.supporter = sanitizeRecord(settings.supporter)
   if (typeof settings.earlyPreviews !== 'boolean') settings.earlyPreviews = false
   settings.wispUrls = sanitizeUrls(settings.wispUrls)
-  return { ...current, settings }
+  return { ...current, settings: liteSettings(settings) }
 }
 
 const clampNum = (v: unknown, lo: number, hi: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : lo)

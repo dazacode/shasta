@@ -286,13 +286,18 @@ class ShastaPlugin extends ManagedPlugin {
     // observe attachment downloads that Shasta's proxy is serving
     this.tap(frame.hooks.fetch.response, (ctx: { request: { rawUrl: URL; mode?: string }; parsed: { url: URL; destination: string } }, props: { response: { body: unknown; headers: { get(k: string): string | null; set(k: string, v: string): void; delete(k: string): void }; status: number } }) => {
       const headers = props.response.headers
-      // Document-Isolation-Policy (TurboWarp sends it) moves the document into its own agent cluster: the shell
-      // can no longer read it, takes that for the browser's error page and covers a working page with ours
+      // A site's OWN Document-Isolation-Policy (TurboWarp sends one) would move its document into a different
+      // agent cluster than the shell -> the shell can no longer read it and covers a working page with an error.
+      // So drop the site's value and set OURS below, matching the shell exactly.
       headers.delete('document-isolation-policy')
-      // when the shell is cross-origin isolated, every proxied document must opt in too or the browser refuses to embed it
+      // When the shell is cross-origin isolated, every proxied document must opt in too or the browser refuses to
+      // embed it. Document-Isolation-Policy is what keeps everything isolated when the app is embedded in a
+      // non-COI page (a Google Site, docs/google-sites-embed.md): it applies per-frame regardless of ancestors.
+      // Chrome 137+ desktop honours it; Firefox/Safari ignore the header and fall back to COOP+COEP.
       if (self.crossOriginIsolated) {
         headers.set('cross-origin-embedder-policy', 'credentialless')
         headers.set('cross-origin-resource-policy', 'cross-origin')
+        headers.set('document-isolation-policy', 'isolate-and-credentialless')
       }
       // Only page navigations are downloads. fetch()/XHR calls often carry `Content-Disposition: attachment`
       // too (Google and YouTube APIs do, as an anti-hijacking measure) and must never be listed.

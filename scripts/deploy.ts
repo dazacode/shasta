@@ -75,7 +75,13 @@ function vpsTunnel(): string | undefined {
 }
 
 // Same policy as server/server.mjs: isolation headers everywhere, /assets/ immutable, the rest revalidated.
-const isolation = { "Cross-Origin-Opener-Policy": "same-origin", "Cross-Origin-Embedder-Policy": "credentialless" };
+// Document-Isolation-Policy is the part that still isolates the app when it is embedded in a non-COI page such
+// as a Google Site (docs/google-sites-embed.md); Chrome 137+ desktop honours it, other browsers ignore it.
+const isolation = {
+	"Cross-Origin-Opener-Policy": "same-origin",
+	"Cross-Origin-Embedder-Policy": "credentialless",
+	"Document-Isolation-Policy": "isolate-and-credentialless",
+};
 
 const stage = join(ROOT, ".deploy", target);
 rmSync(stage, { recursive: true, force: true });
@@ -86,7 +92,14 @@ if (target === "vercel") {
 	const config = {
 		cleanUrls: false,
 		headers: [
-			{ source: "/(.*)", headers: Object.entries(isolation).map(([key, value]) => ({ key, value })) },
+			{
+				source: "/(.*)",
+				headers: [
+					...Object.entries(isolation).map(([key, value]) => ({ key, value })),
+					// same Google-embed allowance as the Cloudflare `_headers` block (see above)
+					{ key: "Content-Security-Policy", value: "frame-ancestors 'self' https://sites.google.com https://*.gstatic.com https://*.googleusercontent.com" },
+				],
+			},
 			{ source: "/((?!assets/).*)", headers: [{ key: "Cache-Control", value: "no-cache" }] },
 			{ source: "/assets/(.*)", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },
 			{ source: "/sw.js", headers: [{ key: "Service-Worker-Allowed", value: "/" }] },
@@ -98,8 +111,21 @@ if (target === "vercel") {
 	run(["vercel", "link", "--yes", "--project", project, "--scope", scope]);
 	run(["vercel", "deploy", "--prod", "--yes", "--scope", scope]);
 } else {
+	// ONE `/*` block, not two. Cloudflare Pages keys header rules by source pattern, and a second `/*` block
+	// REPLACES the first: splitting the isolation headers out silently dropped COOP/COEP, so production served
+	// no cross-origin isolation and threaded-wasm games broke. Keep every `/*` header in this single block.
+	// frame-ancestors lets a public Google Site embed the app (docs/google-sites-embed.md); the whole ancestor
+	// chain must be named (sites.google.com -> *.gstatic.com -> *.googleusercontent.com) and `'self'` keeps our
+	// own same-origin frames. The crawler hints below the isolation headers are for school-filter classifiers
+	// (docs/unblocking.md): advertise the sitemap and never let the crawler skip the SPA.
 	const headers = [
-		`/*\n${Object.entries(isolation).map(([k, v]) => `  ${k}: ${v}`).join("\n")}`,
+		[
+			"/*",
+			...Object.entries(isolation).map(([k, v]) => `  ${k}: ${v}`),
+			"  X-Robots-Tag: all",
+			'  Link: </sitemap.xml>; rel="sitemap"',
+			"  Content-Security-Policy: frame-ancestors 'self' https://sites.google.com https://*.gstatic.com https://*.googleusercontent.com",
+		].join("\n"),
 		"/assets/*\n  Cache-Control: public, max-age=31536000, immutable",
 		"/sw.js\n  Service-Worker-Allowed: /\n  Cache-Control: no-cache",
 	];

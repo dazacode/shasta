@@ -10,6 +10,7 @@
 		"build": "bun scripts/run.ts build",
 		"doctor": "bun scripts/doctor.ts",
 		"deploy": "bun scripts/deploy.ts",
+		"deploy:base44": "bun scripts/deploy-base44.ts",
 		"check": "bun scripts/check.ts",
 		"engine": "bun scripts/engine.ts",
 		"wisp": "bun scripts/wisp.ts",

@@ -5,6 +5,8 @@
 // Offline here means Shasta itself: its interface, settings, bookmarks, history, the library and AI models already
 // on the device. Opening websites always needs a network and a reachable Wisp relay.
 
+import { LITE } from './edition'
+
 export type OfflineGroup = 'core' | 'ai'
 
 export interface OfflineFile {
@@ -269,6 +271,12 @@ export async function checkUpdate(): Promise<UpdateCheck> {
   const before = await info()
   const version = before?.version ?? null
   if (!navigator.onLine) return { state: 'offline', version, latest: null, error: null }
+  // Shasta Lite has no offline shell to update, and its host caches offline-manifest.json for an hour, so comparing
+  // versions would report updates that "failed": let the browser look for a new worker and leave it at that
+  if (LITE) {
+    await reg?.update().catch(() => undefined)
+    return { state: 'current', version, latest: null, error: null }
+  }
   let latest: string | null | 'signin'
   try {
     latest = await serverVersion()

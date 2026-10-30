@@ -69,7 +69,7 @@ const shell = http.createServer(async (req, res) => {
     const stat = await fs.stat(file)
     if (!stat.isFile()) throw new Error('nf')
     const body = deployed?.[rel]
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Content-Length': body ? body.length : stat.size, 'Cache-Control': 'no-cache', ...(process.env.COI !== '0' ? { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'credentialless' } : {}), ...(rel === '/sw.js' ? { 'Service-Worker-Allowed': '/' } : {}) })
+    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Content-Length': body ? body.length : stat.size, 'Cache-Control': 'no-cache', ...(process.env.COI !== '0' ? { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'credentialless', 'Document-Isolation-Policy': 'isolate-and-credentialless' } : {}), ...(rel === '/sw.js' ? { 'Service-Worker-Allowed': '/' } : {}) })
     if (body) return res.end(body)
     createReadStream(file).pipe(res)
   } catch {

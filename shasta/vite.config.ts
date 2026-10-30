@@ -8,6 +8,7 @@ import { viteStaticCopy } from 'vite-plugin-static-copy'
 import vitePluginBundleObfuscator from 'vite-plugin-bundle-obfuscator'
 import pkg from './package.json' with { type: 'json' }
 import { offlineManifestPlugin } from './offlineManifest.ts'
+import { seoPlugin } from './seo.ts'
 
 const LICENSES: Record<string, string> = {
   '../LICENSE': 'AGPL-3.0.txt',
@@ -36,6 +37,9 @@ export default defineConfig({
       name: 'engine-version',
       transformIndexHtml: (html) => html.replaceAll('%ENGINE_VERSION%', engineVersion),
     },
+    // canonical/og/JSON-LD origin + robots.txt/sitemap.xml, so school-filter classifiers can find a
+    // topic. VITE_SITE_ORIGIN sets the domain; see docs/unblocking.md.
+    seoPlugin(),
     react(),
     tailwindcss(),
     viteStaticCopy({
@@ -93,7 +97,10 @@ export default defineConfig({
   server: {
     proxy: { '/wisp': { target: 'ws://localhost:8080', ws: true }, '/api': { target: 'http://localhost:8080', ws: true }, '/ai-models': { target: 'http://localhost:8080' } },
     // cross-origin isolation, like the production server (CROSS_ORIGIN_ISOLATION=0 turns it off)
-    headers: process.env.CROSS_ORIGIN_ISOLATION === '0' ? {} : { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'credentialless' },
+    headers:
+      process.env.CROSS_ORIGIN_ISOLATION === '0'
+        ? {}
+        : { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'credentialless', 'Document-Isolation-Policy': 'isolate-and-credentialless' },
     // @dazacode/shasta-wisp lives in the wisp/ submodule, outside this root: allow reading it
     fs: { allow: [path.resolve(import.meta.dirname, '..')] },
   },

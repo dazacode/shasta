@@ -10,6 +10,7 @@ import { AppIcon, Message } from './components'
 import { useStore } from './storeStore'
 import type { AppCard, Suggestions } from './types'
 import { SupporterBadge } from '@/components/SupporterBadge'
+import { FULL_SITE, LITE } from '@/lib/edition'
 
 const StoreHome = lazy(() => import('./StoreHome'))
 const StoreSearch = lazy(() => import('./StoreSearch'))
@@ -233,7 +234,7 @@ export function StorePage({ tabId, url }: { tabId: string; url: string }) {
           </header>
           {offline && (
             <div role="alert" className="mx-5 mb-2 flex items-center gap-2 rounded-xl bg-shasta-warn/15 px-4 py-2 text-sm text-shasta-warn md:mx-8">
-              <CloudOff className="size-4 shrink-0" /> {noBackend ? "The Store isn't connected in this development build yet. Your library on this device still works." : "The Store server can't be reached. Browsing and your installed apps may be unavailable until you're back online."}
+              <CloudOff className="size-4 shrink-0" /> {noBackend && LITE ? `The Store is on the full Shasta: ${FULL_SITE}` : noBackend ? "The Store isn't connected in this development build yet. Your library on this device still works." : "The Store server can't be reached. Browsing and your installed apps may be unavailable until you're back online."}
             </div>
           )}
           <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto px-5 pb-12 md:px-8">

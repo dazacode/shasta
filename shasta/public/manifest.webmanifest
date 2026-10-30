@@ -2,7 +2,7 @@
   "id": "/",
   "name": "Shasta",
   "short_name": "Shasta",
-  "description": "A browser-style shell on the Scramjet proxy",
+  "description": "An education-friendly web browser for students: research, read and run classroom learning apps from any school computer.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

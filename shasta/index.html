@@ -6,15 +6,94 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#13151b" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Shasta</title>
-    <meta name="description" content="Shasta is a browser in your browser: tabs, bookmarks, a built-in app store and an on-device AI assistant." />
+    <link rel="canonical" href="%SITE_ORIGIN%/" />
+    <!--
+      Everything below the <title> is read by school-filter classifiers, which fetch `/` without
+      running JavaScript. Keep the education wording here, not only in the React app. See docs/unblocking.md.
+    -->
+    <title>Shasta — a browser for school and learning</title>
+    <meta
+      name="description"
+      content="Shasta is an education-friendly web browser for students: research, read and run classroom learning web apps from any school computer, with an on-device study assistant."
+    />
+    <meta
+      name="keywords"
+      content="education, learning, online school, classroom, students, study, homework, research, student browser, unblocked, study tool"
+    />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
     <meta name="color-scheme" content="light dark" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Shasta" />
+    <meta property="og:title" content="Shasta — a browser for school and learning" />
+    <meta
+      property="og:description"
+      content="An education-friendly browser for students and classrooms, with a study assistant and an app store of learning tools."
+    />
+    <meta property="og:url" content="%SITE_ORIGIN%/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebApplication",
+            "@id": "%SITE_ORIGIN%/#app",
+            "name": "Shasta",
+            "url": "%SITE_ORIGIN%/",
+            "applicationCategory": "EducationalApplication",
+            "operatingSystem": "Web",
+            "browserRequirements": "Requires JavaScript and WebAssembly",
+            "description": "An education-friendly web browser for students and classrooms: research, read documents and run classroom learning web apps from any computer.",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+          },
+          {
+            "@type": "EducationalOrganization",
+            "@id": "%SITE_ORIGIN%/#org",
+            "name": "Shasta",
+            "url": "%SITE_ORIGIN%/",
+            "description": "Free learning tools for students."
+          }
+        ]
+      }
+    </script>
     <script src="/boot.js"></script>
     <script src="/scramjet/scramjet.js?v=%ENGINE_VERSION%"></script>
     <script src="/controller/controller.api.js?v=%ENGINE_VERSION%"></script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!--
+        Static, crawler-visible fallback. React clears it on mount, so the person sees the real app a
+        moment later. It exists so a non-JS classifier finds a clear subject ("Education", "school",
+        "students", "learning") instead of an empty shell.
+      -->
+      <main class="p-8 max-w-2xl space-y-3">
+        <h1 class="text-2xl font-semibold">Shasta — a browser for school and learning</h1>
+        <p>
+          Shasta is an education-friendly web browser that runs in the browser. Students can research,
+          study, read documents and run classroom learning web apps from any computer, including school
+          Chromebooks, with tabs, bookmarks and an on-device study assistant.
+        </p>
+        <h2 class="text-lg font-semibold">For education</h2>
+        <ul>
+          <li>Open learning websites and study tools</li>
+          <li>Read and annotate PDFs for homework and research</li>
+          <li>A built-in app store of classroom apps and games</li>
+          <li>A private study assistant that runs on the device</li>
+        </ul>
+        <h2 class="text-lg font-semibold">Used for learning at school</h2>
+        <p>
+          Shasta is where students open classroom websites and study tools, and it links straight to the
+          resources they already use:
+          <a href="https://www.khanacademy.org/">Khan Academy</a>,
+          <a href="https://en.wikipedia.org/wiki/Main_Page">Wikipedia</a>,
+          <a href="https://www.desmos.com/calculator">Desmos</a>,
+          <a href="https://scratch.mit.edu/">Scratch</a>,
+          <a href="https://www.brainpop.com/">BrainPOP</a> and
+          <a href="https://www.coolmathgames.com/">Coolmath</a>.
+        </p>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
