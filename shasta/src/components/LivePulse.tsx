@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Flame, MessagesSquare } from 'lucide-react'
 import { api } from '@/store/api'
-import { openLiveSocket } from '@/lib/liveSocket'
+import { watchOnline } from '@/lib/pulse'
 import { useStore } from '@/store/storeStore'
 import { useTabs } from '@/stores/tabsStore'
 import { trackEvent } from '@/lib/usage'
@@ -37,22 +37,12 @@ export function LivePulse({ onOpenSite }: { onOpenSite: (url: string) => void })
     }
     load()
     const timer = setInterval(load, 60_000)
-    const sock = openLiveSocket(
-      '/api/pulse/ws',
-      (raw) => {
-        try {
-          const m = JSON.parse(raw)
-          if (m.type === 'online' && typeof m.online === 'number') setOnline(m.online)
-        } catch {
-          /* ignore */
-        }
-      },
-      () => undefined,
-    )
+    // the window's pulse socket (lib/pulse.ts) is open for as long as the window is; this only listens to it
+    const unwatch = watchOnline(setOnline)
     return () => {
       alive = false
       clearInterval(timer)
-      sock.close()
+      unwatch()
     }
   }, [])
 

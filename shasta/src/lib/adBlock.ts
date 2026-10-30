@@ -8,10 +8,11 @@
 // the library is imported when the engine loads (it is large, and touches the DOM at import time)
 import type { FiltersEngine, RequestType } from '@ghostery/adblocker'
 import type { IMessageFromBackground } from '@ghostery/adblocker-content'
+import { BASE } from './edition'
 
 type Lib = typeof import('@ghostery/adblocker')
 
-export const ENGINE_URL = '/adblock/engine.bin'
+export const ENGINE_URL = `${BASE}adblock/engine.bin`
 
 let engine: FiltersEngine | null = null
 let lib: Lib | null = null

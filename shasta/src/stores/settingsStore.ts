@@ -115,6 +115,10 @@ export interface Settings {
   saveHistory: boolean
   /** answer requests to known ad and tracker hosts with nothing (lib/adBlock.ts) */
   blockAds: boolean
+  /** adverts on Shasta's own pages (lib/ads.ts): new tab, Store, Watch. Never inside the sites you open. */
+  ads: boolean
+  /** the thin advert strip along the bottom edge of the window (components/ads/AdBar.tsx) */
+  adsBar: boolean
   /** refuse new tabs a page opens without a click or key press */
   blockPopups: boolean
   /** anonymous counts of features used and site hostnames opened (lib/usage.ts) */
@@ -206,6 +210,8 @@ export const defaultSettings = (): Settings => liteSettings({
   shortcuts: DEFAULT_SHORTCUTS,
   saveHistory: true,
   blockAds: true,
+  ads: true,
+  adsBar: true,
   blockPopups: true,
   usageStats: true,
   storeForYou: true,

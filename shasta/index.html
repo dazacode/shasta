@@ -56,9 +56,15 @@
         ]
       }
     </script>
+    <!--
+      Monetag site verification (Websites -> Verify -> "Insert code"). Verified this way, NOT with their sw.js,
+      because Shasta already owns /sw.js (offline shell + Scramjet routes) and only one service worker can hold a
+      scope. The meta tag is static so their bot finds it without JS.
+    -->
+    <meta name="monetag" content="1ea87bcd5251a950a6b90145cefdd031" />
     <script src="/boot.js"></script>
-    <script src="/scramjet/scramjet.js?v=%ENGINE_VERSION%"></script>
-    <script src="/controller/controller.api.js?v=%ENGINE_VERSION%"></script>
+    <script src="%BASE_URL%scramjet/scramjet.js?v=%ENGINE_VERSION%"></script>
+    <script src="%BASE_URL%controller/controller.api.js?v=%ENGINE_VERSION%"></script>
   </head>
   <body>
     <div id="root">

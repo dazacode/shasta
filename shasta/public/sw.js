@@ -4,7 +4,8 @@ try {
 		self.trustedTypes.createPolicy("default", { createHTML: (s) => s, createScript: (s) => s, createScriptURL: (s) => s });
 	}
 } catch {}
-importScripts("/controller/controller.sw.js");
+// relative to this file, so a build served from a folder (Lite on jsDelivr) finds the engine next to it
+importScripts("./controller/controller.sw.js");
 
 // ---- offline application shell ------------------------------------------------------------------------------
 // Shasta's own files are kept in a cache named after the build, so the browser interface starts with no network.
@@ -35,6 +36,11 @@ const SHELL_VERSION = "__SHASTA_SHELL_VERSION__";
 // server, on every same-origin page it serves: a document with a different policy would cut the shell off from it.
 // Lite has no offline shell (the host rewrites index.html, so its checksums never match).
 const LITE_BUILD = "__SHASTA_LITE__" === "yes";
+// Lite on jsDelivr (scripts/deploy-jsdelivr.ts stamps the folder, "/gh/<owner>/<repo>/"): the CDN serves .html as plain
+// text, so people open index.svg, which only registers this worker; from then on this worker answers the entry
+// addresses with index.html as a real page (with the isolation headers).
+const CDN_BASE = "__SHASTA_CDN_BASE__";
+const CDN = LITE_BUILD && !CDN_BASE.startsWith("__");
 const ISOLATION = {
 	"Cross-Origin-Opener-Policy": "same-origin",
 	"Cross-Origin-Embedder-Policy": "credentialless",
@@ -57,7 +63,7 @@ addEventListener("fetch", (e) => {
 		return;
 	}
 	if (LITE_BUILD && e.request.mode === "navigate" && new URL(e.request.url).origin === location.origin) {
-		e.respondWith(isolated(e.request));
+		e.respondWith(CDN && isCdnEntry(new URL(e.request.url)) ? cdnApp() : isolated(e.request));
 		return;
 	}
 	if (!SHELL_ON) return;
@@ -90,6 +96,21 @@ async function isolated(request) {
 	const headers = new Headers(response.headers);
 	for (const [k, v] of Object.entries(ISOLATION)) headers.set(k, v);
 	return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
+function isCdnEntry(url) {
+	const rest = url.pathname.slice(CDN_BASE.length);
+	return url.pathname.startsWith(CDN_BASE) && (rest === "" || rest === "index.svg" || rest === "index.html");
+}
+
+/** Lite on jsDelivr: index.html (served by the CDN as text/plain) as the page it is. */
+async function cdnApp() {
+	// revalidated: the CDN lets browsers keep a file for a week
+	const response = await fetch(CDN_BASE + "index.html", { cache: "no-cache" });
+	if (!response.ok) return response;
+	const headers = new Headers({ "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" });
+	for (const [k, v] of Object.entries(ISOLATION)) headers.set(k, v);
+	return new Response(response.body, { status: 200, headers });
 }
 
 /** The cache key for a request the shell may answer, or null to leave the request alone. */

@@ -33,6 +33,11 @@ Sitemap: ${site}/sitemap.xml
 </urlset>
 `
 
+  // ads.txt, only when this build ships an AdSense publisher id: the standard Google line proves the account is
+  // authorised to sell this domain's inventory. `ca-pub-1234` in settings -> `pub-1234` here.
+  const pub = (process.env.VITE_ADSENSE_CLIENT ?? '').trim().replace(/^ca-/, '')
+  const adsTxt = pub ? `google.com, ${pub}, DIRECT, f08c47fec0942fa0\n` : ''
+
   return {
     name: 'shasta-seo',
     // the %SITE_ORIGIN% token in index.html (canonical, og:url, JSON-LD @id)
@@ -41,14 +46,15 @@ Sitemap: ${site}/sitemap.xml
     generateBundle() {
       this.emitFile({ type: 'asset', fileName: 'robots.txt', source: robots })
       this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemap })
+      if (adsTxt) this.emitFile({ type: 'asset', fileName: 'ads.txt', source: adsTxt })
     },
     // and in dev, so both can be checked without a full build
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const url = req.url?.split('?')[0]
-        if (url !== '/robots.txt' && url !== '/sitemap.xml') return next()
+        if (url !== '/robots.txt' && url !== '/sitemap.xml' && !(url === '/ads.txt' && adsTxt)) return next()
         res.setHeader('Content-Type', url.endsWith('.xml') ? 'application/xml' : 'text/plain')
-        res.end(url.endsWith('.xml') ? sitemap : robots)
+        res.end(url === '/robots.txt' ? robots : url === '/ads.txt' ? adsTxt : sitemap)
       })
     },
   }

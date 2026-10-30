@@ -5,7 +5,7 @@
 // Offline here means Shasta itself: its interface, settings, bookmarks, history, the library and AI models already
 // on the device. Opening websites always needs a network and a reachable Wisp relay.
 
-import { LITE } from './edition'
+import { BASE, LITE } from './edition'
 
 export type OfflineGroup = 'core' | 'ai'
 
@@ -180,7 +180,7 @@ export async function requestPersistence(): Promise<boolean | null> {
 export async function signInExpired(): Promise<boolean> {
   if (!navigator.onLine) return false
   try {
-    const res = await fetch('/offline-manifest.json', { cache: 'no-store', redirect: 'manual', credentials: 'same-origin' })
+    const res = await fetch(`${BASE}offline-manifest.json`, { cache: 'no-store', redirect: 'manual', credentials: 'same-origin' })
     return res.type === 'opaqueredirect'
   } catch {
     return false
@@ -237,7 +237,7 @@ export interface UpdateCheck {
 }
 
 async function serverVersion(): Promise<string | null | 'signin'> {
-  const res = await fetch('/offline-manifest.json', { cache: 'no-store', redirect: 'manual', credentials: 'same-origin' })
+  const res = await fetch(`${BASE}offline-manifest.json`, { cache: 'no-store', redirect: 'manual', credentials: 'same-origin' })
   if (res.type === 'opaqueredirect') return 'signin'
   if (!res.ok) return null
   return ((await res.json()) as { version?: string }).version ?? null

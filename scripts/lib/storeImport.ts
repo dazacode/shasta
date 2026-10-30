@@ -13,8 +13,13 @@ const REMOTE_ENV = process.env.SHASTA_SSH_ENV || "/etc/shasta/shasta.env";
 export interface ImportItem {
 	/** the app name shown in the Store */
 	name: string;
-	/** the live web address the linked app opens */
-	url: string;
+	/** the live web address the linked app opens (the source page when this is a package) */
+	url?: string;
+	/**
+	 * Build the app's ZIP. When set the app is uploaded as a `package` (hosted, downloaded and run from the Store),
+	 * instead of a `linked` app that opens `url`. See scripts/lib/packageBuild.ts.
+	 */
+	build?: () => Promise<Uint8Array>;
 	summary: string;
 	description: string;
 	/** original makers, shown first */
@@ -38,6 +43,8 @@ export interface RunOptions {
 	dry?: boolean;
 	only?: string;
 	jobs?: number;
+	/** only touch apps that are new or not yet live under this source (skips re-uploading finished ones) */
+	pending?: boolean;
 }
 
 const die = (msg: string): never => {
@@ -204,6 +211,8 @@ interface Existing {
 	tags: string[];
 	versions: string[];
 	draft?: string;
+	/** has a currently live version (used by `pending` to leave finished apps alone) */
+	live: boolean;
 	screenshots: number;
 }
 const idCache = new Map<string, string>();
@@ -213,11 +222,11 @@ const bump = (v: string) => {
 	return p.join(".");
 };
 const highest = (vs: string[]) => vs.slice().sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).pop();
-const devAppFields = (a: any): Existing => ({ tags: a.tags ?? [], versions: (a.versions ?? []).map((v: any) => v.version), draft: (a.versions ?? []).find((v: any) => v.state === "draft")?.version, screenshots: (a.screenshots ?? []).length });
+const devAppFields = (a: any): Existing => ({ tags: a.tags ?? [], versions: (a.versions ?? []).map((v: any) => v.version), draft: (a.versions ?? []).find((v: any) => v.state === "draft")?.version, live: (a.versions ?? []).some((v: any) => v.state === "live"), screenshots: (a.screenshots ?? []).length });
 
-function appPayload(item: ImportItem, name: string) {
+export function appPayload(item: ImportItem, name: string) {
 	let description = (item.description || "").replace(/\s+/g, " ").trim();
-	if (description.length < 20) description = `${name}${description ? `: ${description}` : ""} — a linked web app from ${item.host.name}.`;
+	if (description.length < 20) description = `${name}${description ? `: ${description}` : ""} — a web app from ${item.host.name}.`;
 	let summary = (item.summary || "").replace(/\s+/g, " ").trim() || description.slice(0, 120);
 	return {
 		name,
@@ -231,6 +240,20 @@ function appPayload(item: ImportItem, name: string) {
 			{ role: "host", name: item.host.name.slice(0, 60), url: item.host.url },
 		].slice(0, 12),
 	};
+}
+
+// Upload a package, waiting out the Store's per-hour upload limit (bulk imports routinely hit it).
+async function uploadPackageWithWait(versionId: string, bytes: Uint8Array) {
+	for (let attempt = 0; attempt < 90; attempt++) {
+		try {
+			return await api<any>("PUT", `/api/dev/versions/${versionId}/package`, { raw: bytes });
+		} catch (e) {
+			if (!/429|too many uploads|rate[_-]?limited/i.test((e as Error).message)) throw e;
+			console.log("  · upload limit reached, waiting 60s…");
+			await Bun.sleep(60_000);
+		}
+	}
+	throw new Error("still rate limited after 90 attempts");
 }
 
 export async function runImport(items: ImportItem[], opts: RunOptions = {}) {
@@ -254,6 +277,7 @@ export async function runImport(items: ImportItem[], opts: RunOptions = {}) {
 	let failed = 0;
 	let cursor = 0;
 	const failures: string[] = [];
+	const skippedNames: string[] = [];
 	const t0 = Date.now();
 
 	const publishOne = async (item: ImportItem) => {
@@ -263,6 +287,12 @@ export async function runImport(items: ImportItem[], opts: RunOptions = {}) {
 		const already = existing.get(key);
 		if (already && !already.tags.includes(item.source)) {
 			skipped++;
+			skippedNames.push(name);
+			return;
+		}
+		// `pending`: a re-run only finishes what is missing, instead of re-uploading everything that is already live
+		if (opts.pending && already?.live) {
+			skipped++;
 			return;
 		}
 		if (opts.dry) {
@@ -270,15 +300,16 @@ export async function runImport(items: ImportItem[], opts: RunOptions = {}) {
 			return;
 		}
 		let version = already ? (already.draft ?? (already.versions.length ? bump(highest(already.versions)!) : "1.0.0")) : "1.0.0";
+		const isPackage = !!item.build;
 		try {
 			let app: any;
 			if (already) {
 				app = await api<any>("PATCH", `/api/dev/apps/${idCache.get(key)}`, { json: appPayload(item, name) });
 			} else {
-				app = await api<any>("POST", "/api/dev/apps", { json: { ...appPayload(item, name), kind: "linked" } });
+				app = await api<any>("POST", "/api/dev/apps", { json: { ...appPayload(item, name), kind: isPackage ? "package" : "linked" } });
 				idCache.set(key, app.id);
 				// remember this name so a second entry with the same name bumps instead of colliding
-				existing.set(key, { tags: [item.source], versions: [version], draft: undefined, screenshots: 0 });
+				existing.set(key, { tags: [item.source], versions: [version], draft: undefined, live: false, screenshots: 0 });
 			}
 			const appId = app.id as string;
 
@@ -301,13 +332,21 @@ export async function runImport(items: ImportItem[], opts: RunOptions = {}) {
 				if (existsSync(shot)) await api("POST", `/api/dev/apps/${appId}/screenshots`, { raw: readFileSync(shot) });
 			}
 
+			// a package app ships its own bytes: build them once, then upload against the draft version
+			const packageBytes: Uint8Array | null = isPackage ? await item.build!() : null;
+
 			// version + submit; retry on a same-name collision (two catalogue entries) or a leftover draft
 			let published = false;
 			for (let attempt = 0; attempt < 6 && !published; attempt++) {
 				try {
-					const v = await api<any>("POST", `/api/dev/apps/${appId}/versions`, { json: { version, notes: item.notes ?? "", linkedUrl: item.url } });
+					const v = await api<any>("POST", `/api/dev/apps/${appId}/versions`, { json: { version, notes: item.notes ?? "", linkedUrl: isPackage ? undefined : item.url } });
 					const draft = (v.versions ?? []).find((x: any) => x.state === "draft" && x.version === version);
 					if (!draft) throw new Error("could not create a draft version");
+					if (packageBytes) {
+						const up = await uploadPackageWithWait(draft.id, packageBytes);
+						const errs: string[] = up?.report?.errors ?? [];
+						if (errs.length) throw new Error(`package rejected: ${errs.slice(0, 3).join("; ")}`);
+					}
 					await api("POST", `/api/dev/versions/${draft.id}/submit`, { json: { keepPrevious: false } });
 					published = true;
 				} catch (e) {
@@ -320,6 +359,12 @@ export async function runImport(items: ImportItem[], opts: RunOptions = {}) {
 						const now = await api<any>("GET", `/api/dev/apps/${appId}`).catch(() => null);
 						const draft = (now?.versions ?? []).find((x: any) => x.state === "draft");
 						if (draft) {
+							// a leftover draft (an earlier run failed before the upload): finish it, do not skip the bytes
+							if (packageBytes) {
+								const up = await uploadPackageWithWait(draft.id, packageBytes);
+								const errs: string[] = up?.report?.errors ?? [];
+								if (errs.length) throw new Error(`package rejected: ${errs.slice(0, 3).join("; ")}`);
+							}
 							await api("POST", `/api/dev/versions/${draft.id}/submit`, { json: { keepPrevious: false } }).catch(() => undefined);
 							published = true;
 						}
@@ -349,6 +394,7 @@ export async function runImport(items: ImportItem[], opts: RunOptions = {}) {
 	rmSync(work, { recursive: true, force: true });
 	closeTunnel();
 	console.log(`\n${done} imported, ${skipped} skipped, ${failed} failed · ${((Date.now() - t0) / 60000).toFixed(1)} min`);
+	if (skippedNames.length) console.log(`\nskipped (a same name already exists from another source):\n${skippedNames.slice(0, 60).map((n) => `  - ${n}`).join("\n")}`);
 	if (failures.length) console.log(`\nfirst failures:\n${failures.slice(0, 40).map((f) => `  - ${f}`).join("\n")}`);
 	if (failed) process.exitCode = 1;
 }

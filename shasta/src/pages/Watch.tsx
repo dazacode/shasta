@@ -11,6 +11,7 @@ import { Player } from '@/watch/Player'
 import { useWatch } from '@/watch/store'
 import type { Candidate, Card, Featured, Kind, Row, Scope, Title } from '@/watch/types'
 import { cn } from '@/lib/utils'
+import { AdSlot } from '@/components/ads/AdSlot'
 
 const SCOPES: { key: Scope; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -158,6 +159,8 @@ export function Watch({ tabId, initial }: { tabId: string; initial: string }) {
       ) : (
         <>
           {scope === 'all' && featured.length > 0 && <Hero items={featured} onOpen={open} />}
+
+          <AdSlot className="my-5" minHeight={110} />
 
           {/* personalized: only when there is real device data */}
           {progress.length > 0 && (

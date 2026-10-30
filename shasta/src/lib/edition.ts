@@ -7,6 +7,12 @@
 
 export const LITE = import.meta.env.VITE_EDITION === 'lite'
 
+/** Lite on an origin other people's pages share (jsDelivr, `bun run deploy:jsdelivr`): see lib/sharedOrigin.ts. */
+export const SHARED_ORIGIN = LITE && import.meta.env.VITE_SHARED_ORIGIN === '1'
+
+/** The folder Shasta is served from: '/' everywhere except on jsDelivr ('/gh/<owner>/<repo>/'). */
+export const BASE = import.meta.env.BASE_URL || '/'
+
 /** Where the whole of Shasta lives, and the backend Shasta Lite talks to. */
 export const FULL_SITE = 'https://shasta-dtg.pages.dev/'
 
@@ -51,6 +57,8 @@ if (LITE && typeof window !== 'undefined' && 'serviceWorker' in navigator) {
   if (window.crossOriginIsolated) {
     try {
       sessionStorage.removeItem(RELOADED)
+      // jsDelivr's index.svg counts its start attempts (scripts/deploy-jsdelivr.ts): the page is up, so that start worked
+      sessionStorage.removeItem('shasta-boot')
     } catch {
       /* storage blocked: nothing to clear */
     }

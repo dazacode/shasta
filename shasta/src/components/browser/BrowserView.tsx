@@ -26,6 +26,7 @@ const DownloadsPage = lazy(() => import('@/pages/Downloads'))
 const SettingsPage = lazy(() => import('@/pages/Settings'))
 const LibraryPage = lazy(() => import('@/store/LibraryPage').then((m) => ({ default: m.LibraryPage })))
 const SupportPage = lazy(() => import('@/pages/Support'))
+const PrivacyPage = lazy(() => import('@/pages/Privacy'))
 const GetAppPage = lazy(() => import('@/pages/GetApp'))
 const DiscordPage = lazy(() => import('@/pages/Discord'))
 const WhatsNewPage = lazy(() => import('@/pages/WhatsNew'))
@@ -182,6 +183,7 @@ const TabView = memo(function TabView({ tab, active }: { tab: Tab; active: boole
             {page === 'store' && <StorePage tabId={tab.id} url={url} />}
             {page === 'library' && <LibraryPage tabId={tab.id} />}
             {page === 'support' && <SupportPage />}
+            {page === 'privacy' && <PrivacyPage />}
             {page === 'discord' && <DiscordPage />}
             {page === 'whats-new' && <WhatsNewPage />}
             {page === 'get-app' && <GetAppPage />}

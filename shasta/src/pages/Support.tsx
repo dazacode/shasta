@@ -23,7 +23,7 @@ function Done({ title, children }: { title: string; children: React.ReactNode })
   )
 }
 
-/** shasta://support: what keeps Shasta running and how to help. Reached on purpose only: no banners, no popups. */
+/** shasta://support: what keeps Shasta running and how to help. Reached on purpose only: the adverts live elsewhere. */
 export default function SupportPage() {
   const sup = useSupporter()
   const [code, setCode] = useState('')
@@ -50,8 +50,11 @@ export default function SupportPage() {
         <section aria-labelledby="support-heading" className="grid gap-2">
           <h2 id="support-heading" className="flex items-center gap-2 text-base font-semibold"><Server className="size-4 text-shasta-accent" aria-hidden /> What support pays for</h2>
           <p className="text-shasta-muted">
-            Every page you open in Shasta travels through Shasta's servers, and the Store, the app hosting and the AI model downloads run there too. That costs money every month, and donations go toward that hosting and bandwidth. Shasta shows no ads.
+            Every page you open in Shasta travels through Shasta's servers, and the Store, the app hosting and the AI model downloads run there too. That costs money every month, and donations go toward that hosting and bandwidth. Shasta has no accounts and no trackers of its own, but it does show adverts on its own pages (the new tab, the Store and Watch) to help pay for them. They are the one third-party thing here; the privacy policy says exactly what they see.
           </p>
+          <div>
+            <Button variant="outline" onClick={() => useTabs.getState().openInternal('privacy')}>Privacy policy</Button>
+          </div>
         </section>
 
         <section aria-labelledby="support-tier" className="grid gap-3">

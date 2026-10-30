@@ -1,4 +1,4 @@
-import { Flag, Gamepad2, HeartHandshake, MessagesSquare, RefreshCw, Share, Sparkles, VenetianMask, Film, Library, Store, ArrowLeft, Gauge, ArrowRight, Download, Home, Keyboard, MoreVertical, Printer, RotateCw, X } from 'lucide-react'
+import { Flag, Gamepad2, HeartHandshake, MessagesSquare, RefreshCw, Share, ShieldCheck, Sparkles, VenetianMask, Film, Library, Store, ArrowLeft, Gauge, ArrowRight, Download, Home, Keyboard, MoreVertical, Printer, RotateCw, X } from 'lucide-react'
 import { shouldSuggestApp } from '@/lib/shastaApp'
 import { IconButton } from './IconButton'
 import { Omnibox } from './Omnibox'
@@ -189,6 +189,9 @@ export function Toolbar() {
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => openInternal('support')}>
             <HeartHandshake /> Support Shasta
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => openInternal('privacy')}>
+            <ShieldCheck /> Privacy policy
           </DropdownMenuItem>
           {shouldSuggestApp() && (
             <DropdownMenuItem onClick={() => openInternal('get-app')}>

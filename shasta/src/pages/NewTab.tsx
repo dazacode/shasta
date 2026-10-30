@@ -26,6 +26,7 @@ import { useStore } from '@/store/storeStore'
 import { useStoreBoot } from '@/store/hooks'
 import { AppIcon } from '@/store/components'
 import { LivePulse } from '@/components/LivePulse'
+import { AdSlot } from '@/components/ads/AdSlot'
 
 function ShortcutTile({ s, onEdit, onRemove, onOpen }: { s: Shortcut; onEdit: () => void; onRemove: () => void; onOpen: () => void }) {
   return (
@@ -376,6 +377,7 @@ export function NewTab({ tabId }: { tabId: string }) {
       {settings.newTabOrder.map((k) => (
         <Fragment key={k}>{sections[k]}</Fragment>
       ))}
+      <AdSlot className="mt-10" />
       {privateNote}
     </div>
   )

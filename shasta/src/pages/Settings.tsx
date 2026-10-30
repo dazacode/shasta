@@ -22,6 +22,7 @@ import { fromManifest, mergeLocal, emptyLocal } from '@/store/localLibrary'
 import { useStore } from '@/store/storeStore'
 import { clearTaste } from '@/store/tasteStore'
 import { cn } from '@/lib/utils'
+import { BASE } from '@/lib/edition'
 import { ProxyDisclosureBody } from '@/components/ProxyDisclosure'
 import { SiteDataList } from '@/components/SiteDataList'
 import { Row, Toggle, Segmented, selectCls } from './settingsParts'
@@ -250,6 +251,15 @@ function Privacy() {
       <Row title="Block ads and trackers" desc="Requests to known ad networks and trackers get an empty answer and never leave the device. A site that needs one of them may break; turn this off for it. Applies to pages loaded after the change." htmlFor="blockads">
         <Toggle id="blockads" label="Block ads and trackers" checked={s.blockAds} onChange={(blockAds) => update({ blockAds })} />
       </Row>
+      <Row title="Show ads" desc="Adverts on Shasta's own pages (the new tab, the Store and Watch). They never appear inside the sites you open — those frames are the site's own. Unlike Shasta's stats, the ad networks (Google AdSense and Monetag) do see your IP address and set their own cookies, and may follow you across the web to choose what to show. Off loads none at all." htmlFor="showads">
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="ghost" onClick={() => useTabs.getState().openInternal('privacy')}>Privacy policy</Button>
+          <Toggle id="showads" label="Show ads" checked={s.ads} onChange={(ads) => update({ ads })} />
+        </div>
+      </Row>
+      <Row title="Ad bar along the bottom" desc={s.ads ? 'A thin advert strip pinned to the bottom edge, so it is on screen on every tab and site. It hides with the toolbar in game mode.' : 'Needs “Show ads” on.'} htmlFor="adsbar">
+        <Toggle id="adsbar" label="Ad bar along the bottom" checked={s.adsBar} disabled={!s.ads} onChange={(adsBar) => update({ adsBar })} />
+      </Row>
       <Row title="Share anonymous usage counts" desc="Counts which Shasta features and pages are used and the hostname of each site opened (for example example.com, never the page, search or anything you type) so the owner can see what is popular. They go to Shasta's own stats server (Umami, run by the owner, no ad or analytics company), which also sees your browser, device type and rough location, and groups one browser's visits with a code that changes every month; your IP address is not stored. Private tabs are never counted." htmlFor="usagestats">
         <Toggle id="usagestats" label="Share anonymous usage counts" checked={s.usageStats} onChange={(usageStats) => update({ usageStats })} />
       </Row>
@@ -472,7 +482,7 @@ function Advanced() {
           <dt className="text-shasta-muted">Shasta</dt><dd>{__APP_VERSION__}</dd>
           <dt className="text-shasta-muted">License</dt>
           <dd>
-            GNU AGPL-3.0 (<a className="text-shasta-accent hover:underline" href="/licenses/NOTICE.md" target="_blank" rel="noreferrer noopener">notices</a>)
+            GNU AGPL-3.0 (<a className="text-shasta-accent hover:underline" href={`${BASE}licenses/NOTICE.md`} target="_blank" rel="noreferrer noopener">notices</a>)
             {SOURCE_URL && <> · <a className="text-shasta-accent hover:underline" href={SOURCE_URL} target="_blank" rel="noreferrer noopener">Source code</a></>}
           </dd>
           <dt className="text-shasta-muted">Scramjet engine</dt><dd>{proxy.engineVersion()}</dd>

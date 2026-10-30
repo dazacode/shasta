@@ -17,7 +17,7 @@ export const PORTABLE_SETTINGS = [
   'theme', 'accent', 'density', 'motion', 'showBookmarksBar', 'wallpaper', 'newTabBg', 'newTabBgColor', 'newTabBgDim', 'newTabBgBlur', 'newTabClock', 'newTabOrder', 'uiScale', 'highContrast',
   'searchEngine', 'homepage', 'newTabOpensHomepage', 'restoreSession', 'searchSuggestions',
   'newTabStyle', 'newTabLogo', 'newTabGreeting', 'newTabShortcuts', 'newTabGreetingText', 'newTabHeadlineText',
-  'newTabRecent', 'newTabApps', 'newTabLive', 'newTabBookmarks', 'shortcuts', 'saveHistory', 'blockAds', 'blockPopups',
+  'newTabRecent', 'newTabApps', 'newTabLive', 'newTabBookmarks', 'shortcuts', 'saveHistory', 'blockAds', 'ads', 'adsBar', 'blockPopups',
   'suspendTabs', 'suspendAfterMinutes', 'resourceGuard', 'autoCleanup',
 ] as const satisfies readonly (keyof Settings)[]
 type Portable = (typeof PORTABLE_SETTINGS)[number]

@@ -14,8 +14,8 @@ export function Row({ title, desc, children, htmlFor }: { title: string; desc?: 
   )
 }
 
-export function Toggle({ id, checked, onChange, label }: { id: string; checked: boolean; onChange: (v: boolean) => void; label: string }) {
-  return <Switch id={id} aria-label={label} checked={checked} onCheckedChange={onChange} className="data-checked:bg-shasta-accent" />
+export function Toggle({ id, checked, onChange, label, disabled }: { id: string; checked: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }) {
+  return <Switch id={id} aria-label={label} checked={checked} onCheckedChange={onChange} disabled={disabled} className="data-checked:bg-shasta-accent" />
 }
 
 export function Segmented<T extends string>({ value, onChange, options, label }: { value: T; onChange: (v: T) => void; options: { value: T; label: string }[]; label: string }) {

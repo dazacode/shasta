@@ -43,7 +43,7 @@ export class Controller {
     serviceworker: ServiceWorker
     transport: unknown
     scramjetConfig?: unknown
-    config?: { scramjetPath?: string; injectPath?: string; wasmPath?: string }
+    config?: { prefix?: string; scramjetPath?: string; injectPath?: string; wasmPath?: string }
   })
   frames: Frame[]
   transport: unknown

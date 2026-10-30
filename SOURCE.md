@@ -4,9 +4,9 @@
 |---|---|
 | Hosted instance | https://shasta-dtg.pages.dev |
 | Shasta version | 0.2.0 |
-| Published from | commit `6c90f822bbcb128353d0739f0d7001692face581` |
+| Published from | commit `6c90f822bbcb128353d0739f0d7001692face581` (plus uncommitted work at publish time) |
 | Published on | 2026-10-30 |
-| Scramjet engine | https://github.com/dazacode/shasta-scramjet, tag `shasta-v0.1.3` (submodule `scramjet/`) |
+| Scramjet engine | https://github.com/dazacode/shasta-scramjet, tag `shasta-v0.1.4` (submodule `scramjet/`) |
 | Wisp relay | https://github.com/dazacode/shasta-wisp, tag `shasta-v0.1.2` (submodule `wisp/`) |
 
 Shasta is a browser built on [Scramjet](https://github.com/MercuryWorkshop/scramjet). Scramjet is

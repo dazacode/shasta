@@ -3,15 +3,18 @@
 // `shasta-chat` so moderators can stop abuse. It is never sent anywhere but /api/chat and is not linked to browsing.
 import { api } from '@/store/api'
 import { openLiveSocket } from './liveSocket'
+import { SHARED_ORIGIN } from './edition'
 import type { ChatInfo, ChatMessage, Chatter } from './chatFormat'
 
 export { ApiError } from '@/store/api'
 
 const KEY = 'shasta-chat'
+// on a shared origin (Lite on jsDelivr) other sites' pages could read localStorage: the name lasts for the tab instead
+const store = () => (SHARED_ORIGIN ? sessionStorage : localStorage)
 
 export function loadToken(): string | null {
   try {
-    const v = JSON.parse(localStorage.getItem(KEY) ?? 'null') as { token?: unknown } | null
+    const v = JSON.parse(store().getItem(KEY) ?? 'null') as { token?: unknown } | null
     return typeof v?.token === 'string' ? v.token : null
   } catch {
     return null
@@ -20,8 +23,8 @@ export function loadToken(): string | null {
 
 export function saveToken(token: string | null) {
   try {
-    if (token) localStorage.setItem(KEY, JSON.stringify({ token }))
-    else localStorage.removeItem(KEY)
+    if (token) store().setItem(KEY, JSON.stringify({ token }))
+    else store().removeItem(KEY)
   } catch {
     /* private window or blocked storage: the chat name lasts until the tab closes */
   }

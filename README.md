@@ -19,7 +19,7 @@ for the licence and third-party components.
 | Path | |
 |---|---|
 | `shasta/` | The browser: React + TypeScript + Vite, the shell, the Store, and the Scramjet integration |
-| `scramjet/` | The engine fork, as a submodule (tagged `shasta-v0.1.3`) |
+| `scramjet/` | The engine fork, as a submodule (tagged `shasta-v0.1.4`) |
 | `wisp/` | The relay fork, as a submodule (tagged `shasta-v0.1.2`) |
 | `scripts/` | The build scripts |
 | `apps/` | First-party browser apps |

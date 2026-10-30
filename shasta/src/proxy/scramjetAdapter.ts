@@ -11,6 +11,8 @@ import type { ContextInfo } from '@/lib/contextMenu'
 import type { MissingFeature } from '@/lib/browserSupport'
 // tabs in the installed app may use the direct engine instead; every per-tab call below goes to whichever owns the tab
 import * as direct from './directFrame'
+import { BASE } from '@/lib/edition'
+import { storageScope } from '@/lib/sharedOrigin'
 
 type Engine = {
   scramjet: typeof import('@mercuryworkshop/scramjet')
@@ -102,7 +104,7 @@ export interface Entry {
   committed: boolean
 }
 
-const SW_URL = '/sw.js'
+const SW_URL = `${BASE}sw.js`
 const NAV_TIMEOUT_MS = 45_000
 export const TENTATIVE_NAV_MS = 8_000
 const PROBE_INTERVAL_MS = 20_000
@@ -395,7 +397,7 @@ async function registerServiceWorker(timeoutMs = 10_000): Promise<ServiceWorker>
     swRegistration = await navigator.serviceWorker.register(SW_URL, { updateViaCache: 'none' })
   } catch (e) {
     // offline launch: if the browser insists on fetching sw.js, the installed worker still serves the shell
-    const existing = await navigator.serviceWorker.getRegistration('/')
+    const existing = await navigator.serviceWorker.getRegistration(BASE)
     if (!existing?.active) throw e
     swRegistration = existing
   }
@@ -424,10 +426,18 @@ export function serviceWorkerStatus(): string {
 
 /** Versioned engine URLs, so every document and worker thread loads exactly the build that is deployed. */
 const engineFiles = () => ({
-  scramjetPath: `/scramjet/scramjet.js?v=${__ENGINE_VERSION__}`,
-  injectPath: `/controller/controller.inject.js?v=${__ENGINE_VERSION__}`,
-  wasmPath: `/scramjet/scramjet.wasm?v=${__ENGINE_VERSION__}`,
+  // the folder Shasta is served from: proxied pages live under it (the service worker's scope)
+  prefix: `${BASE}~/sj/`,
+  scramjetPath: `${BASE}scramjet/scramjet.js?v=${__ENGINE_VERSION__}`,
+  injectPath: `${BASE}controller/controller.inject.js?v=${__ENGINE_VERSION__}`,
+  wasmPath: `${BASE}scramjet/scramjet.wasm?v=${__ENGINE_VERSION__}`,
 })
+
+/** The engine's own config: on a shared origin, sites' logins and storage stay in the tab (lib/sharedOrigin.ts). */
+const scramjetConfigFor = (defaults: unknown) => {
+  const scope = storageScope()
+  return scope ? { ...(defaults as object), storageScope: scope } : defaults
+}
 
 /** Registers the service worker and boots the controller. Safe to call repeatedly. */
 export function init(options: ProxyOptions): Promise<void> {
@@ -451,13 +461,13 @@ export function init(options: ProxyOptions): Promise<void> {
         log('warn', `Initial connection failed: ${message}`)
         activeWisp = endpoints[0] ?? null
         const placeholder = new (await import('@mercuryworkshop/libcurl-transport')).default({ wisp: normalizeWispUrl(options.wispUrl) })
-        controller = new Controller({ serviceworker, transport: placeholder, scramjetConfig: defaultConfig, config: engineFiles() })
+        controller = new Controller({ serviceworker, transport: placeholder, scramjetConfig: scramjetConfigFor(defaultConfig), config: engineFiles() })
         await controller.wait()
         setConnection('disconnected', message, null)
         scheduleProbe(retryDelay)
         return
       }
-      controller = new Controller({ serviceworker, transport, scramjetConfig: defaultConfig, config: engineFiles() })
+      controller = new Controller({ serviceworker, transport, scramjetConfig: scramjetConfigFor(defaultConfig), config: engineFiles() })
       await controller.wait()
       setConnection('connected', '', null)
       log('info', `Proxy ready (${options.transport})`)
@@ -823,8 +833,9 @@ export interface SiteDataEntry {
   storageKeys: number
 }
 
-/** `host@key` is how Scramjet namespaces a site's web storage in Shasta's own origin. */
-const storageHost = (key: string) => (key.includes('@') && !key.startsWith('shasta-') ? key.slice(0, key.indexOf('@')) : null)
+/** `host@key` is how Scramjet namespaces a site's web storage in Shasta's own origin (`\u0001Lhost@key` for a site's
+ *  localStorage kept in sessionStorage on a shared origin, lib/sharedOrigin.ts). */
+const storageHost = (key: string) => (key.includes('@') && !key.startsWith('shasta-') ? key.slice(key.startsWith('\u0001L') ? 2 : 0, key.indexOf('@')) : null)
 const cookieHost = (id: string) => id.slice(0, id.indexOf('@')).replace(/^\./, '')
 
 /**

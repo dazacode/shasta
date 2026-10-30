@@ -1,4 +1,27 @@
 [
-	{ "name": "Shasta (pages.dev)", "short": "pages.dev", "domain": "shasta-dtg.pages.dev", "id": "815aab28-2473-4c4e-8183-eb61deae5ed5", "main": true },
-	{ "name": "Shasta Lite (Base44)", "short": "Lite", "domain": "shasta-lte.base44.app", "id": "ade53419-c9b4-4690-83e5-c232bab531e3" }
+	{
+		"name": "Shasta (pages.dev)",
+		"short": "pages.dev",
+		"domain": "shasta-dtg.pages.dev",
+		"id": "815aab28-2473-4c4e-8183-eb61deae5ed5",
+		"main": true
+	},
+	{
+		"name": "Shasta Lite (Base44)",
+		"short": "Lite",
+		"domain": "shasta-lte.base44.app",
+		"id": "ade53419-c9b4-4690-83e5-c232bab531e3"
+	},
+	{
+		"name": "Shasta Lite (Vercel)",
+		"short": "Vercel",
+		"domain": "shasta-lite.vercel.app",
+		"id": "a3d45710-11bc-4ba5-a59f-8985ae3a3a92"
+	},
+	{
+		"name": "Shasta Lite (jsDelivr)",
+		"short": "jsDelivr",
+		"domain": "cdn.jsdelivr.net",
+		"id": "32359927-bca9-4b7e-82fe-d41315829b1a"
+	}
 ]

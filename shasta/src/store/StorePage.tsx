@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactNode } 
 import { CloudOff, Compass, LayoutGrid, Search, Send, ShieldCheck, Store, UserRound, Wrench, X } from 'lucide-react'
 import { Logo } from '@/components/Logo'
 import { cn } from '@/lib/utils'
+import { AdSlot } from '@/components/ads/AdSlot'
 import { useTabs } from '@/stores/tabsStore'
 import { internalUrl } from '@/lib/url'
 import { useDebounced, useApi, useStoreBoot } from './hooks'
@@ -241,6 +242,7 @@ export function StorePage({ tabId, url }: { tabId: string; url: string }) {
             <Suspense fallback={<p className="py-10 text-center text-sm text-shasta-muted">Loading…</p>}>
               <Routes />
             </Suspense>
+            <AdSlot className="mx-auto mt-8 max-w-3xl pb-4" minHeight={120} />
           </div>
         </div>
       </div>

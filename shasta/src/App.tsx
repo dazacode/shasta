@@ -30,6 +30,9 @@ import { useUi } from '@/stores/uiStore'
 import { tabTitle } from '@/lib/tabModel'
 import { startResourceGuard } from '@/lib/resourceGuard'
 import { startStats } from '@/lib/stats'
+import { startAds } from '@/lib/ads'
+import { AdBar } from '@/components/ads/AdBar'
+import { startPulse } from '@/lib/pulse'
 import { startMaintenance } from '@/lib/maintenance'
 import { openSharedLink } from '@/lib/shareLink'
 import { showWhatsNewOnce } from '@/lib/whatsNew'
@@ -48,6 +51,10 @@ function useBootstrap() {
     useOffline.getState().boot()
     startResourceGuard()
     startStats()
+    // adverts on Shasta's own pages (AdSlot / AdBar); off unless this build names a provider
+    startAds()
+    // "online now" counts every open window, not only those showing a new tab
+    startPulse()
     startMaintenance()
     // a link someone shared (https://<site>/?app=<slug>) opens that Store page
     // first open (and after a big change): the welcome tour and beta notice, before a shared link so that one ends up in front
@@ -106,6 +113,7 @@ export default function App() {
               <AssistantPanel />
             </div>
           </div>
+          <AdBar />
         </div>
         <ShortcutsDialog />
         <PrivateTabDialog />
