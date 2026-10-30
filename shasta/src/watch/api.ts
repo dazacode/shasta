@@ -46,7 +46,7 @@ export function artUrl(url?: string | null): string | undefined {
 }
 
 export const watchApi = {
-  check: () => get<{ enabled: boolean; tmdb: boolean; kuhi: boolean }>('/api/watch/check'),
+  check: () => get<{ enabled: boolean; tmdb: boolean; direct?: boolean; kuhi: boolean }>('/api/watch/check'),
   home: (scope: Scope) => get<{ enabled: boolean; tmdb: boolean; rows: Row[] }>(`/api/watch/home?kind=${scope}`),
   row: (key: string, signal?: AbortSignal) => get<RowData>(`/api/watch/row/${encodeURIComponent(key)}`, signal),
   featured: (signal?: AbortSignal) => get<{ items: Featured[] }>('/api/watch/featured', signal),
@@ -55,4 +55,9 @@ export const watchApi = {
   title: (kind: Kind, id: string, season?: number) => get<Title>(`/api/watch/title/${kind}/${encodeURIComponent(id)}${season ? `?season=${season}` : ''}`),
   sources: (kind: Kind, id: string, opts: { season?: number; episode?: number } = {}) =>
     get<{ sources: Candidate[] }>(`/api/watch/sources/${kind}/${encodeURIComponent(id)}?season=${opts.season ?? 1}&episode=${opts.episode ?? 1}`),
+  /** the direct resolver alone, with the metadata check it ran (verified = the host's title matched ours) */
+  resolve: (kind: Kind, id: string, opts: { season?: number; episode?: number } = {}) =>
+    get<{ title: string; verified: boolean; served: string | null; candidates: Candidate[] }>(
+      `/api/watch/resolve/${kind}/${encodeURIComponent(id)}?season=${opts.season ?? 1}&episode=${opts.episode ?? 1}`,
+    ),
 }

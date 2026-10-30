@@ -53,6 +53,8 @@ export interface Title extends Card {
   studio?: string
   status?: string
   rating: number | null
+  /** when a split entry (e.g. an AniList "… 2") is really season N of a show, the season to open at */
+  defaultSeason?: number
 }
 
 export interface Featured extends Card {
@@ -83,6 +85,10 @@ export interface Candidate {
   subtitles?: Subtitle[]
   note?: string
   rank: number
+  /** a scraped direct manifest whose title was checked against the title's metadata before it was offered */
+  verified?: boolean
+  /** always route through /api/watch/stream even in "direct" mode (the host sends no CORS headers) */
+  forceProxy?: boolean
 }
 
 export interface Row {

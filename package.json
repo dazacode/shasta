@@ -32,6 +32,7 @@
 		"import:itch": "bun scripts/import-itch.ts",
 		"retag:archive": "bun scripts/retag-archive.ts",
 		"retag:fnf": "bun scripts/retag-fnf.ts",
+		"retag:itch": "bun scripts/retag-itch.ts",
 		"release:app": "bun scripts/release-app.ts",
 		"release:vps": "bun scripts/release-vps.ts",
 		"publish:cli": "bun scripts/publish-cli.ts",

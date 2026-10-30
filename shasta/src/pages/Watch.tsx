@@ -278,6 +278,8 @@ function DetailView({ detail, onClose, onNavigate }: { detail: { kind: Kind; id:
   const [episode, setEpisode] = useState(detail.episode)
   const [showTrailer, setShowTrailer] = useState(false)
   const autoPlayed = useRef(false)
+  // which title the entry's own season has already been seeded for (so a later explicit season pick is respected)
+  const seededFor = useRef('')
   const inList = useWatch((s) => !!title && s.inList(title.kind, title.id))
   const toggleList = useWatch((s) => s.toggleList)
   const progressFor = useWatch((s) => s.progressFor)
@@ -288,10 +290,23 @@ function DetailView({ detail, onClose, onNavigate }: { detail: { kind: Kind; id:
     setLoading(true); setError(''); setTitle(null); setSources([]); setCandidate(null); autoPlayed.current = false
     void (async () => {
       try {
-        const t = await watchApi.title(detail.kind, detail.id, detail.kind === 'tv' ? season : undefined)
+        const key = `${detail.kind}:${detail.id}`
+        const firstOpen = seededFor.current !== key
+        // on first open omit a default season-1 so the server hands back the entry's OWN season (a split AniList
+        // entry like "… 2" is season 2), but pass any real season pick straight through
+        const passSeason = detail.kind !== 'movie' && (!firstOpen || season > 1)
+        const t = await watchApi.title(detail.kind, detail.id, passSeason ? season : undefined)
         if (!live) return
+        // a split entry is really season N of its show: open that season so metadata and the stream stay 1:1
+        let useSeason = season
+        if (firstOpen) {
+          seededFor.current = key
+          const seed = detail.kind !== 'movie' && t.defaultSeason && t.defaultSeason > 1 ? t.defaultSeason : season
+          if (seed !== season) { setSeason(seed); setEpisode(1) }
+          useSeason = seed
+        }
         setTitle(t)
-        const s = await watchApi.sources(detail.kind, detail.id, { season, episode })
+        const s = await watchApi.sources(detail.kind, detail.id, { season: useSeason, episode })
         if (!live) return
         setSources(s.sources)
         setCandidate(s.sources[0] ?? null)
@@ -392,7 +407,7 @@ function DetailView({ detail, onClose, onNavigate }: { detail: { kind: Kind; id:
               {title.overview && <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-shasta-muted">{title.overview}</p>}
               {title.studio && <p className="mt-2 text-xs text-shasta-muted">Studio · {title.studio}</p>}
 
-              {title.kind === 'tv' && title.seasons && title.seasons.length > 0 && (
+              {(title.kind === 'tv' || title.kind === 'anime') && title.seasons && title.seasons.length > 0 && (
                 <select value={season} onChange={(e) => { const s = Number(e.target.value); setSeason(s); setEpisode(1) }} className="mt-4 h-9 rounded-lg border border-white/10 bg-shasta-field px-2 text-sm">
                   {title.seasons.map((s) => <option key={s.number} value={s.number}>{s.name} ({s.episodes})</option>)}
                 </select>

@@ -118,12 +118,14 @@ export function Player(props: PlayerProps) {
   const [embedNonce, setEmbedNonce] = useState(0)
 
   const isEmbed = candidate.kind === 'embed'
+  // a direct scrape of a CORS-less host (vidsrc.buzz) always goes through our proxy, even when "direct" mode is on
+  const mustProxy = proxyVideo || !!candidate.forceProxy
   const extSubs = useMemo(() => candidate.subtitles ?? [], [candidate])
   const src = useMemo(
-    () => (isEmbed ? candidate.url : apiUrl(proxyVideo ? streamUrl(candidate.url, candidate.referer) : candidate.url)),
-    [isEmbed, candidate.url, candidate.referer, proxyVideo],
+    () => (isEmbed ? candidate.url : apiUrl(mustProxy ? streamUrl(candidate.url, candidate.referer) : candidate.url)),
+    [isEmbed, candidate.url, candidate.referer, mustProxy],
   )
-  const subSrc = useCallback((u: string) => apiUrl(proxyVideo ? streamUrl(u, candidate.referer) : u), [candidate.referer, proxyVideo])
+  const subSrc = useCallback((u: string) => apiUrl(mustProxy ? streamUrl(u, candidate.referer) : u), [candidate.referer, mustProxy])
 
   const wake = useCallback(() => {
     setShown(true)

@@ -143,12 +143,45 @@ const hosts = [...new Set(targets.map((t) => { try { return new URL(t.url).hostn
 const chains = new Map<string, { ok: boolean; err?: string }>();
 await Promise.all(hosts.map(async (h) => chains.set(h, await tlsCheck(h))));
 
+// The DIRECT resolver (server/src/services/watch/resolvers.ts): instead of iframing the embed, scrape the host's
+// own backend for the real CDN manifest. This is the check that the exploit still works — vidsrc.buzz renders a
+// signed token + title + server list into its page, `api.php?a=play` turns a ref into a master `.m3u8`.
+interface DirectResult { id: string; ok: boolean; verified: boolean; title: string; master: boolean; note: string }
+const DIRECT = [
+	{ id: "vidsrc.buzz movie", type: "movie", tmdb: TMDB_MOVIE, s: 0, e: 0 },
+	{ id: "vidsrc.buzz tv", type: "tv", tmdb: TMDB_TV, s: 1, e: 1 },
+];
+async function probeDirect(d: (typeof DIRECT)[number]): Promise<DirectResult> {
+	const base: DirectResult = { id: d.id, ok: false, verified: false, title: "", master: false, note: "" };
+	try {
+		const embed = `https://vidsrc.buzz/embed/${d.type}/${d.tmdb}${d.type === "tv" ? `/${d.s}/${d.e}` : ""}`;
+		const html = await (await fetch(embed, { headers: { "user-agent": UA }, signal: AbortSignal.timeout(20_000) })).text();
+		const m = /var Q = (\{.*?\});/s.exec(html);
+		if (!m) return { ...base, note: "no token block" };
+		const Q = JSON.parse(m[1]) as { t?: string; id?: string; ssr?: { title?: string; servers?: { ref: string; name?: string }[] } };
+		base.title = Q.ssr?.title ?? "";
+		const servers = Q.ssr?.servers ?? [];
+		if (!Q.t || !servers.length) return { ...base, note: "no servers" };
+		const api = "https://vidsrc.buzz/pl/api.php";
+		const play = await (await fetch(`${api}?a=play&ref=${encodeURIComponent(servers[0].ref)}&t=${encodeURIComponent(Q.t)}`, { headers: { "user-agent": UA, referer: embed }, signal: AbortSignal.timeout(20_000) })).text();
+		const url = new URL((JSON.parse(play) as { url: string }).url, "https://vidsrc.buzz").href;
+		base.master = (await (await fetch(url, { headers: { "user-agent": UA, referer: embed }, signal: AbortSignal.timeout(20_000) })).text()).includes("#EXTM3U");
+		base.ok = base.master;
+		base.verified = base.ok && !!base.title;
+		base.note = base.ok ? `title="${base.title}"` : "no manifest";
+	} catch (e) {
+		base.note = (e as Error).name === "TimeoutError" ? "timeout" : `${(e as Error).message}`;
+	}
+	return base;
+}
+const direct = await Promise.all(DIRECT.map(probeDirect));
+
 const embeds = results.filter((r) => r.kind.endsWith("embed"));
 const okEmbeds = embeds.filter((r) => r.ok);
 const blocked = embeds.filter((r) => r.framable === false);
 
 if (json) {
-	console.log(JSON.stringify({ at: new Date().toISOString(), okEmbeds: okEmbeds.length, blocked, chains: Object.fromEntries(chains), results }, null, 2));
+	console.log(JSON.stringify({ at: new Date().toISOString(), okEmbeds: okEmbeds.length, blocked, direct, chains: Object.fromEntries(chains), results }, null, 2));
 } else {
 	const pad = (s: string, n: number) => s + " ".repeat(Math.max(0, n - s.length));
 	console.log(`\nmedia probes — ${new Date().toISOString()}\n`);
@@ -162,10 +195,12 @@ if (json) {
 		const frame = r.framable === false ? "NOT-EMBEDDABLE" : r.framesTo ? `→ frames ${r.framesTo.replace(/^https?:\/\//, "").slice(0, 48)}` : "";
 		console.log(`    ${mark} ${pad(r.id, 20)} ${pad(String(r.status), 4)} ${pad(r.bytes + "b", 9)} ${r.note || frame}`);
 	}
+	console.log(`\n  direct resolver (embed host's own CDN manifest, no iframe — the default playback path):`);
+	for (const d of direct) console.log(`    ${d.ok ? "ok  " : "FAIL"} ${pad(d.id, 20)} master=${d.master ? "yes" : "no "} verified=${d.verified ? "yes" : "no "} ${d.note}`);
 	console.log(`\n  TLS chains — an incomplete chain passes curl but FAILS in the proxied iframe (libcurl, error 60):`);
 	for (const [h, c] of [...chains].sort()) console.log(`    ${c.ok ? "ok  " : "BAD "} ${h}${c.ok ? "" : ` — ${c.err}`}`);
 	const badChains = [...chains].filter(([, c]) => !c.ok).length;
-	console.log(`\n  ${okEmbeds.length}/${embeds.length} embed sources answered; ${blocked.length} refuse framing; ${badChains} host(s) with a broken TLS chain.`);
+	console.log(`\n  ${okEmbeds.length}/${embeds.length} embed sources answered; ${blocked.length} refuse framing; ${badChains} host(s) with a broken TLS chain; ${direct.filter((d) => d.ok).length}/${direct.length} direct resolvers returned a manifest.`);
 }
 
 process.exit(okEmbeds.length >= (only ? 1 : min) ? 0 : 1);
