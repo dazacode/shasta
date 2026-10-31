@@ -10,7 +10,7 @@ export interface TransferResponse {
 
 export interface FrameHooks {
   init: { pre: Hook; post: Hook }
-  fetch: { response: Hook; intercept: Hook; request: Hook }
+  fetch: { response: Hook; preresponse: Hook; intercept: Hook; request: Hook }
   error: { request: Hook }
 }
 

@@ -11,7 +11,7 @@
 import { type ArchiveDoc, classify, fetchArchive } from "./lib/archiveClass";
 import { runImport, summarize, cleanText, type ImportItem } from "./lib/storeImport";
 
-const DEFAULT_COLLECTIONS = ["internetarcade", "consolelivingroom", "softwarelibrary_msdos_games"];
+const DEFAULT_COLLECTIONS = ["internetarcade", "consolelivingroom", "softwarelibrary_msdos_games", "softwarelibrary_flash_games"];
 const argv = process.argv.slice(2);
 const opt = (n: string) => {
 	const i = argv.indexOf(`--${n}`);

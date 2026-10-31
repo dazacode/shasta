@@ -218,6 +218,8 @@ interface Existing {
 const idCache = new Map<string, string>();
 const bump = (v: string) => {
 	const p = v.split(".").map(Number);
+	// the Store wants dotted versions (1.0, 1.2.3); a bare "1" becomes "1.1" instead of an invalid "2"
+	if (p.length < 2) p.push(0);
 	p[p.length - 1] = (Number.isFinite(p[p.length - 1]) ? p[p.length - 1] : 0) + 1;
 	return p.join(".");
 };
@@ -323,13 +325,18 @@ export async function runImport(items: ImportItem[], opts: RunOptions = {}) {
 			}
 			await api("PUT", `/api/dev/apps/${appId}/icon`, { raw: readFileSync(iconFile) });
 
-			// banner only on first import, so re-runs do not stack screenshots
+			// banner only on first import, so re-runs do not stack screenshots (a duplicate name in one run shares the
+			// same app: mark it so the next entry does not add a 9th screenshot)
 			if (item.bannerUrl && (!already || already.screenshots === 0)) {
 				const shot = path.join(work, `shot-${appId}.webp`);
 				try {
 					await sharp()(await get(item.bannerUrl)).resize({ width: 1280, withoutEnlargement: true }).webp({ quality: 82 }).toFile(shot);
 				} catch {}
-				if (existsSync(shot)) await api("POST", `/api/dev/apps/${appId}/screenshots`, { raw: readFileSync(shot) });
+				if (existsSync(shot)) {
+					await api("POST", `/api/dev/apps/${appId}/screenshots`, { raw: readFileSync(shot) }).catch(() => undefined);
+					const ex = existing.get(key);
+					if (ex) ex.screenshots = Math.max(ex.screenshots, 1);
+				}
 			}
 
 			// a package app ships its own bytes: build them once, then upload against the draft version

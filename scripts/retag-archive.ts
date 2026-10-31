@@ -12,7 +12,7 @@
 import { type ArchiveDoc, archiveIdOf, classify, fetchArchive } from "./lib/archiveClass";
 import { api, closeTunnel } from "./lib/storeImport";
 
-const COLLECTIONS = ["internetarcade", "consolelivingroom", "softwarelibrary_msdos_games"];
+const COLLECTIONS = ["internetarcade", "consolelivingroom", "softwarelibrary_msdos_games", "softwarelibrary_flash_games"];
 const argv = process.argv.slice(2);
 const has = (n: string) => argv.includes(`--${n}`);
 const opt = (n: string) => {
@@ -23,7 +23,7 @@ const limit = Number(opt("limit")) || Infinity;
 const dry = has("dry");
 
 const docs = new Map<string, ArchiveDoc>();
-for (const d of await fetchArchive(COLLECTIONS)) if (!docs.has(d.identifier)) docs.set(d.identifier, d);
+for (const d of await fetchArchive(COLLECTIONS, ["description"])) if (!docs.has(d.identifier)) docs.set(d.identifier, d);
 console.log(`${docs.size} archive.org items indexed`);
 
 const { apps } = await api<{ apps: any[] }>("GET", "/api/dev/apps?all=1&brief=1");

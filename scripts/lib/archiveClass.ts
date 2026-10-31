@@ -1,7 +1,8 @@
 // Sorting Internet Archive game items into the Store's genres, from the Archive's own metadata: the sub-collection an
 // item is in names its system, MAME's `genre` (Internet Arcade) and `subject` name what kind of game it is. Also says
 // which items are clutter (bad-dump variants, ROM hacks, demos, items MAME marks unplayable or mature): those are
-// never imported and are unpublished by `retag-archive.ts`. Shared by import-archive.ts and retag-archive.ts.
+// never imported and are unpublished by `retag-archive.ts`. Flash items are their own "Flash classics" shelf (they
+// ran in a browser), never a console. Shared by import-archive.ts and retag-archive.ts.
 
 export interface ArchiveDoc {
 	identifier: string;
@@ -10,6 +11,8 @@ export interface ArchiveDoc {
 	genre?: string | string[];
 	subject?: string | string[];
 	year?: string | number;
+	/** read only for Flash items whose subjects name no kind of game */
+	description?: string | string[];
 }
 
 const list = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : typeof v === "string" ? [v] : []);
@@ -86,6 +89,43 @@ const KIND: [string, RegExp][] = [
 	["arcade", /\bmaze\b|ball & paddle|breakout|pinball/i],
 ];
 
+// Flash items are tagged by their uploaders, not by MAME: looser words, read only for Flash ("arcade" on an Internet
+// Arcade item means the cabinet, not "Arcade & casual").
+const FLASH_KIND: [string, RegExp][] = [
+	["action", /\baction\b/i],
+	["arcade", /\barcade\b|score.?attack|time.?attack|\bdodge\b|mini.?game|avoid(?:er)?\b/i],
+	["casual", /dress.?up|make.?a.?scene|colou?ring|make.?over|cooking/i],
+	["escape", /\bescape\b/i],
+	["puzzle", /jigsaw|hidden object|mahjong|sudoku|match.?3|\blogic(?:al)?\b|word game|spot the difference|matching/i],
+	["point-and-click", /point.?(?:and|&|n).?click/i],
+	["physics", /physics/i],
+	["tower-defense", /tower.?defen[cs]e/i],
+	["idle", /\bidle\b|clicker|incremental/i],
+	["multiplayer", /multi.?player|\b2.?players\b|two.?player/i],
+	["zombies", /zombie/i],
+];
+
+// Last resort when the subjects name no kind: unambiguous words in the title (and, for Flash, the start of the
+// description, which is usually one line like "Standard matching puzzle game").
+const TITLE_KIND: [string, RegExp][] = [
+	["casual", /dress.?up|make.?over|\bcooking\b/i],
+	["escape", /\bescape\b/i],
+	["puzzle", /puzzle|jigsaw|sudoku|mahjong|\bquiz\b|trivia|tetris/i],
+	["racing", /racing|\bracer\b|\brace\b|\bdrift|\bkart\b|motocross|\brally\b/i],
+	["sports", /soccer|football|basketball|baseball|\bgolf|tennis|hockey|bowling|penalty|skateboard/i],
+	["tower-defense", /tower.?defen[cs]e|\bdefen[cs]e\b/i],
+	["shooter", /shoot|sniper|\bgun\b/i],
+	["fighting", /fight|brawl|boxing|wrestl/i],
+	["zombies", /zombie/i],
+	["simulation", /tycoon|simulator/i],
+	["horror", /horror|\bscary\b|haunted/i],
+	["idle", /\bidle\b|clicker/i],
+	["rpg", /\brpg\b/i],
+];
+
+// A few items in the Flash games library are cartoons, banner ads or whole saved websites, not games.
+const NOT_A_GAME = /flash ?(?:animation|movie|cartoon|website|site)|^animation$|music video|banner ad/i;
+
 export interface ArchiveClass {
 	/** tags to give the app, without the import marker */
 	tags: string[];
@@ -99,17 +139,26 @@ export function classify(doc: ArchiveDoc, name = doc.title ?? ""): ArchiveClass 
 	const words = [genre, ...list(doc.subject)].join("; ");
 	const id = doc.identifier;
 
-	const arcade = subs.includes("internetarcade") || id.startsWith("arcade_");
-	const dos = !arcade && (subs.includes("softwarelibrary_msdos_games") || subs.includes("softwarelibrary_msdos"));
-	const cls = arcade ? "arcade-classic" : dos ? "dos" : "console";
+	const flash = subs.includes("softwarelibrary_flash_games") || subs.includes("softwarelibrary_flash");
+	const arcade = !flash && (subs.includes("internetarcade") || id.startsWith("arcade_"));
+	const dos = !flash && !arcade && (subs.includes("softwarelibrary_msdos_games") || subs.includes("softwarelibrary_msdos"));
+	const cls = flash ? "flash-classic" : arcade ? "arcade-classic" : dos ? "dos" : "console";
 
-	const platforms = arcade || dos ? [] : [...new Set([...subs.map((s) => SUB_PLATFORM[s]).filter(Boolean), ...TITLE_PLATFORM.filter(([, re]) => re.test(name)).map(([t]) => t)])].slice(0, 2);
-	const kinds = KIND.filter(([, re]) => re.test(words)).map(([t]) => t).slice(0, 3);
+	const platforms = arcade || dos || flash ? [] : [...new Set([...subs.map((s) => SUB_PLATFORM[s]).filter(Boolean), ...TITLE_PLATFORM.filter(([, re]) => re.test(name)).map(([t]) => t)])].slice(0, 2);
+	const subjects = list(doc.subject).flatMap((x) => x.split(/[;,]/)).map((x) => x.trim()).filter(Boolean);
+	let kinds = [...new Set([...KIND, ...(flash ? FLASH_KIND : [])].filter(([, re]) => re.test(words)).map(([t]) => t))];
+	if (!kinds.length) {
+		const blurb = flash ? list(doc.description).join(" ").replace(/<[^>]+>/g, " ").slice(0, 400) : "";
+		const fallback = [...TITLE_KIND.filter(([, re]) => re.test(name)), ...(blurb ? [...KIND, ...FLASH_KIND, ...TITLE_KIND].filter(([, re]) => re.test(blurb)) : [])];
+		kinds = [...new Set(fallback.map(([t]) => t))];
+	}
+	kinds = kinds.slice(0, 3);
 	const n = Number(doc.year);
 	const year = Number.isFinite(n) && n > 1950 && n < 2030 ? [String(n)] : [];
 
 	const sub = subs.find((s) => CLUTTER_SUBS.has(s));
-	const clutter = sub ? `in ${sub}` : DUMP_FLAG.test(name) ? "dump variant or hack" : /unplayable|\*mature\*/i.test(genre) ? `MAME: ${genre}` : null;
+	const notGame = flash && subjects.some((x) => NOT_A_GAME.test(x)) && !subjects.some((x) => /game|jogo|juego/i.test(x));
+	const clutter = sub ? `in ${sub}` : DUMP_FLAG.test(name) ? "dump variant or hack" : /unplayable|\*mature\*/i.test(genre) ? `MAME: ${genre}` : notGame ? "Flash animation or website" : null;
 	return { tags: [cls, ...platforms, ...kinds, ...year].slice(0, 9), clutter };
 }
 

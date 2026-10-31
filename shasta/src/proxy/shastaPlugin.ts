@@ -9,6 +9,8 @@ import { googleLocale, withAcceptLanguage } from '@/lib/siteLanguage'
 import { forceFocus, forcePointerLock, gameControl } from '@/lib/gameControl'
 import { blockPolicy, blockedResponseHeaders, loadAdBlocker, matchAd, shouldBlockPopup } from '@/lib/adBlock'
 import { applyAdCosmetics } from './adCosmetics'
+import { applyArchivePlayer } from './archivePlayer'
+import { servePlainAsHtml } from './plainHtml'
 import { watchCrashes } from './crashWatch'
 import { captureConsole } from '@/lib/consoleCapture'
 import { diagnoseCrash } from '@/lib/browserSupport'
@@ -157,6 +159,8 @@ class ShastaPlugin extends ManagedPlugin {
       })
       // element hiding, procedural selectors and scriptlets from the filter lists (proxy/adCosmetics.ts)
       if (blockPolicy().ads) applyAdCosmetics(ctx.window, ctx.client.url.href)
+      // Internet Archive games start at once, fill the tab and explain their keys (proxy/archivePlayer.ts)
+      applyArchivePlayer(ctx.window, ctx.client.url)
       // the game may start listening after its window already had focus: replay the event once it has loaded
       ctx.window.addEventListener('load', () => {
         if (gameControl() && ctx.window.document.hasFocus()) forceFocus(ctx.window)
@@ -290,6 +294,17 @@ class ShastaPlugin extends ManagedPlugin {
       if (took >= SLOW_REQUEST_MS || props.response.status >= 400) {
         log(props.response.status >= 400 ? 'warn' : 'info', `${props.response.status} ${p.label}${size ? ` (${Math.round(size / 1048576)} MB)` : ''} after ${(took / 1000).toFixed(1)}s`)
       }
+    })
+
+    // .html pages on jsDelivr arrive as text/plain (plainHtml.ts). `preresponse` runs before Scramjet picks the body
+    // rewriter, so fixing the type here gets the page the normal HTML rewrite.
+    this.tap(frame.hooks.fetch.preresponse, (ctx: { parsed: { url: URL; destination: string } }, props: { response: { headers: Headers; rawHeaders: [string, string][] } }) => {
+      const res = props.response
+      if (!servePlainAsHtml(ctx.parsed.url, ctx.parsed.destination, res.headers.get('content-type'))) return
+      const html = 'text/html; charset=utf-8'
+      res.headers.set('content-type', html)
+      res.rawHeaders = res.rawHeaders.filter(([k]) => k.toLowerCase() !== 'content-type' && k.toLowerCase() !== 'x-content-type-options')
+      res.rawHeaders.push(['content-type', html])
     })
 
     // observe attachment downloads that Shasta's proxy is serving

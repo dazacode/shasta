@@ -33,6 +33,7 @@
 		"import:scratch": "bun scripts/import-scratch.ts",
 		"import:fnf": "bun scripts/import-fnf.ts",
 		"import:itch": "bun scripts/import-itch.ts",
+		"import:pico8": "bun scripts/import-pico8.ts",
 		"import:openapps": "bun scripts/import-openapps.ts",
 		"enrich:openapps": "bun scripts/enrich-openapps.ts",
 		"retag:archive": "bun scripts/retag-archive.ts",
