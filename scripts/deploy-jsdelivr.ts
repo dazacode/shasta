@@ -78,8 +78,38 @@ if (!existsSync(join(CLONE, ".git"))) {
 		if (Bun.spawnSync(["git", "rev-parse", "--verify", "-q", "origin/main"], { cwd: CLONE }).exitCode === 0) run(["git", "reset", "-q", "origin/main"], CLONE);
 	}
 }
+// Keep the chunks of the previous KEEP builds: browsers cache jsDelivr pages for up to a week, and a page from an
+// older build asks for its own lazy chunks ("Failed to fetch dynamically imported module" once they were deleted).
+// builds.json = each build's own assets/ list, newest first; before it existed, every commit was one pure build.
+const KEEP = 3;
+const git = (args: string[]) => Bun.spawnSync(["git", ...args], { cwd: CLONE });
+const own = files.filter((f) => f.startsWith("assets/"));
+const hasHead = git(["rev-parse", "--verify", "-q", "HEAD"]).exitCode === 0;
+let history: string[][] = [];
+if (existsSync(join(CLONE, "builds.json"))) history = JSON.parse(readFileSync(join(CLONE, "builds.json"), "utf8"));
+else if (hasHead)
+	for (let i = 0; i < KEEP; i++) {
+		const r = git(["ls-tree", "--name-only", `HEAD~${i}`, "assets/"]);
+		if (r.exitCode === 0) history.push(r.stdout.toString().split("\n").filter(Boolean));
+	}
+const ownSet = new Set(own);
+const kept = new Map<string, Uint8Array>();
+for (const f of new Set(history.slice(0, KEEP).flat())) {
+	if (ownSet.has(f)) continue;
+	for (let i = 0; i < KEEP && hasHead; i++) {
+		const r = git(["show", `HEAD~${i}:${f}`]);
+		if (r.exitCode === 0) {
+			kept.set(f, r.stdout);
+			break;
+		}
+	}
+}
+
 for (const name of readdirSync(CLONE)) if (name !== ".git") rmSync(join(CLONE, name), { recursive: true, force: true });
 cpSync(BUILD, CLONE, { recursive: true });
+for (const [f, bytes] of kept) writeFileSync(join(CLONE, f), bytes);
+writeFileSync(join(CLONE, "builds.json"), JSON.stringify([own, ...history].slice(0, KEEP + 1)));
+console.log(`kept ${kept.size} chunks of the previous ${Math.min(KEEP, history.length)} builds`);
 run(["git", "add", "-A"], CLONE);
 const changed = Bun.spawnSync(["git", "diff", "--cached", "--quiet"], { cwd: CLONE }).exitCode !== 0;
 if (changed) {
