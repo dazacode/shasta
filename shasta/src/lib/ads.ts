@@ -33,9 +33,16 @@ const MONETAG_SRC = str(import.meta.env.VITE_MONETAG_SRC) || 'https://libtl.com/
 /** The exact tag URL from the dashboard (`VITE_MONETAG_TAG`): the classic delivery URL (`//<their-domain>/5/<zone>`,
  *  self-contained) or the Multitag (`https://<their-domain>/88/tag.min.js` + `data-zone`, give VITE_MONETAG_ZONE too). */
 const MONETAG_TAG = str(import.meta.env.VITE_MONETAG_TAG)
+/** One tag per format (`VITE_MONETAG_SCRIPTS` = `url|zone,url|zone`), each with its own zone: the way to run the
+ *  in-page formats without Monetag's Push, which needs their worker at /sw.js (Shasta's own) and so is never used.
+ *  Not `#`: an unquoted `#` starts a comment in .env and silently cut the list after its first URL. */
+const MONETAG_SCRIPTS = str(import.meta.env.VITE_MONETAG_SCRIPTS)
+  .split(',')
+  .map((t) => t.trim().split('|'))
+  .filter(([src, zone]) => /^https:\/\//.test(src ?? '') && /^\d+$/.test(zone ?? ''))
 
 /** A provider is configured at all. */
-export const HAS_ADS = !!ADSENSE_CLIENT || !!MONETAG_TAG || !!MONETAG_ZONE
+export const HAS_ADS = !!ADSENSE_CLIENT || !!MONETAG_TAG || !!MONETAG_ZONE || MONETAG_SCRIPTS.length > 0
 /** Display (inline) units are possible — only AdSense does those; Monetag works through side effects alone. */
 export const HAS_DISPLAY_ADS = !!ADSENSE_CLIENT
 
@@ -69,6 +76,7 @@ function loadProviders() {
   // where Rocket Loader is off.
   if (MONETAG_TAG) addScript(MONETAG_TAG, { ...(MONETAG_ZONE && { 'data-zone': MONETAG_ZONE }), 'data-cfasync': 'false' })
   else if (MONETAG_ZONE) addScript(MONETAG_SRC, { 'data-zone': MONETAG_ZONE, 'data-sdk': MONETAG_SDK, 'data-cfasync': 'false' })
+  for (const [src, zone] of MONETAG_SCRIPTS) addScript(src, { 'data-zone': zone, 'data-cfasync': 'false' })
 }
 
 /** True when a provider is configured, this build can run it, and the person has not turned ads off. */
