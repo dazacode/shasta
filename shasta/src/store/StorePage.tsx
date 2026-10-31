@@ -12,6 +12,8 @@ import { useStore } from './storeStore'
 import type { AppCard, Suggestions } from './types'
 import { SupporterBadge } from '@/components/SupporterBadge'
 import { FULL_SITE, LITE } from '@/lib/edition'
+import { useHalloweenLook } from '@/lib/seasonal'
+import { Pumpkin } from '@/components/seasonal/Halloween'
 
 const StoreHome = lazy(() => import('./StoreHome'))
 const StoreSearch = lazy(() => import('./StoreSearch'))
@@ -214,6 +216,7 @@ export function StorePage({ tabId, url }: { tabId: string; url: string }) {
   useStoreBoot()
   const offline = useStore((s) => s.offline)
   const noBackend = useStore((s) => s.noBackend)
+  const halloween = useHalloweenLook()
   const scroller = useRef<HTMLDivElement>(null)
   // each Store page starts at the top
   useEffect(() => {
@@ -226,11 +229,16 @@ export function StorePage({ tabId, url }: { tabId: string; url: string }) {
 
   return (
     <NavProvider tabId={tabId} url={url}>
-      <div className="flex h-full flex-col text-shasta-fg md:flex-row">
+      <div className={cn('flex h-full flex-col text-shasta-fg md:flex-row', halloween && 'sh-theme hw-store')}>
         <Sidebar />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <header className="flex shrink-0 items-center gap-3 px-5 py-3 md:px-8">
             <SearchBox />
+            {halloween && (
+              <span className="hidden items-center gap-1.5 rounded-full bg-orange-500/15 px-3 py-1 text-xs font-medium text-orange-600 ring-1 ring-orange-500/30 sm:flex dark:text-orange-300">
+                <Pumpkin className="size-4" /> Happy Halloween
+              </span>
+            )}
             <SupporterBadge />
           </header>
           {offline && (

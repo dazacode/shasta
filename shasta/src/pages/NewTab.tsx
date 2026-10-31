@@ -27,6 +27,8 @@ import { useStoreBoot } from '@/store/hooks'
 import { AppIcon } from '@/store/components'
 import { LivePulse, OnlineCount } from '@/components/LivePulse'
 import { AdSlot } from '@/components/ads/AdSlot'
+import { claimHalloween, turnOffHalloween, useHalloween } from '@/lib/seasonal'
+import { HalloweenWallpaper, Pumpkin } from '@/components/seasonal/Halloween'
 
 function ShortcutTile({ s, onEdit, onRemove, onOpen }: { s: Shortcut; onEdit: () => void; onRemove: () => void; onOpen: () => void }) {
   return (
@@ -217,13 +219,19 @@ export function NewTab({ tabId }: { tabId: string }) {
   const customImage = settings.newTabBg === 'image' && picture
   const customColor = settings.newTabBg === 'color'
   const custom = customImage || customColor
-  const wallpaper = custom ? 'none' : effectiveWallpaper(settings.wallpaper, perks)
+  const wallpaper = custom ? 'none' : effectiveWallpaper(settings.wallpaper, perks, settings.claimedWallpapers)
+  // Halloween night replaces the wallpaper until Nov 1 unless holiday looks are off (lib/seasonal.ts), and stays for
+  // people who claimed it; the person's own picture or colour always wins
+  const season = useHalloween()
+  const halloweenLook = season && settings.seasonalLooks && !custom
+  const halloween = halloweenLook || wallpaper === 'halloween'
+  const offerClaim = halloweenLook && !isPrivate && !settings.claimedWallpapers.includes('halloween')
   // text colour follows what is behind it, after the dimming
   const luma = customImage ? picture.luma : customColor ? hexLuma(settings.newTabBgColor) : 1
   const customDark = luma * (1 - settings.newTabBgDim / 100) < 0.5
-  const dark = immersive || (custom ? customDark : !!WALLPAPERS[wallpaper].dark)
-  const greeting = settings.newTabGreetingText.trim() || (isPrivate ? 'Private tab at Shasta' : 'Happy to see you at Shasta')
-  const headline = settings.newTabHeadlineText.trim() || 'How can I help you?'
+  const dark = immersive || halloween || (custom ? customDark : !!WALLPAPERS[wallpaper].dark)
+  const greeting = settings.newTabGreetingText.trim() || (isPrivate ? 'Private tab at Shasta' : halloweenLook ? 'Happy Halloween from Shasta' : 'Happy to see you at Shasta')
+  const headline = settings.newTabHeadlineText.trim() || (halloweenLook && !isPrivate ? 'Trick or treat? Ask away.' : 'How can I help you?')
   const recording = useAssistant((s) => s.recording)
   const transcribing = useAssistant((s) => s.transcribing)
   const engine = SEARCH_ENGINES[settings.searchEngine].label
@@ -384,7 +392,9 @@ export function NewTab({ tabId }: { tabId: string }) {
 
   return (
     <div className={cn(immersive ? 'nt' : 'nt-plain', dark && 'dark', 'text-shasta-fg')} data-wallpaper={wallpaper} data-style={style}>
-      {wallpaper === 'ribbon' ? (
+      {halloween ? (
+        <HalloweenWallpaper />
+      ) : wallpaper === 'ribbon' ? (
         <RibbonWallpaper />
       ) : customImage ? (
         <div
@@ -399,7 +409,7 @@ export function NewTab({ tabId }: { tabId: string }) {
       {!minimal && !isPrivate && settings.newTabLive && <OnlineCount onOpenSite={(url) => navigateTo(tabId, url)} />}
       <div className="nt-hero">
         {!minimal && settings.newTabClock !== 'off' && <Clock hour12={settings.newTabClock === '12'} />}
-        {immersive && (
+        {immersive && !halloween && (
           <svg className="nt-ridge" viewBox="0 0 1600 260" preserveAspectRatio="none" aria-hidden>
             <defs>
               <linearGradient id="nt-ridge-fill" x1="0" y1="0" x2="0" y2="1">
@@ -440,6 +450,19 @@ export function NewTab({ tabId }: { tabId: string }) {
         )}
         {extras}
       </div>
+      {offerClaim && (
+        <div className="nt-claim" role="region" aria-label="Halloween background">
+          <Pumpkin className="size-9 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-white">Like the Halloween night?</p>
+            <p className="text-xs text-white/65">Keep it as your background after Halloween. Only until Oct 31.</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button onClick={claimHalloween} className="rounded-full bg-orange-500 px-3 py-1 text-xs font-semibold text-white hover:bg-orange-400">Keep it</button>
+              <button onClick={turnOffHalloween} className="rounded-full px-3 py-1 text-xs text-white/70 ring-1 ring-white/20 hover:bg-white/10 hover:text-white">Not for me, turn off Halloween</button>
+            </div>
+          </div>
+        </div>
+      )}
       <button onClick={() => setCustomizing(true)} className="nt-customize" aria-label="Customize this page" title="Customize this page">
         <SlidersHorizontal className="size-4" /> <span>Customize</span>
       </button>

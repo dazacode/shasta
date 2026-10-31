@@ -5,7 +5,8 @@ import { useSettings, defaultSettings, type NewTabBackground, type NewTabClock, 
 import { ChevronDown, ChevronUp, ImagePlus, Lock, Trash2 } from 'lucide-react'
 import { PICTURE_ACCEPT, removePicture, savePicture } from '@/lib/newTabBackground'
 import { useUi } from '@/stores/uiStore'
-import { WALLPAPERS, isLockedWallpaper, wallpaperBackground, type WallpaperName } from '@/lib/wallpaper'
+import { WALLPAPERS, isLockedWallpaper, isUnclaimedWallpaper, wallpaperBackground, type WallpaperName } from '@/lib/wallpaper'
+import { claimHalloween, useHalloween } from '@/lib/seasonal'
 import { useSupporter } from '@/stores/supporterStore'
 import { useTabs } from '@/stores/tabsStore'
 import { cn } from '@/lib/utils'
@@ -13,11 +14,15 @@ import { Row, Segmented, Toggle } from './settingsParts'
 
 export function WallpaperPicker() {
   const wallpaper = useSettings((x) => x.settings.wallpaper)
+  const claimed = useSettings((x) => x.settings.claimedWallpapers)
   const update = useSettings((x) => x.update)
   const { perks } = useSupporter()
+  const season = useHalloween()
   return (
     <div role="radiogroup" aria-label="New tab wallpaper" className="flex flex-wrap gap-2">
       {(Object.keys(WALLPAPERS) as WallpaperName[]).map((w) => {
+        // a seasonal wallpaper shows only to people who claimed it, or during its season (picking it claims it)
+        if (isUnclaimedWallpaper(w, claimed) && !(w === 'halloween' && season)) return null
         const locked = isLockedWallpaper(w, perks)
         const label = locked ? `${WALLPAPERS[w].label} (Supporter perk, locked)` : WALLPAPERS[w].label
         return (
@@ -28,7 +33,7 @@ export function WallpaperPicker() {
             aria-label={label}
             title={locked ? `${WALLPAPERS[w].label}: a Supporter perk. Click to learn more.` : label}
             // a locked preset explains itself instead of being picked
-            onClick={() => (locked ? useTabs.getState().openInternal('settings', 'supporter') : update({ wallpaper: w }))}
+            onClick={() => (locked ? useTabs.getState().openInternal('settings', 'supporter') : w === 'halloween' && isUnclaimedWallpaper(w, claimed) ? claimHalloween() : update({ wallpaper: w }))}
             className={cn('relative grid size-10 place-items-center overflow-hidden rounded-xl bg-shasta-field text-[10px] text-shasta-muted ring-offset-2 ring-offset-shasta-bg', wallpaper === w && 'ring-2 ring-shasta-fg')}
             style={{ background: wallpaperBackground(w), backgroundColor: 'var(--sh-field)' }}
           >
@@ -174,6 +179,7 @@ export function NewTabCustomizer() {
   const s = useSettings((x) => x.settings)
   const update = useSettings((x) => x.update)
   const minimal = s.newTabStyle === 'minimal'
+  const season = useHalloween()
   const d = defaultSettings()
   return (
     <>
@@ -185,6 +191,11 @@ export function NewTabCustomizer() {
           options={[{ value: 'immersive', label: 'Immersive' }, { value: 'classic', label: 'Classic' }, { value: 'minimal', label: 'Minimal' }]}
         />
       </Row>
+      {season && (
+        <Row title="Halloween look" desc="The Halloween night here, orange colours in the Store and a Halloween section on Watch, until November 1. Off keeps everything normal." htmlFor="nt-season">
+          <Toggle id="nt-season" label="Halloween look" checked={s.seasonalLooks} onChange={(seasonalLooks) => update({ seasonalLooks })} />
+        </Row>
+      )}
       <Row title="Background" desc="A built-in wallpaper (the ones with a lock are a thank-you for Supporters), a color, or a picture of your own. Nothing is uploaded.">
         <BackgroundPicker />
       </Row>

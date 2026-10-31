@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware'
 import type { SearchEngine } from '@/lib/url'
 import { canRunLocalRelay, defaultWispUrl, defaultWispUrls, type TransportName } from '@/proxy/scramjetAdapter'
 import { available as directAvailable } from '@/proxy/directFrame'
-import type { WallpaperName } from '@/lib/wallpaper'
+import { isWallpaper, type WallpaperName } from '@/lib/wallpaper'
 import type { Tier } from '@/ai/catalog'
 import { sanitizeRecord, type SupporterRecord } from '@/lib/supporter'
 import { LITE } from '@/lib/edition'
@@ -148,6 +148,10 @@ export interface Settings {
   supporter: SupporterRecord | null
   /** a supporter perk: try new features before everyone else (only a flag for now) */
   earlyPreviews: boolean
+  /** holiday looks (Halloween: new tab night, Store colours, Watch section); off = everything stays normal */
+  seasonalLooks: boolean
+  /** seasonal wallpapers this person claimed during their season, kept for good (lib/wallpaper.ts `claim`) */
+  claimedWallpapers: WallpaperName[]
   // advanced
   /**
    * How tabs load websites in the installed app: `direct` (a <controlledframe>: the real site, any site works)
@@ -226,6 +230,8 @@ export const defaultSettings = (): Settings => liteSettings({
   offlineAiRuntime: false,
   supporter: null,
   earlyPreviews: false,
+  seasonalLooks: true,
+  claimedWallpapers: [],
   // the installed app (an Isolated Web App) has sockets: browse with no relay server at all
   pageEngine: directAvailable() ? 'direct' : 'proxy',
   transport: canRunLocalRelay() ? 'local' : 'libcurl',
@@ -285,6 +291,8 @@ export function mergeSettings(persisted: unknown, current: SettingsState): Setti
   settings.supporter = sanitizeRecord(settings.supporter)
   if (typeof settings.earlyPreviews !== 'boolean') settings.earlyPreviews = false
   settings.wispUrls = sanitizeUrls(settings.wispUrls)
+  if (typeof settings.seasonalLooks !== 'boolean') settings.seasonalLooks = true
+  settings.claimedWallpapers = Array.isArray(settings.claimedWallpapers) ? settings.claimedWallpapers.filter(isWallpaper) : []
   return { ...current, settings: liteSettings(settings) }
 }
 

@@ -12,6 +12,8 @@ import { ShortcutsDialog } from '@/components/browser/ShortcutsDialog'
 import { Toasts } from '@/components/browser/Toasts'
 import { PrivateTabDialog } from '@/components/browser/PrivateTabDialog'
 import { ReportHost } from '@/store/ReportDialog'
+import { SaveShastaHost } from '@/components/SaveShasta'
+import { openSaveFromLink } from '@/lib/saveShasta'
 import { RecoveryKeyDialog } from '@/store/RecoveryKeyDialog'
 import { useAppearance } from '@/hooks/useAppearance'
 import { useShortcuts } from '@/hooks/useShortcuts'
@@ -60,6 +62,8 @@ function useBootstrap() {
     // first open (and after a big change): the welcome tour and beta notice, before a shared link so that one ends up in front
     showWhatsNewOnce(() => useTabs.getState().openInternal('whats-new'))
     openSharedLink((path) => useTabs.getState().openInternal('store', path))
+    // a phone that scanned "Save Shasta"'s code (?save=phone): show how to put Shasta on its home screen
+    openSaveFromLink()
     // idle tabs release their page; one timer for the whole app
     const timer = setInterval(() => useTabs.getState().suspendIdle(), 60_000)
     return () => {
@@ -119,6 +123,7 @@ export default function App() {
         <PrivateTabDialog />
         <RecoveryKeyDialog />
         <ReportHost />
+        <SaveShastaHost />
         <Toasts />
         <PageContextMenu />
       </TooltipProvider>

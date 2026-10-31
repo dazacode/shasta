@@ -7,6 +7,7 @@ import { SupporterBadge } from '@/components/SupporterBadge'
 import { useTabs } from '@/stores/tabsStore'
 import { useSupporter, useSupporterStore } from '@/stores/supporterStore'
 import { DISCORD_INVITE, MEMBERSHIP_URL, SUPPORT_URL, purgeLegacyPaymentKeys } from '@/lib/supporter'
+import { DiscordQrButton } from '@/components/DiscordQr'
 
 const linkProps = { target: '_blank', rel: 'noreferrer noopener' } as const
 
@@ -93,8 +94,9 @@ export default function SupportPage() {
                     Connect your Discord account to Ko-fi (in Ko-fi's settings) and Ko-fi gives you the Supporter role there. Want to try it first? A free trial (no ads for 7 days) is available in the Discord with <code className="rounded bg-shasta-field px-1">/trial</code>.
                   </p>
                   {DISCORD_INVITE && (
-                    <div>
+                    <div className="flex flex-wrap gap-2">
                       <a className={buttonVariants({ variant: 'outline' })} href={DISCORD_INVITE} {...linkProps}><ExternalLink /> Join the Discord</a>
+                      <DiscordQrButton />
                     </div>
                   )}
                 </li>

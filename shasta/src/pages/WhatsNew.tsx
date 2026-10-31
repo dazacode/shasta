@@ -1,220 +1,75 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
 import { motion, useReducedMotion } from 'motion/react'
-import {
-  Activity,
-  AppWindow,
-  ArrowRight,
-  Bot,
-  ChevronLeft,
-  Compass,
-  Download,
-  ExternalLink,
-  Film,
-  FlaskConical,
-  Gamepad2,
-  Globe,
-  Heart,
-  Library,
-  MessagesSquare,
-  ShieldAlert,
-  WifiOff,
-} from 'lucide-react'
+import { ArrowRight, Bookmark, ChevronLeft, Film, Smartphone, Sparkles } from 'lucide-react'
 import { Logo } from '@/components/Logo'
 import { buttonVariants } from '@/components/ui/button'
-import { DISCORD_INVITE } from '@/lib/supporter'
+import { QrImage } from '@/components/DiscordQr'
+import { Pumpkin } from '@/components/seasonal/Halloween'
+import { claimHalloween, useHalloween } from '@/lib/seasonal'
+import { openSaveShasta, phoneAddress } from '@/lib/saveShasta'
+import { firstVisit } from '@/lib/whatsNew'
+import { useSettings } from '@/stores/settingsStore'
 import { useTabs } from '@/stores/tabsStore'
 import { cn } from '@/lib/utils'
 
-/** One topic per slide; `a`/`b` colour the backdrop and the icon tile while it is showing. */
-type Slide = { icon: ReactNode; eyebrow: string; title: string; body: ReactNode; a: string; b: string; cta?: 'community' | 'support' }
+/** One topic per slide, ONE short sentence each: people skim this on their way to something else, so keep it to a few
+ *  slides (owner feedback 2026-10-31: the 15-slide tour was too long). `a`/`b` colour the backdrop and the icon tile. */
+type Slide = { icon: ReactNode; eyebrow: string; title: string; body?: ReactNode; points?: string[]; a: string; b: string; cta?: 'halloween' | 'save' }
 
-/** The latest update's slides, shown right after Welcome so returning people see them first. Replace them (and bump
- *  WHATS_NEW_VERSION in lib/whatsNew.ts) with each update worth announcing. */
-const NEW = 'New · Oct 31'
+/** Only for a browser that has never seen this page. */
+const WELCOME: Slide = {
+  icon: <Logo className="size-10" />,
+  eyebrow: 'Welcome',
+  title: 'Welcome to Shasta',
+  body: <>A whole browser in a tab, with games, shows and an AI that stays on your device. It's in beta, so things change fast.</>,
+  a: '#5b6cff',
+  b: '#c04dff',
+}
 
-const SLIDES: Slide[] = [
+/** The latest update. Replace these (and bump WHATS_NEW_VERSION in lib/whatsNew.ts) with each update worth announcing. */
+const UPDATE: Slide[] = [
   {
-    icon: <Logo className="size-10" />,
-    eyebrow: 'Welcome',
-    title: 'Welcome to Shasta',
-    body: <>A whole browser that runs inside a tab, with a Store of games and apps and an AI that stays on your device.</>,
-    a: '#5b6cff',
-    b: '#c04dff',
-  },
-  {
-    icon: <Globe />,
-    eyebrow: NEW,
-    title: 'Shasta has its own address',
-    body: (
-      <>
-        Shasta now lives at <strong className="text-shasta-fg">edushasta.lol</strong>. The old address keeps working, and lighter copies (Shasta Lite) run
-        on other hosts too, in case one of them is blocked on your network.
-      </>
-    ),
-    a: '#06b6d4',
-    b: '#3b82f6',
-  },
-  {
-    icon: <Heart />,
-    eyebrow: NEW,
-    title: 'No ads for supporters',
-    body: (
-      <>
-        To pay for its servers, Shasta now shows ads on its own pages (the new tab, the Store, Watch and a bar along the bottom), never inside the sites you
-        open. Supporters see none at all: $5 a month on Ko-fi, then <code className="font-mono">/supporter</code> in the Discord. Want to try it?{' '}
-        <code className="font-mono">/trial</code> gives you 7 days without ads, free. Codes now also work on older Chromebooks.
-      </>
-    ),
-    a: '#ec4899',
-    b: '#f43f5e',
-    cta: 'support',
-  },
-  {
-    icon: <Download />,
-    eyebrow: NEW,
-    title: 'Games that Shasta hosts itself',
-    body: (
-      <>
-        New in the Store: classic open-source games and tools like Hextris, A Dark Room, HexGL and JS Paint, plus dozens of small games, all stored on
-        Shasta, so they still load when the original site is blocked. Explore can now show only these downloads or only links, and the Top 10 keeps up with
-        what is trending.
-      </>
-    ),
-    a: '#22c55e',
-    b: '#84cc16',
-  },
-  {
-    icon: <Film />,
-    eyebrow: NEW,
-    title: 'Watch got faster',
-    body: (
-      <>
-        Films and shows start sooner, played straight from the source through Shasta. Anime that is split into seasons now plays the season you picked (a
-        “Season 2” used to start at season 1).
-      </>
-    ),
+    icon: <Pumpkin className="size-12" />,
+    eyebrow: 'Halloween update',
+    title: 'Shasta got spooky',
+    body: <>A haunted new tab, plus Halloween picks in Watch and the Store. Here until November 1.</>,
     a: '#f97316',
-    b: '#ef4444',
+    b: '#a855f7',
+    cta: 'halloween',
   },
   {
-    icon: <Activity />,
-    eyebrow: NEW,
-    title: 'See who is online',
-    body: <>The Trending strip on the new tab now shows how many people are using Shasta right now, on every Shasta address together.</>,
-    a: '#8b5cf6',
+    icon: <Smartphone />,
+    eyebrow: "Don't lose us",
+    title: 'Save Shasta on your phone',
+    body: <>Scan this to join our Discord (new links land there if Shasta gets blocked) and add Shasta to your home screen.</>,
+    a: '#5865f2',
     b: '#06b6d4',
+    cta: 'save',
   },
   {
-    icon: <FlaskConical />,
-    eyebrow: 'Heads up',
-    title: 'Shasta is in beta',
-    body: (
-      <>
-        We are building it in the open, live. Features change, new ones appear and things break, sometimes while you are using it. Updates arrive by
-        themselves; when one is ready the main menu says “Restart to update Shasta”. If something looks wrong, tell us in the Discord or use “Report a
-        problem” on any Store app.
-      </>
-    ),
-    a: '#f59e0b',
-    b: '#ef4444',
-  },
-  {
-    icon: <Compass />,
-    eyebrow: 'Browse',
-    title: 'The whole web, in a tab',
-    body: (
-      <>
-        Type an address or a search in the bar at the top. Tabs, bookmarks, history and downloads work like any browser, and ads and pop-ups are blocked
-        by default. Some sign-ins (Google, Microsoft, passkeys) and CAPTCHAs may not work through the proxy.
-      </>
-    ),
-    a: '#0ea5e9',
-    b: '#6366f1',
-  },
-  {
-    icon: <Gamepad2 />,
-    eyebrow: 'Store',
-    title: 'Thousands of games and apps',
-    body: (
-      <>
-        Sorted by genre. Install one and it gets its own address (like <code className="font-mono">game://name</code>) that you can type into the bar.
-        Game mode keeps the keyboard and mouse inside the game.
-      </>
-    ),
+    icon: <Sparkles />,
+    eyebrow: 'Small fixes',
+    title: 'A few nice touches',
+    points: ["Who's online sits at the top of the new tab. Hover it to see what's popular.", "Fold away the Halloween sections if they're not your thing.", 'Every Discord button now has a QR code for your phone.'],
     a: '#22c55e',
     b: '#14b8a6',
-  },
-  {
-    icon: <Library />,
-    eyebrow: 'Library',
-    title: 'Yours, no account needed',
-    body: <>Installed apps, favorites and the storefronts you follow live on this device.</>,
-    a: '#f97316',
-    b: '#eab308',
-  },
-  {
-    icon: <Bot />,
-    eyebrow: 'Shasta AI',
-    title: 'An AI that stays on your device',
-    body: (
-      <>
-        Summarize a page, explain a selection, quiz yourself, describe a picture. Your files, pictures, recordings and pages never leave the device. Open it
-        with the toolbar button or Ctrl+Shift+K.
-      </>
-    ),
-    a: '#a855f7',
-    b: '#ec4899',
-  },
-  {
-    icon: <WifiOff />,
-    eyebrow: 'Offline',
-    title: 'Opens even without a network',
-    body: <>Shasta saves itself on this device, so it still opens when the network is down (Settings → Updates &amp; offline).</>,
-    a: '#64748b',
-    b: '#0ea5e9',
-  },
-  {
-    icon: <AppWindow />,
-    eyebrow: 'Customize',
-    title: 'Make it yours',
-    body: <>Wallpapers, new tab backgrounds, size and contrast are in Settings. Export your profile to take your bookmarks and settings to another device.</>,
-    a: '#ec4899',
-    b: '#f97316',
-  },
-  {
-    icon: <ShieldAlert />,
-    eyebrow: 'Good to know',
-    title: 'Private tabs are not incognito',
-    body: (
-      <>
-        A private tab keeps no history, but sites can still share cookies with your other tabs. The proxy's operator can see which sites you visit, so don't
-        do anything through Shasta that you wouldn't do on a shared computer.
-      </>
-    ),
-    a: '#ef4444',
-    b: '#64748b',
-  },
-  {
-    icon: <MessagesSquare />,
-    eyebrow: 'Community',
-    title: 'Join the Discord',
-    body: <>Updates are announced there first. Report bugs, ask for games and apps, and talk to the people building Shasta.</>,
-    a: '#5865f2',
-    b: '#a855f7',
-    cta: 'community',
   },
 ]
 
 const typing = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))
 
-/** shasta://whats-new: the tour shown on first open, and the beta notice. A full-screen slideshow, one topic per slide. */
+/** shasta://whats-new: the latest update (plus a Welcome slide for a first visit), shown once per WHATS_NEW_VERSION. */
 export default function WhatsNewPage() {
   const open = useTabs((s) => s.openInternal)
   const still = useReducedMotion()
   const [viewport, embla] = useEmblaCarousel({ duration: still ? 1 : 28 })
   const [index, setIndex] = useState(0)
+  const SLIDES = useMemo(() => (firstVisit ? [WELCOME, ...UPDATE] : UPDATE), [])
   const slide = SLIDES[index]
+  const halloween = useHalloween()
+  const claimed = useSettings((s) => s.settings.claimedWallpapers.includes('halloween'))
+  const phoneLink = phoneAddress()
   const last = index === SLIDES.length - 1
 
   useEffect(() => {
@@ -260,8 +115,15 @@ export default function WhatsNewPage() {
             Beta
           </span>
         </span>
-        <span className="tabular-nums">
-          {index + 1} / {SLIDES.length}
+        <span className="flex items-center gap-3">
+          <span className="tabular-nums">
+            {index + 1} / {SLIDES.length}
+          </span>
+          {!last && (
+            <button className="rounded-full px-2.5 py-1 font-medium hover:bg-shasta-hover hover:text-shasta-fg" onClick={() => open('newtab')}>
+              Skip
+            </button>
+          )}
         </span>
       </header>
 
@@ -304,30 +166,38 @@ export default function WhatsNewPage() {
                     >
                       {s.title}
                     </motion.h1>
-                    <motion.p {...rise(0.24)} className="mt-5 text-base leading-relaxed text-pretty text-shasta-muted sm:text-lg">
-                      {s.body}
-                    </motion.p>
-                    {s.cta === 'support' && (
+                    {s.body && (
+                      <motion.p {...rise(0.24)} className="mt-5 text-base leading-relaxed text-pretty text-shasta-muted sm:text-lg">
+                        {s.body}
+                      </motion.p>
+                    )}
+                    {s.points && (
+                      <motion.ul {...rise(0.24)} className="mt-6 grid gap-2 text-left text-sm sm:text-base">
+                        {s.points.map((p) => (
+                          <li key={p} className="flex items-start gap-2.5 rounded-xl bg-shasta-home/70 px-4 py-2.5 ring-1 ring-shasta-line backdrop-blur">
+                            <span className="mt-2 size-1.5 shrink-0 rounded-full" style={{ background: s.a }} />
+                            <span className="text-shasta-muted">{p}</span>
+                          </li>
+                        ))}
+                      </motion.ul>
+                    )}
+                    {s.cta === 'halloween' && (
                       <motion.div {...rise(0.32)} className="mt-7 flex flex-wrap justify-center gap-2">
-                        <button className={buttonVariants({ size: 'lg' })} onClick={() => open('support')} tabIndex={on ? 0 : -1}>
-                          <Heart /> Remove ads
-                        </button>
-                        {DISCORD_INVITE && (
-                          <a className={buttonVariants({ variant: 'outline', size: 'lg' })} href={DISCORD_INVITE} target="_blank" rel="noreferrer noopener" tabIndex={on ? 0 : -1}>
-                            <MessagesSquare /> Free trial in the Discord <ExternalLink />
-                          </a>
+                        {halloween && !claimed && (
+                          <button className={buttonVariants({ size: 'lg' })} onClick={claimHalloween} tabIndex={on ? 0 : -1}>
+                            <Pumpkin className="size-5" /> Keep the Halloween background
+                          </button>
                         )}
+                        <button className={buttonVariants({ variant: 'outline', size: 'lg' })} onClick={() => open('watch')} tabIndex={on ? 0 : -1}>
+                          <Film /> Halloween picks on Watch
+                        </button>
                       </motion.div>
                     )}
-                    {s.cta === 'community' && (
-                      <motion.div {...rise(0.32)} className="mt-7 flex flex-wrap justify-center gap-2">
-                        {DISCORD_INVITE && (
-                          <a className={buttonVariants({ size: 'lg' })} href={DISCORD_INVITE} target="_blank" rel="noreferrer noopener" tabIndex={on ? 0 : -1}>
-                            <MessagesSquare /> Join the Discord <ExternalLink />
-                          </a>
-                        )}
-                        <button className={buttonVariants({ variant: 'outline', size: 'lg' })} onClick={() => open('store')} tabIndex={on ? 0 : -1}>
-                          <Gamepad2 /> Open the Store
+                    {s.cta === 'save' && phoneLink && (
+                      <motion.div {...rise(0.32)} className="mt-6 grid justify-items-center gap-3">
+                        <QrImage value={phoneLink} label="QR code to open Shasta on your phone" className="size-40 p-1.5 shadow-lg ring-1 ring-shasta-line" />
+                        <button className={buttonVariants({ variant: 'outline' })} onClick={() => openSaveShasta()} tabIndex={on ? 0 : -1}>
+                          <Bookmark /> Other ways to save it
                         </button>
                       </motion.div>
                     )}
@@ -369,7 +239,7 @@ export default function WhatsNewPage() {
             {last ? 'Start browsing' : 'Next'} <ArrowRight className="size-4" />
           </button>
         </div>
-        <p className="text-xs text-shasta-muted">Use ← → or swipe · Come back any time from the main menu → What's new</p>
+        <p className="text-xs text-shasta-muted">← → or swipe · Main menu → What's new to see it again</p>
       </footer>
     </div>
   )

@@ -1,4 +1,5 @@
-import { Flag, Gamepad2, HeartHandshake, MessagesSquare, RefreshCw, Share, ShieldCheck, Sparkles, VenetianMask, Film, Library, Store, ArrowLeft, Gauge, ArrowRight, Download, Home, Keyboard, MoreVertical, Printer, RotateCw, X } from 'lucide-react'
+import { Bookmark, Flag, Gamepad2, HeartHandshake, MessagesSquare, RefreshCw, Share, ShieldCheck, Sparkles, VenetianMask, Film, Library, Store, ArrowLeft, Gauge, ArrowRight, Download, Home, Keyboard, MoreVertical, Printer, RotateCw, X } from 'lucide-react'
+import { openSaveShasta, siteAddress } from '@/lib/saveShasta'
 import { shouldSuggestApp } from '@/lib/shastaApp'
 import { IconButton } from './IconButton'
 import { Omnibox } from './Omnibox'
@@ -184,6 +185,11 @@ export function Toolbar() {
           <DropdownMenuItem onClick={() => openInternal('discord')}>
             <MessagesSquare /> Join our Discord
           </DropdownMenuItem>
+          {siteAddress() && (
+            <DropdownMenuItem onClick={() => openSaveShasta()}>
+              <Bookmark /> Save Shasta (bookmark, phone)
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onClick={() => openInternal('whats-new')}>
             <Sparkles /> What's new
           </DropdownMenuItem>

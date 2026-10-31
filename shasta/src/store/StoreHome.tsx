@@ -14,6 +14,8 @@ import { useSettings } from '@/stores/settingsStore'
 import { useTabs } from '@/stores/tabsStore'
 import { AppAction, AppGrid, AppIcon, AppTile, Chip, LazyMount, LoadError, LoadMore, Message, Section, Shelf, StoreTile, TILE_FRAME, TileLink, TileSkeleton, TileSkeletons } from './components'
 import type { AppCard, Home, SearchResult } from './types'
+import { useHalloweenLook } from '@/lib/seasonal'
+import { HalloweenSection } from '@/components/seasonal/Halloween'
 
 const DAY = 86_400_000
 /** a rail with fewer apps than this (after leaving out what is already on the page) is not worth a row */
@@ -102,6 +104,42 @@ function FacetRail({ facet, index, exclude, claims }: { facet: Facet; index: num
     <Section title={facet.name} subtitle="Most installed first" action={<SeeAll path={`/search?${facetQuery(facet)}&sort=popular`} label={facet.count ? `See all ${facet.count}` : 'See all'} />}>
       {data ? <Row apps={apps} /> : <RowSkeleton />}
     </Section>
+  )
+}
+
+/** Halloween 2026 (lib/seasonal.ts): three spooky shelves under one banner, nothing repeated between them or from
+ *  what the page already shows higher up. Plain catalogue queries, the same any search makes. */
+const SPOOKY: { title: string; subtitle: string; query: string; see: string }[] = [
+  { title: 'Fright night favourites', subtitle: 'The most installed horror games', query: 'genre=horror&sort=popular', see: '/search?genre=horror&sort=popular' },
+  { title: 'Halloween treats', subtitle: 'Pumpkins, costumes and trick-or-treating', query: 'q=halloween', see: '/search?q=halloween' },
+  { title: 'Spooky but cozy', subtitle: 'For the ones who scare easily', query: 'q=spooky', see: '/search?q=spooky' },
+]
+function HalloweenShelves({ exclude }: { exclude: Set<string> }) {
+  const a = useApi<SearchResult>(`/api/catalog/apps?${SPOOKY[0].query}&limit=30`)
+  const b = useApi<SearchResult>(`/api/catalog/apps?${SPOOKY[1].query}&limit=30`)
+  const c = useApi<SearchResult>(`/api/catalog/apps?${SPOOKY[2].query}&limit=30`)
+  const lists = useMemo(() => {
+    const seen = new Set(exclude)
+    return [a.data, b.data, c.data].map((d) => {
+      if (!d) return null
+      const out = d.items.filter((x) => !seen.has(x.id)).slice(0, 12)
+      out.forEach((x) => seen.add(x.id))
+      return out
+    })
+  }, [a.data, b.data, c.data, exclude])
+  if ([a, b, c].every((r) => r.error) || lists.every((l) => l && l.length < 3)) return null
+  return (
+    <HalloweenSection id="store" title="Halloween in the Store" subtitle="Horror games, Halloween treats and cozy spooks. Here until November 1." className="mb-12">
+      {SPOOKY.map((shelf, i) => {
+        const list = lists[i]
+        if (list && list.length < 3) return null
+        return (
+          <Section key={shelf.title} title={shelf.title} subtitle={shelf.subtitle} action={<SeeAll path={shelf.see} />} className="mt-5 mb-4">
+            {list ? <Row apps={list} /> : <RowSkeleton />}
+          </Section>
+        )
+      })}
+    </HalloweenSection>
   )
 }
 
@@ -233,6 +271,7 @@ function BrowseAll({ kind, facets, kindTotal }: { kind: Kind; facets: Facet[]; k
 export default function StoreHome() {
   const [kind, setKind] = useState<Kind>('all')
   const { go } = useStoreNav()
+  const halloween = useHalloweenLook()
   const user = useStore((s) => s.user)
   const library = useStore((s) => s.library)
   const { data, loading, error, offline, reload } = useApi<Home>('/api/catalog/home')
@@ -361,6 +400,8 @@ export default function StoreHome() {
           ))}
         </nav>
       )}
+
+      {halloween && kind !== 'apps' && <HalloweenShelves exclude={page.exclude} />}
 
       {page.recent.length > 0 && (
         <Section title="Jump back in" subtitle="What you opened last on this device" action={<History className="size-4 text-shasta-muted" aria-hidden />}>

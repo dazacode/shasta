@@ -8,6 +8,7 @@ import { useSupporter, useSupporterStore } from '@/stores/supporterStore'
 import { useTabs } from '@/stores/tabsStore'
 import { useUi } from '@/stores/uiStore'
 import { DISCORD_INVITE } from '@/lib/supporter'
+import { DiscordQrButton } from '@/components/DiscordQr'
 
 function statusText(s: ReturnType<typeof useSupporter>): string {
   if (s.perks) return `${s.kind === 'trial' ? 'Free trial' : 'Supporter'} · ${s.daysLeft} day${s.daysLeft === 1 ? '' : 's'} left. Thank you!`
@@ -87,6 +88,7 @@ export function SupporterSection() {
               <ExternalLink /> Join the Discord
             </a>
           )}
+          <DiscordQrButton />
         </div>
       </section>
 

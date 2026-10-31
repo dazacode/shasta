@@ -12,6 +12,8 @@ import { useWatch } from '@/watch/store'
 import type { Candidate, Card, Featured, Kind, Row, Scope, Title } from '@/watch/types'
 import { cn } from '@/lib/utils'
 import { AdSlot } from '@/components/ads/AdSlot'
+import { useHalloweenLook } from '@/lib/seasonal'
+import { HalloweenSection } from '@/components/seasonal/Halloween'
 
 const SCOPES: { key: Scope; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -31,6 +33,11 @@ export function Watch({ tabId, initial }: { tabId: string; initial: string }) {
   const [searchError, setSearchError] = useState('')
   const [featured, setFeatured] = useState<Featured[]>([])
   const [rows, setRows] = useState<Row[] | null>(null)
+  // seasonal shelves come from the server tagged with a section; they are drawn as one block, and only while it is
+  // still Halloween here (the server drops them a little later, on its own clock)
+  const halloween = useHalloweenLook()
+  const spooky = useMemo(() => (halloween ? (rows ?? []).filter((r) => r.section === 'halloween') : []), [rows, halloween])
+  const plainRows = useMemo(() => (rows ?? []).filter((r) => !r.section), [rows])
   const [detail, setDetail] = useState<{ kind: Kind; id: string; season: number; episode: number; play: boolean } | null>(null)
 
   const progress = useWatch((s) => s.progress)
@@ -177,6 +184,12 @@ export function Watch({ tabId, initial }: { tabId: string; initial: string }) {
             </Rail>
           )}
 
+          {spooky.length > 0 && (
+            <HalloweenSection id="watch" title="Halloween at Shasta Watch" subtitle="Horror films, Halloween specials and spooky anime. Here until November 1.">
+              {spooky.map((r) => <RowSection key={r.key} rowKey={r.key} title={r.title} onOpen={open} />)}
+            </HalloweenSection>
+          )}
+
           {list.length > 0 && (
             <Rail title="My List" icon={<ListVideo className="size-4" />}>
               {list.slice(0, 18).map((c) => <MediaCard key={`${c.kind}:${c.id}`} card={c} onOpen={open} fixed />)}
@@ -207,7 +220,7 @@ export function Watch({ tabId, initial }: { tabId: string; initial: string }) {
             </div>
           ) : (
             <>
-              {rows.map((r) => <RowSection key={r.key} rowKey={r.key} title={r.title} onOpen={open} />)}
+              {plainRows.map((r) => <RowSection key={r.key} rowKey={r.key} title={r.title} onOpen={open} />)}
               {rows.length === 0 && <p className="mt-8 text-center text-sm text-shasta-muted">No rows answered right now. Try again in a moment.</p>}
             </>
           )}

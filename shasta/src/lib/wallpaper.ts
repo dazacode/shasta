@@ -1,7 +1,7 @@
 // New-tab wallpapers: plain CSS gradients tinted over the page colour, so text stays readable in light and dark themes
 // and nothing is downloaded or stored beyond the preset's name. Presets marked `supporter` are a cosmetic perk; a saved
 // one that is locked again (pass ended) is shown as the default without touching the saved choice.
-export type WallpaperName = 'none' | 'alpine' | 'dawn' | 'forest' | 'dusk' | 'ember' | 'ribbon' | 'aurora' | 'sunset' | 'lagoon' | 'prism' | 'nebula'
+export type WallpaperName = 'none' | 'alpine' | 'dawn' | 'forest' | 'dusk' | 'ember' | 'ribbon' | 'aurora' | 'sunset' | 'lagoon' | 'prism' | 'nebula' | 'halloween'
 
 export interface WallpaperPreset {
   label: string
@@ -13,6 +13,8 @@ export interface WallpaperPreset {
   dark?: boolean
   /** a supporter perk */
   supporter?: true
+  /** a seasonal wallpaper: shown for everyone during its season, kept afterwards only by people who claimed it */
+  claim?: true
 }
 
 const glow = (l: number, c: number, h: number, a: number) => `oklch(${l} ${c} ${h} / ${a})`
@@ -56,23 +58,33 @@ export const WALLPAPERS: Record<WallpaperName, WallpaperPreset> = {
     dark: true,
     css: 'radial-gradient(1.5px 1.5px at 18% 28%, #fff, transparent), radial-gradient(1px 1px at 62% 18%, #fff, transparent), radial-gradient(1.5px 1.5px at 82% 58%, #fff, transparent), radial-gradient(1px 1px at 34% 76%, #fff, transparent), radial-gradient(1px 1px at 90% 88%, #fff, transparent), radial-gradient(55% 45% at 28% 32%, #7c3aed99, transparent 65%), radial-gradient(45% 40% at 76% 66%, #db277788, transparent 65%), radial-gradient(60% 50% at 60% 10%, #2563eb66, transparent 70%), #0b0820',
   },
+  // Halloween 2026: drawn by components/seasonal/Halloween.tsx; claimable until Nov 1 (lib/seasonal.ts)
+  halloween: { label: 'Halloween night', hue: null, dark: true, claim: true },
 }
 
 export const isWallpaper = (v: unknown): v is WallpaperName => typeof v === 'string' && Object.hasOwn(WALLPAPERS, v)
 
 export const isLockedWallpaper = (name: WallpaperName, perks: boolean) => !!WALLPAPERS[name]?.supporter && !perks
 
-/** The wallpaper to draw: a saved supporter preset falls back to the default while perks are off (the saved choice stays). */
-export function effectiveWallpaper(name: WallpaperName, perks: boolean): WallpaperName {
-  return !isWallpaper(name) || isLockedWallpaper(name, perks) ? 'none' : name
+/** A seasonal wallpaper this person never claimed. */
+export const isUnclaimedWallpaper = (name: WallpaperName, claimed: readonly string[]) => !!WALLPAPERS[name]?.claim && !claimed.includes(name)
+
+/** The wallpaper to draw: a saved supporter preset falls back to the default while perks are off (the saved choice stays),
+ *  and so does a seasonal one that was never claimed. */
+export function effectiveWallpaper(name: WallpaperName, perks: boolean, claimed: readonly string[] = []): WallpaperName {
+  return !isWallpaper(name) || isLockedWallpaper(name, perks) || isUnclaimedWallpaper(name, claimed) ? 'none' : name
 }
 
 /** The small swatch for the glossy ribbon wallpaper; the page draws the full version (components/RibbonWallpaper.tsx). */
 const RIBBON_PREVIEW = 'linear-gradient(120deg, transparent 20%, #8b5cf6 38%, #d9c2ff 46%, transparent 56%), linear-gradient(60deg, transparent 55%, #5b7bf0 68%, #cfe0ff 74%, transparent 84%), #0a0a22'
 
+/** The small swatch for the Halloween night; the page draws the full scene. */
+const HALLOWEEN_PREVIEW = 'radial-gradient(22% 22% at 72% 28%, #ffd98f 90%, transparent 100%), radial-gradient(60% 30% at 50% 100%, #08040c 60%, transparent 62%), radial-gradient(14% 12% at 28% 84%, #f07f24 80%, transparent 90%), linear-gradient(180deg, #07040f, #2a1036 80%, #5a1f22)'
+
 /** Background for the new tab page, or undefined for the plain page colour. */
 export function wallpaperBackground(name: WallpaperName): string | undefined {
   if (name === 'ribbon') return RIBBON_PREVIEW
+  if (name === 'halloween') return HALLOWEEN_PREVIEW
   const preset = WALLPAPERS[name]
   if (preset?.css) return preset.css
   const hue = preset?.hue
