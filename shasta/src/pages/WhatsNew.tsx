@@ -2,14 +2,19 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
 import { motion, useReducedMotion } from 'motion/react'
 import {
+  Activity,
   AppWindow,
   ArrowRight,
   Bot,
   ChevronLeft,
   Compass,
+  Download,
   ExternalLink,
+  Film,
   FlaskConical,
   Gamepad2,
+  Globe,
+  Heart,
   Library,
   MessagesSquare,
   ShieldAlert,
@@ -22,7 +27,11 @@ import { useTabs } from '@/stores/tabsStore'
 import { cn } from '@/lib/utils'
 
 /** One topic per slide; `a`/`b` colour the backdrop and the icon tile while it is showing. */
-type Slide = { icon: ReactNode; eyebrow: string; title: string; body: ReactNode; a: string; b: string; cta?: 'community' }
+type Slide = { icon: ReactNode; eyebrow: string; title: string; body: ReactNode; a: string; b: string; cta?: 'community' | 'support' }
+
+/** The latest update's slides, shown right after Welcome so returning people see them first. Replace them (and bump
+ *  WHATS_NEW_VERSION in lib/whatsNew.ts) with each update worth announcing. */
+const NEW = 'New · Oct 31'
 
 const SLIDES: Slide[] = [
   {
@@ -32,6 +41,69 @@ const SLIDES: Slide[] = [
     body: <>A whole browser that runs inside a tab, with a Store of games and apps and an AI that stays on your device.</>,
     a: '#5b6cff',
     b: '#c04dff',
+  },
+  {
+    icon: <Globe />,
+    eyebrow: NEW,
+    title: 'Shasta has its own address',
+    body: (
+      <>
+        Shasta now lives at <strong className="text-shasta-fg">edushasta.lol</strong>. The old address keeps working, and lighter copies (Shasta Lite) run
+        on other hosts too, in case one of them is blocked on your network.
+      </>
+    ),
+    a: '#06b6d4',
+    b: '#3b82f6',
+  },
+  {
+    icon: <Heart />,
+    eyebrow: NEW,
+    title: 'No ads for supporters',
+    body: (
+      <>
+        To pay for its servers, Shasta now shows ads on its own pages (the new tab, the Store, Watch and a bar along the bottom), never inside the sites you
+        open. Supporters see none at all: $5 a month on Ko-fi, then <code className="font-mono">/supporter</code> in the Discord. Want to try it?{' '}
+        <code className="font-mono">/trial</code> gives you 7 days without ads, free. Codes now also work on older Chromebooks.
+      </>
+    ),
+    a: '#ec4899',
+    b: '#f43f5e',
+    cta: 'support',
+  },
+  {
+    icon: <Download />,
+    eyebrow: NEW,
+    title: 'Games that Shasta hosts itself',
+    body: (
+      <>
+        New in the Store: classic open-source games and tools like Hextris, A Dark Room, HexGL and JS Paint, plus dozens of small games, all stored on
+        Shasta, so they still load when the original site is blocked. Explore can now show only these downloads or only links, and the Top 10 keeps up with
+        what is trending.
+      </>
+    ),
+    a: '#22c55e',
+    b: '#84cc16',
+  },
+  {
+    icon: <Film />,
+    eyebrow: NEW,
+    title: 'Watch got faster',
+    body: (
+      <>
+        Films and shows start sooner, played straight from the source through Shasta. Anime that is split into seasons now plays the season you picked (a
+        “Season 2” used to start at season 1).
+      </>
+    ),
+    a: '#f97316',
+    b: '#ef4444',
+  },
+  {
+    icon: <Activity />,
+    eyebrow: NEW,
+    title: 'See who is online',
+    body: <>The Trending strip on the new tab now shows how many people are using Shasta right now, on every Shasta address together.</>,
+    a: '#8b5cf6',
+    b: '#06b6d4',
   },
   {
     icon: <FlaskConical />,
@@ -235,6 +307,18 @@ export default function WhatsNewPage() {
                     <motion.p {...rise(0.24)} className="mt-5 text-base leading-relaxed text-pretty text-shasta-muted sm:text-lg">
                       {s.body}
                     </motion.p>
+                    {s.cta === 'support' && (
+                      <motion.div {...rise(0.32)} className="mt-7 flex flex-wrap justify-center gap-2">
+                        <button className={buttonVariants({ size: 'lg' })} onClick={() => open('support')} tabIndex={on ? 0 : -1}>
+                          <Heart /> Remove ads
+                        </button>
+                        {DISCORD_INVITE && (
+                          <a className={buttonVariants({ variant: 'outline', size: 'lg' })} href={DISCORD_INVITE} target="_blank" rel="noreferrer noopener" tabIndex={on ? 0 : -1}>
+                            <MessagesSquare /> Free trial in the Discord <ExternalLink />
+                          </a>
+                        )}
+                      </motion.div>
+                    )}
                     {s.cta === 'community' && (
                       <motion.div {...rise(0.32)} className="mt-7 flex flex-wrap justify-center gap-2">
                         {DISCORD_INVITE && (

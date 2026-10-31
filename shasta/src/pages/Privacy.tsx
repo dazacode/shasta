@@ -76,8 +76,8 @@ export default function PrivacyPage() {
           <p>
             Banners run in sealed-off frames that cannot read Shasta or the sites you open, and because the pages are
             cross-origin isolated for the games, they load <em>credentialless</em> (without your cookies to the ad
-            network). Turn adverts off entirely in{' '}
-            <button onClick={() => open('settings', 'privacy')} className="text-shasta-accent hover:underline">Settings → Privacy</button>.
+            network). Supporters see no adverts at all:{' '}
+            <button onClick={() => open('support')} className="text-shasta-accent hover:underline">Support Shasta</button>.
           </p>
         </Section>
 

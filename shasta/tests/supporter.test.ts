@@ -77,6 +77,7 @@ describe('pass verification', () => {
     expect(await verifyToken('nope', pub, NOW)).toMatchObject({ ok: false, reason: 'malformed' })
     expect(await verifyToken('a.b.c', pub, NOW)).toMatchObject({ ok: false, reason: 'malformed' })
   })
+
 })
 
 describe('status', () => {
@@ -236,5 +237,26 @@ describe('old payment detection leftovers', () => {
 
   it('has no payment-detection exports left', () => {
     for (const name of ['generateRef', 'claim', 'startClaimPoll', 'isEmail', 'normalizeEmail', 'loadPendingClaim', 'loadPendingRef']) expect(name in sup).toBe(false)
+  })
+})
+
+// last on purpose: it resets the module registry (ed25519Supported() is memoized per module)
+describe('pass verification without WebCrypto Ed25519', () => {
+  it('falls back to @noble/ed25519 where WebCrypto has no Ed25519 (school Chromebooks on Chrome 126)', async () => {
+    const good = await sign({ v: 1, kind: 'supporter', iat: NOW - DAY, exp: NOW + 30 * DAY })
+    const [, s] = good.split('.')
+    const forged = `${base64urlEncode(new TextEncoder().encode(JSON.stringify({ v: 1, kind: 'supporter', iat: NOW, exp: NOW + 999 * DAY })))}.${s}`
+    const realImport = crypto.subtle.importKey.bind(crypto.subtle) as (...a: unknown[]) => Promise<CryptoKey>
+    const spy = vi.spyOn(crypto.subtle, 'importKey').mockImplementation(((...a: unknown[]) =>
+      (a[2] as { name?: string })?.name === 'Ed25519' ? Promise.reject(new DOMException('Unrecognized name', 'NotSupportedError')) : realImport(...a)) as typeof crypto.subtle.importKey)
+    try {
+      vi.resetModules() // ed25519Supported() is memoized per module
+      const old = await import('@/lib/supporter')
+      expect(await old.ed25519Supported()).toBe(false)
+      expect(await old.verifyToken(good, pub, NOW)).toMatchObject({ ok: true, payload: { kind: 'supporter' } })
+      expect(await old.verifyToken(forged, pub, NOW)).toMatchObject({ ok: false, reason: 'signature' })
+    } finally {
+      spy.mockRestore()
+    }
   })
 })

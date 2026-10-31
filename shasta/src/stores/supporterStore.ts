@@ -1,5 +1,6 @@
 // Supporter state for this device. The code and its signed pass live in settings (`settings.supporter`); this store
-// checks the pass against the server's public key and keeps it fresh. useSupporter() is the ONE gate for perks.
+// checks the pass against the server's public key and keeps it fresh. useSupporter() is the ONE gate for perks
+// (hasPerks() outside React: lib/ads.ts shows supporters no adverts at all).
 import { create } from 'zustand'
 import { useSettings, getSettings } from '@/stores/settingsStore'
 import {
@@ -29,6 +30,8 @@ interface SupporterState {
   note: SupporterNote
   /** a redeem or refresh is in flight */
   busy: boolean
+  /** the saved pass has been checked at least once this session (adverts wait for it: supporters see none) */
+  checked: boolean
   /** start once at boot: check the saved pass, refresh it when due, and re-check now and then */
   boot: () => void
   /** re-read settings and check the pass; resolves with the new status */
@@ -121,6 +124,7 @@ export const useSupporterStore = create<SupporterState>()((set, get) => ({
   daysLeft: 0,
   note: null,
   busy: false,
+  checked: false,
 
   evaluate: async () => {
     const record = getSettings().supporter
@@ -130,7 +134,7 @@ export const useSupporterStore = create<SupporterState>()((set, get) => ({
     const status = statusOf(record, result)
     const note: SupporterNote = !record ? null : !record.token ? 'ended' : result && !result.ok && result.reason !== 'expired' ? (result.reason === 'unsupported' ? 'unsupported' : 'invalid') : null
     const exp = result?.payload?.exp ?? 0
-    set({ status, exp, daysLeft: result?.ok ? daysLeftOf(exp) : 0, note })
+    set({ status, exp, daysLeft: result?.ok ? daysLeftOf(exp) : 0, note, checked: true })
     // a pass that runs out while the tab stays open ends its perks right then, not at the next check
     clearTimeout(expiryTimer)
     const ms = exp * 1000 - Date.now()
@@ -217,4 +221,10 @@ export function useSupporter(): Supporter {
   const code = useSettings((s) => s.settings.supporter?.code ?? null)
   const perks = status === 'trial' || status === 'supporter'
   return { status, perks, kind: perks ? status : null, daysLeft: perks ? daysLeft : 0, note, code, busy }
+}
+
+/** Perks are on right now (outside React). */
+export const hasPerks = () => {
+  const st = useSupporterStore.getState().status
+  return st === 'trial' || st === 'supporter'
 }

@@ -14,9 +14,11 @@
 // Monetag was tried and removed (2026-10-30): its Push format and Multitag need their service worker at /sw.js, which
 // is Shasta's own (Scramjet + offline shell). Never install an ad network's service worker.
 //
-// Gated exactly like lib/stats.ts: off in tests and in the installed app (the IWA CSP allows no remote script), off
-// when the person turns Settings -> Privacy -> "Show ads" off, and off until the build names a provider.
-import { getSettings, useSettings } from '@/stores/settingsStore'
+// Off in tests and in the installed app (the IWA CSP allows no remote script) and until the build names a provider.
+// Otherwise ON for everyone except supporters (owner decision 2026-10-31): an active Supporter pass or trial is the
+// ONLY way to turn adverts off — the old free "Show ads" toggle is gone (`settings.ads`/`adsBar` are ignored now).
+// Nothing loads before the saved pass has been checked, so a supporter never gets a pop-under while it is checked.
+import { hasPerks, useSupporterStore } from '@/stores/supporterStore'
 import { inInstalledApp } from './shastaApp'
 
 const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : '')
@@ -99,9 +101,16 @@ function loadProviders() {
   for (const [src, zone] of AD_SCRIPTS) addScript(src, { ...(zone && { 'data-zone': zone }), 'data-cfasync': 'false' })
 }
 
-/** True when a provider is configured, this build can run it, and the person has not turned ads off. */
+/** True when a provider is configured, this build can run it, and this device is not a supporter's. */
 export function adsEnabled(): boolean {
-  return AVAILABLE && getSettings().ads
+  return AVAILABLE && useSupporterStore.getState().checked && !hasPerks()
+}
+
+/** The same, for components: false until the pass has been checked, and false for supporters. */
+export function useAdsOn(): boolean {
+  const checked = useSupporterStore((s) => s.checked)
+  const perks = useSupporterStore((s) => s.status === 'trial' || s.status === 'supporter')
+  return checked && !perks
 }
 
 /** Fills one AdSense unit. Safe to call before the script arrives (it queues) and more than once per element. */
@@ -118,15 +127,22 @@ export function pushAdSense() {
 export function startAds() {
   if (!AVAILABLE) return
   started = true
+  let ready = false
   const go = () => {
     if (adsEnabled()) loadProviders()
   }
+  const arm = () => {
+    ready = true
+    go()
+  }
   // after first paint, and after the offline shell has had a chance to come up
-  if (document.readyState === 'complete') setTimeout(go, 1200)
-  else addEventListener('load', () => setTimeout(go, 1200), { once: true })
-  // turning ads back on later loads the scripts then (never unloading them: harmless either way)
-  useSettings.subscribe((s, prev) => {
-    if (s.settings.ads !== prev.settings.ads && s.settings.ads) loadProviders()
+  if (document.readyState === 'complete') setTimeout(arm, 1200)
+  else addEventListener('load', () => setTimeout(arm, 1200), { once: true })
+  // the pass is checked after boot (and may end later): load then. A pass that starts mid-session hides the banners
+  // at once; page-level tags already running stay until the next reload (scripts cannot be unloaded).
+  useSupporterStore.subscribe(() => {
+    if (loaded || !ready) return
+    go()
   })
 }
 

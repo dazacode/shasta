@@ -1,5 +1,5 @@
 /** Bump when shasta://whats-new changes enough that everybody should see it again on their next start. */
-export const WHATS_NEW_VERSION = '2026-10-29-public-beta'
+export const WHATS_NEW_VERSION = '2026-10-31-supporters'
 const KEY = 'shasta-whats-new'
 
 /** Opens the welcome/beta page once per WHATS_NEW_VERSION. Skipped under automation so e2e tests start on a plain new tab. */

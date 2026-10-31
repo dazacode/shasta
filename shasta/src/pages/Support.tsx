@@ -62,22 +62,22 @@ export default function SupportPage() {
 
           {sup.perks ? (
             justAdded ? (
-              <Done title="Code accepted. Thank you!">The extras are on for this device ({days} left on this pass). It renews on its own while your membership continues.</Done>
+              <Done title="Code accepted. Thank you!">Ads are gone and the extras are on for this device ({days} left on this pass). It renews on its own while your membership continues.</Done>
             ) : sup.kind === 'trial' ? (
-              <Done title="You're on a free trial.">{days} left. To keep the extras after that, become a Supporter on Ko-fi and get your code with /supporter in the Discord.</Done>
+              <Done title="You're on a free trial.">{days} left. No ads until then. To keep it that way, become a Supporter on Ko-fi and get your code with /supporter in the Discord.</Done>
             ) : (
               <Done title="You're a Supporter. Thank you!">{days} left on this device's pass. It renews on its own while your membership continues.</Done>
             )
           ) : (
             <>
               <p className="text-shasta-muted">
-                Supporters get a few thank-you extras that only change how Shasta looks: extra new tab wallpapers, a small badge and early previews of new features. There are no accounts and Shasta never sees your payment. Three steps:
+                Supporters see <strong className="text-shasta-fg">no ads anywhere in Shasta</strong>, plus a few thank-you extras: extra new tab wallpapers, a small badge and early previews of new features. There are no accounts and Shasta never sees your payment. Three steps:
               </p>
               <ol className="grid gap-3">
                 <li className="grid gap-2 rounded-xl border border-shasta-line p-4">
                   <h3 className="font-medium">1. Support on Ko-fi</h3>
                   <p className="text-shasta-muted">
-                    <strong className="text-shasta-fg">$5 a month or $50 a year</strong> as a Ko-fi membership, for looks only. A one-off tip is a thank you and does not unlock anything. Ko-fi opens in a new tab, outside Shasta.
+                    <strong className="text-shasta-fg">$5 a month</strong> as a Ko-fi membership: no ads, plus the extras. A one-off tip is a thank you and does not unlock anything. Ko-fi opens in a new tab, outside Shasta.
                   </p>
                   <div>
                     {MEMBERSHIP_URL ? (
@@ -90,7 +90,7 @@ export default function SupportPage() {
                 <li className="grid gap-2 rounded-xl border border-shasta-line p-4">
                   <h3 className="font-medium">2. Join the Discord</h3>
                   <p className="text-shasta-muted">
-                    Connect your Discord account to Ko-fi (in Ko-fi's settings) and Ko-fi gives you the Supporter role there. Want to try the extras first? A free trial is available in the Discord with <code className="rounded bg-shasta-field px-1">/trial</code>.
+                    Connect your Discord account to Ko-fi (in Ko-fi's settings) and Ko-fi gives you the Supporter role there. Want to try it first? A free trial (no ads for 7 days) is available in the Discord with <code className="rounded bg-shasta-field px-1">/trial</code>.
                   </p>
                   {DISCORD_INVITE && (
                     <div>

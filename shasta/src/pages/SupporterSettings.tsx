@@ -12,8 +12,8 @@ import { DISCORD_INVITE } from '@/lib/supporter'
 function statusText(s: ReturnType<typeof useSupporter>): string {
   if (s.perks) return `${s.kind === 'trial' ? 'Free trial' : 'Supporter'} · ${s.daysLeft} day${s.daysLeft === 1 ? '' : 's'} left. Thank you!`
   if (!s.code) return 'Not a Supporter on this device. Everything in Shasta still works.'
-  if (s.note === 'ended') return 'This code has ended (it expired or the membership stopped). The perks are off; everything else still works.'
-  if (s.note === 'unsupported') return "This browser can't check Supporter passes (it lacks Ed25519 in WebCrypto), so the perks stay off here. Everything else works. A recent Chrome, Edge, Firefox or Safari can check them."
+  if (s.note === 'ended') return 'This code has ended (it expired or the membership stopped). Ads are back and the perks are off; everything else still works.'
+  if (s.note === 'unsupported') return "This browser can't check Supporter passes (it lacks Ed25519 in WebCrypto), so ads stay on and the perks stay off here. Everything else works. A recent Chrome, Edge, Firefox or Safari can check them."
   if (s.note === 'invalid') return "This device couldn't confirm the pass for this code. Try “Check again”."
   return 'The pass for this code has run out. Shasta tries to renew it on its own; “Check again” does it now.'
 }
@@ -46,7 +46,7 @@ export function SupporterSection() {
       </Row>
       {s.code && (
         <Row title="Code on this device" desc={s.code}>
-          <Button variant="outline" onClick={() => { if (confirm('Remove the Supporter code from this device? The perks turn off here. You can add the code again later while it is still valid.')) useSupporterStore.getState().remove() }}>
+          <Button variant="outline" onClick={() => { if (confirm('Remove the Supporter code from this device? Ads come back and the perks turn off here. You can add the code again later while it is still valid.')) useSupporterStore.getState().remove() }}>
             <Trash2 /> Remove from this device
           </Button>
         </Row>
@@ -68,7 +68,7 @@ export function SupporterSection() {
         <h3 id="sup-what" className="mb-2 text-sm font-medium">What is free, what is a perk</h3>
         <ul className="max-w-2xl list-disc space-y-1 pl-5 text-sm text-shasta-muted">
           <li><strong className="text-shasta-fg">Free for everyone, always:</strong> browsing, tabs, bookmarks, the Store and every app and game in it, Shasta AI, settings, profiles. Nothing that does something is ever locked.</li>
-          <li><strong className="text-shasta-fg">Supporter perks</strong> are only looks and a thank-you: extra new tab wallpapers, a small Supporter badge, and early previews of new features.</li>
+          <li><strong className="text-shasta-fg">Supporter perks:</strong> no ads anywhere in Shasta (the only way to turn them off), plus extra new tab wallpapers, a small Supporter badge, and early previews of new features.</li>
           <li>Supporting is optional and helps pay for the servers that run Shasta.</li>
         </ul>
       </section>
@@ -76,7 +76,7 @@ export function SupporterSection() {
       <section className="border-t border-shasta-line py-4" aria-labelledby="sup-how">
         <h3 id="sup-how" className="mb-2 text-sm font-medium">How to get a code or a trial</h3>
         <p className="max-w-2xl text-sm text-shasta-muted">
-          Pay for the <strong className="text-shasta-fg">membership on Ko-fi</strong> ($5 a month or $50 a year), connect Discord to Ko-fi to get the Supporter role, then run <code className="rounded bg-shasta-field px-1">/supporter</code> in Shasta's Discord. The bot sends you a code; paste it above. <code className="rounded bg-shasta-field px-1">/trial</code> there gives a free trial. If the bot isn't answering, ask the owner for a code.
+          Pay for the <strong className="text-shasta-fg">membership on Ko-fi</strong> ($5 a month), connect Discord to Ko-fi to get the Supporter role, then run <code className="rounded bg-shasta-field px-1">/supporter</code> in Shasta's Discord. The bot sends you a code; paste it above. <code className="rounded bg-shasta-field px-1">/trial</code> there gives a free trial. If the bot isn't answering, ask the owner for a code.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button onClick={() => useTabs.getState().openInternal('support')}>

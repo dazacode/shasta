@@ -1,5 +1,5 @@
 // One inline advert on Shasta's own pages: an AdSense unit when the build has AdSense, otherwise the Adsterra banner
-// that fits the space. Renders nothing when no display provider is configured or the person turned ads off, so a
+// that fits the space. Renders nothing when no display provider is configured or this is a supporter's device, so a
 // placement can be dropped in anywhere without a layout branch.
 //
 // SPA note: an internal page is unmounted when its tab is not in front, so switching tabs mounts a fresh unit and
@@ -14,8 +14,8 @@ import {
   adsAvailable,
   pickBanner,
   pushAdSense,
+  useAdsOn,
 } from '@/lib/ads'
-import { useSettings } from '@/stores/settingsStore'
 import { cn } from '@/lib/utils'
 import { AdsterraFrame } from './AdsterraFrame'
 
@@ -46,7 +46,7 @@ export function AdSlot({
   label?: boolean
   className?: string
 }) {
-  const on = useSettings((s) => s.settings.ads)
+  const on = useAdsOn()
   const ref = useRef<HTMLModElement>(null)
   const wrap = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)

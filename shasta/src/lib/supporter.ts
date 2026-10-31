@@ -106,9 +106,10 @@ export function ed25519Supported(): Promise<boolean> {
 
 /**
  * Checks a pass: format, version, Ed25519 signature over the payload bytes, and expiry. `now` is unix seconds.
- * Never throws: a browser without Ed25519 gets `unsupported` (treated as no perks, everything else keeps working).
- * There is deliberately no hand-written JavaScript Ed25519 fallback: perks are cosmetic, and a home-made
- * curve implementation is not worth carrying for them.
+ * Never throws. Uses WebCrypto's Ed25519 where the browser has it (Chrome 137+); older browsers fall back to
+ * @noble/ed25519 (audited, loaded only then), because the perks include NO ADS and the school Chromebooks this is
+ * for are stuck on Chrome 126: a paying student must not keep seeing adverts. `unsupported` is left for a browser
+ * where even that fails (no WebCrypto SHA-512, i.e. not a secure context).
  */
 export async function verifyToken(token: string, publicKey: Uint8Array<ArrayBuffer>, now = Date.now() / 1000): Promise<VerifyResult> {
   const d = decodeToken(token)
@@ -116,8 +117,13 @@ export async function verifyToken(token: string, publicKey: Uint8Array<ArrayBuff
   if (publicKey.length !== 32) return { ok: false, reason: 'signature', payload: d.payload }
   let valid: boolean
   try {
-    const key = await crypto.subtle.importKey('raw', publicKey, { name: 'Ed25519' }, false, ['verify'])
-    valid = await crypto.subtle.verify({ name: 'Ed25519' }, key, d.signature, d.payloadBytes)
+    if (await ed25519Supported()) {
+      const key = await crypto.subtle.importKey('raw', publicKey, { name: 'Ed25519' }, false, ['verify'])
+      valid = await crypto.subtle.verify({ name: 'Ed25519' }, key, d.signature, d.payloadBytes)
+    } else {
+      const ed = await import('@noble/ed25519')
+      valid = await ed.verifyAsync(d.signature, d.payloadBytes, publicKey)
+    }
   } catch {
     return { ok: false, reason: (await ed25519Supported()) ? 'signature' : 'unsupported', payload: d.payload }
   }

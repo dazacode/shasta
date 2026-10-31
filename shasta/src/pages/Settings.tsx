@@ -31,6 +31,7 @@ import { SupporterSection } from './SupporterSettings'
 import { OfflineSection } from './OfflineSettings'
 import { ConsoleSection } from './ConsoleSection'
 import { SupporterBadge } from '@/components/SupporterBadge'
+import { useSupporter } from '@/stores/supporterStore'
 
 /** where this build's source is offered (AGPL section 13); required for a public host, see NOTICE.md */
 const SOURCE_URL = (import.meta.env.VITE_SOURCE_URL as string | undefined)?.startsWith('https://') ? (import.meta.env.VITE_SOURCE_URL as string) : ''
@@ -214,6 +215,28 @@ const CLEARABLES: { id: Clearable; label: string; desc: string }[] = [
   { id: 'bookmarks', label: 'Bookmarks', desc: 'All bookmarks and folders. This cannot be undone.' },
 ]
 
+/** Ads are on for everyone but supporters (owner decision 2026-10-31): there is no free off switch, so this row
+ *  explains them and points at the one way to turn them off. */
+function AdsRow() {
+  const sup = useSupporter()
+  const open = useTabs.getState().openInternal
+  return (
+    <Row
+      title="Ads"
+      desc={
+        sup.perks
+          ? "You're a Supporter, so Shasta shows you no ads anywhere. Thank you for keeping it running!"
+          : "Shasta shows ads on its own pages (the new tab, the Store, Watch, a strip along the bottom, and pop-unders) to pay for its servers. They never appear inside the sites you open. The ad network (Adsterra) sees your IP address, can set its own cookies and may follow you across the web to choose what to show. Supporters see no ads at all."
+      }
+    >
+      <div className="flex items-center gap-2">
+        <Button size="sm" variant="ghost" onClick={() => open('privacy')}>Privacy policy</Button>
+        {!sup.perks && <Button size="sm" onClick={() => open('support')}>Remove ads</Button>}
+      </div>
+    </Row>
+  )
+}
+
 function Privacy() {
   const s = useSettings((x) => x.settings)
   const update = useSettings((x) => x.update)
@@ -251,15 +274,7 @@ function Privacy() {
       <Row title="Block ads and trackers" desc="Requests to known ad networks and trackers get an empty answer and never leave the device. A site that needs one of them may break; turn this off for it. Applies to pages loaded after the change." htmlFor="blockads">
         <Toggle id="blockads" label="Block ads and trackers" checked={s.blockAds} onChange={(blockAds) => update({ blockAds })} />
       </Row>
-      <Row title="Show ads" desc="Adverts on Shasta's own pages (the new tab, the Store and Watch). They never appear inside the sites you open — those frames are the site's own. Unlike Shasta's stats, the ad network (Adsterra) does see your IP address, can set its own cookies and may follow you across the web to choose what to show. Off loads none at all." htmlFor="showads">
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="ghost" onClick={() => useTabs.getState().openInternal('privacy')}>Privacy policy</Button>
-          <Toggle id="showads" label="Show ads" checked={s.ads} onChange={(ads) => update({ ads })} />
-        </div>
-      </Row>
-      <Row title="Ad bar along the bottom" desc={s.ads ? 'A thin advert strip pinned to the bottom edge, so it is on screen on every tab and site. It hides with the toolbar in game mode.' : 'Needs “Show ads” on.'} htmlFor="adsbar">
-        <Toggle id="adsbar" label="Ad bar along the bottom" checked={s.adsBar} disabled={!s.ads} onChange={(adsBar) => update({ adsBar })} />
-      </Row>
+      <AdsRow />
       <Row title="Share anonymous usage counts" desc="Counts which Shasta features and pages are used and the hostname of each site opened (for example example.com, never the page, search or anything you type) so the owner can see what is popular. They go to Shasta's own stats server (Umami, run by the owner, no ad or analytics company), which also sees your browser, device type and rough location, and groups one browser's visits with a code that changes every month; your IP address is not stored. Private tabs are never counted." htmlFor="usagestats">
         <Toggle id="usagestats" label="Share anonymous usage counts" checked={s.usageStats} onChange={(usageStats) => update({ usageStats })} />
       </Row>
