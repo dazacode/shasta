@@ -4,6 +4,7 @@
 // Base44 project: .deploy/base44/base44/{config.jsonc,.app.jsonc} (`npx base44 create` / `link` once; gitignored).
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { adEnv } from "./lib/adCodes";
 import { buildLite, ROOT, run } from "./lib/liteBuild";
 
 const PROJECT = join(ROOT, ".deploy/base44");
@@ -18,10 +19,8 @@ if (!existsSync(join(PROJECT, "base44/.app.jsonc"))) {
 }
 
 // Umami website "Shasta Lite (Base44)"
-// Ads: this host may carry its own Monetag zone (VITE_MONETAG_ZONE_BASE44) so per-domain stats stay separate;
-// VITE_MONETAG_ZONE (the full site's zone) is the fallback, so one zone everywhere also works.
-const zone = process.env.VITE_MONETAG_ZONE_BASE44 || process.env.VITE_MONETAG_ZONE;
-const { bytes, files } = buildLite(OUT, "ade53419-c9b4-4690-83e5-c232bab531e3", "/", zone ? { VITE_MONETAG_ZONE: zone } : {});
+// Ads: this host's own Adsterra codes (scripts/lib/adCodes.ts)
+const { bytes, files } = buildLite(OUT, "ade53419-c9b4-4690-83e5-c232bab531e3", "/", adEnv("base44"));
 if (bytes > MAX_BYTES || files > MAX_FILES) {
 	console.error(`over Base44's limits (${MAX_BYTES / 1024 / 1024} MB, ${MAX_FILES} files): not uploaded`);
 	process.exit(1);

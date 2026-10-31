@@ -9,6 +9,7 @@
 // on a host that can, the headers are simply already there.
 import { existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { adEnv } from "./adCodes";
 
 export const ROOT = resolve(import.meta.dir, "../..");
 export const FULL = "https://shasta-dtg.pages.dev";
@@ -33,6 +34,8 @@ export function buildLite(out: string, statsId: string, base = "/", extraEnv: Re
 		VITE_SITE_ORIGIN: FULL,
 		VITE_STATS_URL: process.env.VITE_STATS_URL || "https://stats.176-100-37-63.sslip.io",
 		VITE_STATS_WEBSITE_ID: statsId,
+		// no adverts unless the host passes its own codes (adEnv): the root .env holds the Pages site's
+		...adEnv(),
 		...extraEnv,
 	};
 	// production rules: devtools shortcuts blocked, obfuscated chunks

@@ -4,6 +4,7 @@
 // dazaseals-projects (`VERCEL_SCOPE`, `SHASTA_LITE_PROJECT` override); the host must be in APP_ORIGINS on the VPS.
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { adEnv } from "./lib/adCodes";
 import { buildLite, ROOT, run } from "./lib/liteBuild";
 
 const OUT = join(ROOT, ".deploy/vercel-lite");
@@ -12,9 +13,8 @@ const scope = process.env.VERCEL_SCOPE ?? "dazaseals-projects";
 const dry = process.argv.includes("--dry-run");
 
 // Umami website "Shasta Lite (Vercel)"
-// Ads: own Monetag zone if set (VITE_MONETAG_ZONE_VERCEL), else the full site's zone (VITE_MONETAG_ZONE).
-const zone = process.env.VITE_MONETAG_ZONE_VERCEL || process.env.VITE_MONETAG_ZONE;
-buildLite(OUT, "a3d45710-11bc-4ba5-a59f-8985ae3a3a92", "/", zone ? { VITE_MONETAG_ZONE: zone } : {});
+// Ads: this host's own Adsterra codes (scripts/lib/adCodes.ts)
+buildLite(OUT, "a3d45710-11bc-4ba5-a59f-8985ae3a3a92", "/", adEnv("vercel"));
 
 // Same header policy as `bun run deploy vercel` (scripts/deploy.ts); no /api rewrite: Lite calls the full site directly.
 const config = {

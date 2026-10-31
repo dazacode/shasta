@@ -2,6 +2,7 @@
 import { randomBytes } from "node:crypto";
 import { chmodSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { adEnv } from "./lib/adCodes";
 
 const ROOT = resolve(import.meta.dir, "..");
 const SCRAMJET = join(ROOT, "scramjet");
@@ -171,7 +172,7 @@ async function ensureShasta(force: boolean) {
 		statSync(out).mtimeMs < Math.max(newest(join(SHASTA, "src")), newest(join(SHASTA, "public")), statSync(join(SHASTA, "index.html")).mtimeMs) ||
 		statSync(out).mtimeMs < statSync(join(SCRAMJET, "packages/core/dist/scramjet.wasm")).mtimeMs ||
 		statSync(out).mtimeMs < statSync(join(SCRAMJET, "packages/core/dist/scramjet.js")).mtimeMs;
-	if (force || stale) await run("shasta: build", ["bun", "run", "build"], SHASTA);
+	if (force || stale) await run("shasta: build", ["bun", "run", "build"], SHASTA, adEnv("pages")); // the Pages site's own ad codes
 }
 
 const mode = process.argv[2];

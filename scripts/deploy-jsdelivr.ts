@@ -26,10 +26,8 @@ const dry = process.argv.includes("--dry-run");
 const MAX_FILE = 20 * 1024 * 1024;
 
 // Umami website "Shasta Lite (jsDelivr)"
-// Ads: own Monetag zone if set (VITE_MONETAG_ZONE_JSDELIVR), else the full site's zone. jsDelivr's origin is shared
-// with every other package on the CDN, so a separate zone here keeps its (odd) stats apart from the real domains.
-const zone = process.env.VITE_MONETAG_ZONE_JSDELIVR || process.env.VITE_MONETAG_ZONE;
-buildLite(BUILD, "32359927-bca9-4b7e-82fe-d41315829b1a", BASE, { VITE_SHARED_ORIGIN: "1", ...(zone ? { VITE_MONETAG_ZONE: zone } : {}) });
+// Ads: none (no Adsterra site for cdn.jsdelivr.net in scripts/lib/adCodes.ts; another host's codes must not run here)
+buildLite(BUILD, "32359927-bca9-4b7e-82fe-d41315829b1a", BASE, { VITE_SHARED_ORIGIN: "1" });
 
 // the service worker answers the entry addresses (public/sw.js CDN_BASE)
 const swPath = join(BUILD, "sw.js");
