@@ -25,7 +25,7 @@ import { useIsPrivateTab } from '@/hooks/usePrivateTab'
 import { useStore } from '@/store/storeStore'
 import { useStoreBoot } from '@/store/hooks'
 import { AppIcon } from '@/store/components'
-import { LivePulse } from '@/components/LivePulse'
+import { LivePulse, OnlineCount } from '@/components/LivePulse'
 import { AdSlot } from '@/components/ads/AdSlot'
 
 function ShortcutTile({ s, onEdit, onRemove, onOpen }: { s: Shortcut; onEdit: () => void; onRemove: () => void; onOpen: () => void }) {
@@ -396,6 +396,7 @@ export function NewTab({ tabId }: { tabId: string }) {
         <div className="nt-wall" style={{ background: customColor ? settings.newTabBgColor : wallpaperBackground(wallpaper) }} aria-hidden />
       )}
       {custom && settings.newTabBgDim > 0 && <div className="nt-wall" style={{ background: `rgb(0 0 0 / ${settings.newTabBgDim / 100})` }} aria-hidden />}
+      {!minimal && !isPrivate && settings.newTabLive && <OnlineCount onOpenSite={(url) => navigateTo(tabId, url)} />}
       <div className="nt-hero">
         {!minimal && settings.newTabClock !== 'off' && <Clock hour12={settings.newTabClock === '12'} />}
         {immersive && (

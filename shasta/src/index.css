@@ -348,6 +348,12 @@ body { overflow: hidden; }
 .nt-plain { position: relative; display: flex; min-height: 100%; flex-direction: column; container-type: inline-size; overflow: clip; isolation: isolate; }
 .nt-plain .nt-hero { padding-bottom: 8cqw; }
 .nt-plain .nt-extra { max-width: 46rem; }
+.nt-online {
+  position: absolute; top: 1rem; left: 50%; translate: -50% 0; z-index: 5;
+  display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.75rem; border-radius: 999px;
+  font: 500 12px 'Urbanist', sans-serif; color: var(--sh-muted);
+  background: rgb(127 127 150 / 0.12); border: 1px solid var(--sh-line); backdrop-filter: blur(8px);
+}
 .nt-customize {
   position: sticky; bottom: 1rem; align-self: flex-end; margin: 0 1rem 1rem auto; z-index: 5;
   display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.8rem; border-radius: 999px;
