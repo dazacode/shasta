@@ -9,6 +9,7 @@
 		"pages-backend": "bun scripts/run.ts pages-backend",
 		"build": "bun scripts/run.ts build",
 		"doctor": "bun scripts/doctor.ts",
+		"deobfuscate": "bun scripts/deobfuscate.ts",
 		"deploy": "bun scripts/deploy.ts",
 		"deploy:base44": "bun scripts/deploy-base44.ts",
 		"deploy:vercel-lite": "bun scripts/deploy-vercel-lite.ts",

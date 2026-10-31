@@ -242,7 +242,7 @@ export function StorePage({ tabId, url }: { tabId: string; url: string }) {
             <Suspense fallback={<p className="py-10 text-center text-sm text-shasta-muted">Loading…</p>}>
               <Routes />
             </Suspense>
-            <AdSlot className="mx-auto mt-8 max-w-3xl pb-4" minHeight={120} />
+            <AdSlot format="native" className="mx-auto mt-8 max-w-3xl pb-4" minHeight={120} />
           </div>
         </div>
       </div>

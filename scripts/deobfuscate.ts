@@ -110,7 +110,7 @@ function findPrologues(ast: AnyNode): Prologue[] {
 		traverse(ast, {
 			ExpressionStatement(path: AnyPath) {
 				const expr = path.node.expression;
-				if (rotate || !t.isCallExpression(expr) || !t.isFunctionExpression(expr.callee)) return;
+				if (rotate || !t.isCallExpression(expr) || !(t.isFunctionExpression(expr.callee) || t.isArrowFunctionExpression(expr.callee))) return;
 				const first = expr.arguments[0];
 				if (t.isIdentifier(first) && first.name === factoryName) rotate = path.node;
 			},
@@ -180,50 +180,79 @@ function decodeCalls(ast: AnyNode, aliases: Set<string>, decode: (i: number) => 
 	return { total, done };
 }
 
+function referenceCounts(ast: AnyNode): Map<string, number> {
+	const counts = new Map<string, number>();
+	traverse(ast, {
+		Identifier(path: AnyPath) {
+			if (path.isReferencedIdentifier()) counts.set(path.node.name, (counts.get(path.node.name) ?? 0) + 1);
+		},
+	});
+	return counts;
+}
+
+// A decoder and its array factory both reassign themselves on first call, so only references from
+// *outside* the function count towards it still being needed.
+function removeIfUnowned(path: AnyPath, counts: Map<string, number>): boolean {
+	const { id } = path.node;
+	if (!id) return false;
+	let self = 0;
+	path.traverse({
+		Identifier(p: AnyPath) {
+			if (p.isReferencedIdentifier() && p.node.name === id.name) self++;
+		},
+	});
+	if ((counts.get(id.name) ?? 0) !== self) return false;
+	path.remove();
+	return true;
+}
+
 // Drop the now-unused alias declarations, the rotation IIFE, and the decoder/factory themselves.
 function stripPrologue(ast: AnyNode, decoderNames: Set<string>, factoryName: string): void {
-	const referenceCount = () => {
-		const counts = new Map<string, number>();
-		traverse(ast, {
-			Identifier(path: AnyPath) {
-				if (path.isReferencedIdentifier()) counts.set(path.node.name, (counts.get(path.node.name) ?? 0) + 1);
-			},
-		});
-		return counts;
-	};
-	// aliases only become removable in waves (a -> b -> decoder), so sweep a few times
-	for (let pass = 0; pass < 4; pass++) {
-		const counts = referenceCount();
-		const unused = (name: string) => (counts.get(name) ?? 0) === 0;
+	// aliases reference each other in chains, so peel the leaves off until nothing more comes away
+	for (let pass = 0; pass < 24; pass++) {
+		const counts = referenceCounts(ast);
+		let removed = 0;
 		traverse(ast, {
 			VariableDeclarator(path: AnyPath) {
 				const { id, init } = path.node;
-				if (t.isIdentifier(id) && t.isIdentifier(init) && decoderNames.has(init.name) && unused(id.name)) path.remove();
+				if (!t.isIdentifier(id) || !t.isIdentifier(init) || !decoderNames.has(init.name)) return;
+				if ((counts.get(id.name) ?? 0) === 0) {
+					path.remove();
+					removed++;
+				}
 			},
 			FunctionDeclaration(path: AnyPath) {
 				const { id } = path.node;
 				if (!id || !(decoderNames.has(id.name) || id.name === factoryName)) return;
-				// the array factory reassigns itself on first call, so only references from *outside* it count
-				let self = 0;
-				path.traverse({
-					Identifier(p: AnyPath) {
-						if (p.isReferencedIdentifier() && p.node.name === id.name) self++;
-					},
-				});
-				if ((counts.get(id.name) ?? 0) !== self) return;
-				path.remove();
+				if (removeIfUnowned(path, counts)) removed++;
 			},
 			ExpressionStatement(path: AnyPath) {
 				const expr = path.node.expression;
-				if (!t.isCallExpression(expr) || !t.isFunctionExpression(expr.callee)) return;
+				if (!t.isCallExpression(expr) || !(t.isFunctionExpression(expr.callee) || t.isArrowFunctionExpression(expr.callee))) return;
 				const first = expr.arguments[0];
-				if (t.isIdentifier(first) && first.name === factoryName) path.remove();
+				if (t.isIdentifier(first) && first.name === factoryName) {
+					path.remove();
+					removed++;
+				}
 			},
 		});
+		if (process.env.DEOB_DEBUG) console.error(`[strip] pass=${pass} removed=${removed} refs(decoder)=${counts.get([...decoderNames][0])} refs(factory)=${counts.get(factoryName)}`);
+		if (!removed) break;
 	}
 	traverse(ast, {
 		VariableDeclaration(path: AnyPath) {
-			if (path.node.elements === undefined && path.node.declarations.length === 0) path.remove();
+			if (path.node.declarations.length === 0) path.remove();
+		},
+	});
+}
+
+// Some prologues share one decoder; sweep up any factory the per-prologue pass left standing.
+function sweepFactories(ast: AnyNode, names: Set<string>): void {
+	const counts = referenceCounts(ast);
+	traverse(ast, {
+		FunctionDeclaration(path: AnyPath) {
+			const { id } = path.node;
+			if (id && names.has(id.name)) removeIfUnowned(path, counts);
 		},
 	});
 }
@@ -318,16 +347,20 @@ function deobfuscate(code: string, label: string): Result {
 	if (!prologues.length) return null;
 
 	let decoded = 0;
+	const factories = new Set<string>();
 	for (const prologue of prologues) {
 		const decoder = makeDecoder(prologue);
 		if (!decoder) continue;
 		const aliases = decoderAliases(ast, prologue.decoderName);
 		const { total, done } = decodeCalls(ast, aliases, decoder);
 		decoded += done;
+		factories.add(prologue.factoryName);
+		if (process.env.DEOB_DEBUG) console.error(`[deob] ${label} decoder=${prologue.decoderName} factory=${prologue.factoryName} aliases=${aliases.size} total=${total} done=${done}`);
 		// only strip the helpers when nothing is left calling them
 		if (done === total && total > 0) stripPrologue(ast, aliases, prologue.factoryName);
 	}
 	if (!decoded) return null;
+	sweepFactories(ast, factories);
 
 	const renamed = renameSymbols(ast);
 	const out = generate(ast, { comments: true, concise: false, compact: false, jsescOption: { minimal: true } }).code;

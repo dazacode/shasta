@@ -2,51 +2,74 @@
 // person opens: those frames belong to the site being proxied, and Shasta's own ad blocker (lib/adBlock.ts) already
 // strips theirs, so Shasta earns nothing there without injecting into them (it does not).
 //
-// Two providers, each off unless this build names it at build time:
-//  - Google AdSense (VITE_ADSENSE_CLIENT): display units placed by <AdSlot>. Best revenue per visitor, and its hosts
-//    (pagead2.googlesyndication.com, doubleclick.net) are the ones school filters least often block — see
-//    docs/unblocking.md. Needs a real domain + an approved account + ads.txt (seo.ts emits it).
-//  - Monetag (VITE_MONETAG_TAG, or VITE_MONETAG_ZONE): one script that runs passive formats on its own
-//    (pop-under, in-page push, vignette). No markup; it appends what it wants. This is the "money while sleeping"
-//    layer and has no approval gate. Monetag hands out TWO tag shapes — a per-account delivery URL
-//    (`//<your-tag-domain>/5/<zone>`, VITE_MONETAG_TAG) or the shared libtl SDK (`data-zone`/`data-sdk`,
-//    VITE_MONETAG_ZONE) — paste whichever the dashboard shows; the tag is DOMAIN-LESS either way, so the same zone
-//    runs on every hostname (an ads-front domain can sit in front of other hosts, see CLAUDE.md).
+// Providers, each off unless this build names it at build time:
+//  - Google AdSense (VITE_ADSENSE_CLIENT): display units placed by <AdSlot>. Needs a real domain + an approved
+//    account + ads.txt (seo.ts emits it). Not in use: Watch and the proxy make approval unlikely.
+//  - Adsterra banners (VITE_ADSTERRA_HOST + VITE_ADSTERRA_BANNERS, VITE_ADSTERRA_NATIVE): fixed-size units placed by
+//    <AdSlot>, each inside a data: URL frame (components/ads/AdsterraFrame.tsx), so the ad
+//    code gets an opaque origin and can read neither Shasta nor the proxied sites' cookie jar.
+//  - Page-level tags (VITE_AD_SCRIPTS): formats that must run in the page itself (Adsterra's popunder and Social
+//    Bar). These DO run with Shasta's origin, like any third-party script tag; keep the list to what is needed.
+//
+// Monetag was tried and removed (2026-10-30): its Push format and Multitag need their service worker at /sw.js, which
+// is Shasta's own (Scramjet + offline shell). Never install an ad network's service worker.
 //
 // Gated exactly like lib/stats.ts: off in tests and in the installed app (the IWA CSP allows no remote script), off
-// when the person turns Settings -> Privacy -> "Show ads" off, and off until the build names a provider. Ad networks
-// DO see the visitor's IP and set their own cookies, unlike Shasta's own Umami: the Settings copy and the privacy
-// policy say so.
+// when the person turns Settings -> Privacy -> "Show ads" off, and off until the build names a provider.
 import { getSettings, useSettings } from '@/stores/settingsStore'
 import { inInstalledApp } from './shastaApp'
 
 const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : '')
+const list = (v: unknown) =>
+  str(v)
+    .split(',')
+    .map((t) => t.trim())
+    .filter(Boolean)
 
 /** AdSense publisher id, e.g. `ca-pub-1234567890123456` (`VITE_ADSENSE_CLIENT`). */
 export const ADSENSE_CLIENT = str(import.meta.env.VITE_ADSENSE_CLIENT)
 /** Default AdSense ad-unit id (`VITE_ADSENSE_SLOT`); a placement may override it. Units may be reused across slots. */
 export const ADSENSE_SLOT = str(import.meta.env.VITE_ADSENSE_SLOT)
-/** Monetag Multitag zone id (`VITE_MONETAG_ZONE`), its SDK file name and host (overridable for a custom tag). */
-const MONETAG_ZONE = str(import.meta.env.VITE_MONETAG_ZONE)
-const MONETAG_SDK = str(import.meta.env.VITE_MONETAG_SDK) || `show_${MONETAG_ZONE}`
-const MONETAG_SRC = str(import.meta.env.VITE_MONETAG_SRC) || 'https://libtl.com/sdk.js'
-/** The exact tag URL from the dashboard (`VITE_MONETAG_TAG`): the classic delivery URL (`//<their-domain>/5/<zone>`,
- *  self-contained) or the Multitag (`https://<their-domain>/88/tag.min.js` + `data-zone`, give VITE_MONETAG_ZONE too). */
-const MONETAG_TAG = str(import.meta.env.VITE_MONETAG_TAG)
-/** One tag per format (`VITE_MONETAG_SCRIPTS` = `url|zone,url|zone`), each with its own zone: the way to run the
- *  in-page formats without Monetag's Push, which needs their worker at /sw.js (Shasta's own) and so is never used.
- *  Not `#`: an unquoted `#` starts a comment in .env and silently cut the list after its first URL. */
-const MONETAG_SCRIPTS = str(import.meta.env.VITE_MONETAG_SCRIPTS)
-  .split(',')
-  .map((t) => t.trim().split('|'))
-  .filter(([src, zone]) => /^https:\/\//.test(src ?? '') && /^\d+$/.test(zone ?? ''))
 
+/** Adsterra's delivery host for this account, e.g. `https://bellnewyork.org` (`VITE_ADSTERRA_HOST`). */
+export const ADSTERRA_HOST = /^https:\/\/[^/]+$/.test(str(import.meta.env.VITE_ADSTERRA_HOST).replace(/\/$/, ''))
+  ? str(import.meta.env.VITE_ADSTERRA_HOST).replace(/\/$/, '')
+  : ''
+
+export type Banner = { width: number; height: number; key: string }
+/** Adsterra iframe banners (`VITE_ADSTERRA_BANNERS` = `728x90:<key>,300x250:<key>,...`). Not `#`: .env reads it as
+ *  a comment. */
+export const ADSTERRA_BANNERS: Banner[] = ADSTERRA_HOST
+  ? list(import.meta.env.VITE_ADSTERRA_BANNERS).flatMap((t) => {
+      const m = /^(\d+)x(\d+):([0-9a-f]{32})$/i.exec(t)
+      return m ? [{ width: +m[1], height: +m[2], key: m[3] }] : []
+    })
+  : []
+/** Adsterra native banner key (`VITE_ADSTERRA_NATIVE`). */
+export const ADSTERRA_NATIVE = ADSTERRA_HOST && /^[0-9a-f]{32}$/i.test(str(import.meta.env.VITE_ADSTERRA_NATIVE))
+  ? str(import.meta.env.VITE_ADSTERRA_NATIVE)
+  : ''
+
+/** Page-level tags (`VITE_AD_SCRIPTS` = `url,url`, or `url|zone` for a tag that wants `data-zone`). */
+const AD_SCRIPTS = list(import.meta.env.VITE_AD_SCRIPTS)
+  .map((t) => t.split('|'))
+  .filter(([src, zone]) => /^https:\/\//.test(src ?? '') && (zone === undefined || /^\d+$/.test(zone)))
+
+/** Display (inline) units are possible: AdSense, or Adsterra banners. */
+export const HAS_DISPLAY_ADS = !!ADSENSE_CLIENT || ADSTERRA_BANNERS.length > 0 || !!ADSTERRA_NATIVE
 /** A provider is configured at all. */
-export const HAS_ADS = !!ADSENSE_CLIENT || !!MONETAG_TAG || !!MONETAG_ZONE || MONETAG_SCRIPTS.length > 0
-/** Display (inline) units are possible — only AdSense does those; Monetag works through side effects alone. */
-export const HAS_DISPLAY_ADS = !!ADSENSE_CLIENT
+export const HAS_ADS = HAS_DISPLAY_ADS || AD_SCRIPTS.length > 0
 
 const AVAILABLE = HAS_ADS && import.meta.env.MODE !== 'test' && typeof document !== 'undefined' && !inInstalledApp()
+
+/** The banner for a placement: the first of `prefer` (sizes, best first) that this build has and that fits `width`. */
+export function pickBanner(prefer: string[], width: number): Banner | null {
+  for (const size of prefer) {
+    const b = ADSTERRA_BANNERS.find((x) => `${x.width}x${x.height}` === size)
+    if (b && b.width <= width) return b
+  }
+  return null
+}
 
 declare global {
   interface Window {
@@ -72,11 +95,8 @@ function loadProviders() {
   // crossorigin keeps the request in the credentialed/CORS path, which survives Shasta's `Cross-Origin-Embedder-Policy:
   // credentialless` without becoming an opaque credential-less load (better ad fill).
   if (ADSENSE_CLIENT) addScript(`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(ADSENSE_CLIENT)}`, { crossorigin: 'anonymous' })
-  // data-cfasync="false" is Monetag's own instruction: Cloudflare Rocket Loader must leave their tag alone. Harmless
-  // where Rocket Loader is off.
-  if (MONETAG_TAG) addScript(MONETAG_TAG, { ...(MONETAG_ZONE && { 'data-zone': MONETAG_ZONE }), 'data-cfasync': 'false' })
-  else if (MONETAG_ZONE) addScript(MONETAG_SRC, { 'data-zone': MONETAG_ZONE, 'data-sdk': MONETAG_SDK, 'data-cfasync': 'false' })
-  for (const [src, zone] of MONETAG_SCRIPTS) addScript(src, { 'data-zone': zone, 'data-cfasync': 'false' })
+  // data-cfasync="false" is the networks' own instruction: Cloudflare Rocket Loader must leave their tags alone.
+  for (const [src, zone] of AD_SCRIPTS) addScript(src, { ...(zone && { 'data-zone': zone }), 'data-cfasync': 'false' })
 }
 
 /** True when a provider is configured, this build can run it, and the person has not turned ads off. */
@@ -112,3 +132,5 @@ export function startAds() {
 
 /** True while startAds has run for this build (used only to keep the hook honest in tests). */
 export const adsStarted = () => started
+/** Banners render only where scripts may run at all (not in tests or the installed app). */
+export const adsAvailable = () => AVAILABLE

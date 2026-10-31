@@ -67,15 +67,16 @@ export default function PrivacyPage() {
             along the bottom. They never appear inside the sites you open — those frames belong to the site itself.
           </p>
           <p>
-            Adverts come from <strong className="text-shasta-fg">Google AdSense</strong> and{' '}
-            <strong className="text-shasta-fg">Monetag</strong>. Unlike Shasta's own stats, these{' '}
-            <em>do</em> see your IP address and set their own cookies, and they can follow you across the web to pick what
-            to show. They may open a tab behind the current one (a "pop-under") and push small notifications. This is the
-            part of Shasta that is not the most gentle, on purpose: it is what keeps the servers paid for.
+            Adverts come from <strong className="text-shasta-fg">Adsterra</strong>. Unlike Shasta's own stats, they{' '}
+            <em>do</em> see your IP address and can set their own cookies and follow you across the web to pick what to
+            show. Besides the banners, they may open a tab behind the current one (a "pop-under") and show a small
+            notification-style bar inside the page. This is the part of Shasta that is not the most gentle, on purpose:
+            it is what keeps the servers paid for.
           </p>
           <p>
-            Because the pages are cross-origin isolated for the games, the advert frames load <em>credentialless</em>
-            (without your cookies to the ad network). Turn adverts off entirely in{' '}
+            Banners run in sealed-off frames that cannot read Shasta or the sites you open, and because the pages are
+            cross-origin isolated for the games, they load <em>credentialless</em> (without your cookies to the ad
+            network). Turn adverts off entirely in{' '}
             <button onClick={() => open('settings', 'privacy')} className="text-shasta-accent hover:underline">Settings → Privacy</button>.
           </p>
         </Section>

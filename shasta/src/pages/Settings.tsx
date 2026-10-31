@@ -251,7 +251,7 @@ function Privacy() {
       <Row title="Block ads and trackers" desc="Requests to known ad networks and trackers get an empty answer and never leave the device. A site that needs one of them may break; turn this off for it. Applies to pages loaded after the change." htmlFor="blockads">
         <Toggle id="blockads" label="Block ads and trackers" checked={s.blockAds} onChange={(blockAds) => update({ blockAds })} />
       </Row>
-      <Row title="Show ads" desc="Adverts on Shasta's own pages (the new tab, the Store and Watch). They never appear inside the sites you open — those frames are the site's own. Unlike Shasta's stats, the ad networks (Google AdSense and Monetag) do see your IP address and set their own cookies, and may follow you across the web to choose what to show. Off loads none at all." htmlFor="showads">
+      <Row title="Show ads" desc="Adverts on Shasta's own pages (the new tab, the Store and Watch). They never appear inside the sites you open — those frames are the site's own. Unlike Shasta's stats, the ad network (Adsterra) does see your IP address, can set its own cookies and may follow you across the web to choose what to show. Off loads none at all." htmlFor="showads">
         <div className="flex items-center gap-2">
           <Button size="sm" variant="ghost" onClick={() => useTabs.getState().openInternal('privacy')}>Privacy policy</Button>
           <Toggle id="showads" label="Show ads" checked={s.ads} onChange={(ads) => update({ ads })} />
