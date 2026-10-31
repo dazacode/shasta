@@ -20,6 +20,7 @@ import {
 } from './localLibrary'
 import { registerAppLauncher, useTabs } from '@/stores/tabsStore'
 import { useUi } from '@/stores/uiStore'
+import { useGameControls } from '@/stores/gameControlsStore'
 import { noteTaste } from './tasteStore'
 import type { TabApp } from '@/lib/tabModel'
 
@@ -268,6 +269,8 @@ export const useStore = create<StoreState>()((set, get) => ({
     const known = get().library?.installed.find((i) => i.app.id === appKey || i.app.slug === appKey)
     const have = local.installs.find((i) => i.appId === (known?.app.id ?? appKey))?.installedVersion
     const r = await api.get<RuntimeTarget>(`/api/apps/${encodeURIComponent(appKey)}/launch${have ? `?version=${encodeURIComponent(have)}` : ''}`)
+    // the owner's curated controls (two-player layouts): every launch path comes through here
+    useGameControls.getState().setHint(r.slug, r.controls ?? null)
     const mine = (get().local ?? local).installs.find((i) => i.appId === r.id)
     if (mine && mine.installedVersion !== r.version) {
       await changeInstall(set, get, r.id, (i) => ({ ...i, installedVersion: r.version }))

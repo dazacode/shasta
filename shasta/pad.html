@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- The phone controller (src/pad/main.ts): its own small page, so a phone on cellular downloads a controller, not the browser. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#0b0c12" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <title>Shasta controller</title>
+    <style>
+      :root { color-scheme: dark; --bg: #0b0c12; --panel: #161823; --line: #2a2d3d; --fg: #f4f5f8; --muted: #9298ab; --accent: #3b82f6; }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 15px/1.4 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+      body { overflow: hidden; overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+      #app { position: fixed; inset: 0; display: flex; flex-direction: column; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+      noscript { display: block; padding: 24px; }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <noscript>The Shasta controller needs JavaScript.</noscript>
+    <script type="module" src="/src/pad/main.ts"></script>
+  </body>
+</html>

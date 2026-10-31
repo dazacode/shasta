@@ -88,6 +88,17 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
+        <Section id="phone-controller" title="Phone controllers">
+          <p>
+            When you use a phone as a game controller, Shasta's server passes its buttons to your window while the two are
+            paired and keeps nothing: no code, address or button press is stored or logged, and the pairing ends when the
+            window closes. When the network allows it, the phone then connects straight to your window so buttons arrive
+            faster; to find each other, the two devices learn each other's network address, and so does Cloudflare's
+            address server (Cloudflare already serves Shasta). Turn off "Direct phone connection" in Settings → Privacy to
+            keep everything going through Shasta's server instead.
+          </p>
+        </Section>
+
         <Section id="school" title="Schools and Chromebooks">
           <p>
             The school's own web filter and network can still see and block traffic, and if a device is managed the
@@ -97,7 +108,7 @@ export default function PrivacyPage() {
         </Section>
 
         <Section id="changes" title="Changes">
-          <p>This policy is honest by design and changes when the app does. Last updated 30 October 2026.</p>
+          <p>This policy is honest by design and changes when the app does. Last updated 31 October 2026.</p>
         </Section>
       </div>
     </PageShell>

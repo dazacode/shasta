@@ -127,6 +127,8 @@ export interface Settings {
   storeForYou: boolean
   /** Watch: route video through Shasta's server (unblocked + ad-free embeds) instead of fetching it directly */
   watchProxy: boolean
+  /** phone controllers may connect straight to this window (WebRTC) instead of only through Shasta's server */
+  phoneDirect: boolean
   // performance
   suspendTabs: boolean
   suspendAfterMinutes: number
@@ -220,6 +222,7 @@ export const defaultSettings = (): Settings => liteSettings({
   usageStats: true,
   storeForYou: true,
   watchProxy: true,
+  phoneDirect: true,
   pageAccess: { camera: false, microphone: false, location: false, clipboard: false, devices: false },
   suspendTabs: true,
   suspendAfterMinutes: 15,
@@ -292,6 +295,7 @@ export function mergeSettings(persisted: unknown, current: SettingsState): Setti
   if (typeof settings.earlyPreviews !== 'boolean') settings.earlyPreviews = false
   settings.wispUrls = sanitizeUrls(settings.wispUrls)
   if (typeof settings.seasonalLooks !== 'boolean') settings.seasonalLooks = true
+  if (typeof settings.phoneDirect !== 'boolean') settings.phoneDirect = true
   settings.claimedWallpapers = Array.isArray(settings.claimedWallpapers) ? settings.claimedWallpapers.filter(isWallpaper) : []
   return { ...current, settings: liteSettings(settings) }
 }

@@ -106,6 +106,8 @@ export default defineConfig({
   },
   build: {
     rolldownOptions: {
+      // pad.html = the phone controller (src/pad/main.ts): its own tiny page, none of the browser
+      input: { index: path.resolve(import.meta.dirname, 'index.html'), pad: path.resolve(import.meta.dirname, 'pad.html') },
       output: {
         // Keep the big libraries that only load on demand (transports with inlined wasm, ad blocker, OpenUI, Wisp) out of the
         // shared vendor chunk, which index.html modulepreloads: otherwise first paint waits for ~5 MB it never runs.

@@ -10,6 +10,8 @@ import { forceFocus, forcePointerLock, gameControl } from '@/lib/gameControl'
 import { blockPolicy, blockedResponseHeaders, loadAdBlocker, matchAd, shouldBlockPopup } from '@/lib/adBlock'
 import { applyAdCosmetics } from './adCosmetics'
 import { applyArchivePlayer } from './archivePlayer'
+import { applyInputMapper } from './inputMapper'
+import { applyVirtualGamepads } from './virtualGamepads'
 import { servePlainAsHtml } from './plainHtml'
 import { watchCrashes } from './crashWatch'
 import { captureConsole } from '@/lib/consoleCapture'
@@ -161,6 +163,10 @@ class ShastaPlugin extends ManagedPlugin {
       if (blockPolicy().ads) applyAdCosmetics(ctx.window, ctx.client.url.href)
       // Internet Archive games start at once, fill the tab and explain their keys (proxy/archivePlayer.ts)
       applyArchivePlayer(ctx.window, ctx.client.url)
+      // the game's own key remaps (Controls dialog, lib/gameInput.ts), in every frame so a nested game frame gets them
+      applyInputMapper(ctx.window, this.tabId)
+      // phones playing as real gamepads for games that read controllers (lib/virtualPads.ts)
+      applyVirtualGamepads(ctx.window, this.tabId)
       // the game may start listening after its window already had focus: replay the event once it has loaded
       ctx.window.addEventListener('load', () => {
         if (gameControl() && ctx.window.document.hasFocus()) forceFocus(ctx.window)

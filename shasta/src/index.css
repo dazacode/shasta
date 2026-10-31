@@ -262,6 +262,9 @@ body { overflow: hidden; }
 @keyframes sh-spin { to { transform: rotate(360deg); } }
 .sh-spin { animation: sh-spin 0.8s linear infinite; }
 
+/* game launcher splash (components/game/GameSplash.tsx): the cover drifts slowly while the game loads */
+@keyframes sh-splash-pan { from { transform: scale(1.02) translateX(-1%); } to { transform: scale(1.08) translateX(1%); } }
+
 /* A storefront page carries its own colour: set --sh-hue on the element and the accent follows. */
 .sh-theme { --sh-accent: oklch(0.55 0.18 var(--sh-hue)); }
 .dark .sh-theme { --sh-accent: oklch(0.8 0.12 var(--sh-hue)); }

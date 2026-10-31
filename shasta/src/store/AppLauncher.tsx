@@ -12,6 +12,7 @@ import { AppIcon } from './components'
 import { AI_APP_SLUG, attachBridge } from '@/ai/bridge'
 import type { RuntimeTarget } from './types'
 import { openReport, type ReportTarget } from './ReportDialog'
+import { GameSplash } from '@/components/game/GameSplash'
 
 /** No allow-popups / allow-top-navigation / allow-downloads-without-gesture: the app cannot open windows or leave its frame. */
 const SANDBOX = 'allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-modals allow-downloads'
@@ -48,7 +49,7 @@ function Fail({ title, message, recover, onRetry, onReport }: { title: string; m
 }
 
 /** `appKey` is the app's name from its address (game://click-quest -> click-quest); older tabs carry the id instead. */
-export function AppRuntime({ tabId, appKey, active }: { tabId: string; appKey: string; active: boolean }) {
+export function AppRuntime({ tabId, appKey, active, isGame = false }: { tabId: string; appKey: string; active: boolean; /** a game:// address: the launcher splash instead of the plain loading screen */ isGame?: boolean }) {
   useStoreBoot()
   const [phase, setPhase] = useState<Phase>({ kind: 'starting' })
   const [nonce, setNonce] = useState(0)
@@ -59,6 +60,11 @@ export function AppRuntime({ tabId, appKey, active }: { tabId: string; appKey: s
   const [appId, setAppId] = useState<string | null>(null)
   const reloads = useUi((s) => (appId ? (s.appReloads[appId] ?? 0) : 0))
   const item = library?.installed.find((i) => i.app.id === appId || i.app.slug === appKey || i.app.id === appKey)
+  // the launcher splash (games): shown again after a reload, gone for good once the game is on screen
+  const [splashDone, setSplashDone] = useState(false)
+  useEffect(() => {
+    setSplashDone(false)
+  }, [appKey, nonce, reloads])
 
   // look up how to run the app (no side effects: reopening a restored tab is not a "launch")
   useEffect(() => {
@@ -188,7 +194,19 @@ export function AppRuntime({ tabId, appKey, active }: { tabId: string; appKey: s
             className="absolute inset-0 size-full border-0 bg-white"
           />
         )}
-        {(phase.kind === 'starting' || phase.kind === 'loading') && (
+        {isGame && !splashDone && phase.kind !== 'error' && (
+          <GameSplash
+            app={{ id: appId ?? item?.app.id, name: info?.name ?? item?.app.name ?? appKey, iconUrl: info?.iconUrl ?? item?.app.iconUrl ?? null, kind: info ? (info.target.kind === 'linked' ? 'linked' : 'package') : (item?.app.kind ?? 'linked') }}
+            stage={phase.kind === 'starting' ? 'connecting' : phase.kind === 'loading' ? 'loading' : 'ready'}
+            tabId={tabId}
+            onReload={() => setNonce((n) => n + 1)}
+            onDone={() => {
+              setSplashDone(true)
+              if (active) frame.current?.focus()
+            }}
+          />
+        )}
+        {!isGame && (phase.kind === 'starting' || phase.kind === 'loading') && (
           <div className="absolute inset-0 z-10 grid place-items-center bg-shasta-bg" role="status" aria-live="polite">
             <div className="text-center">
               {info ? <AppIcon app={{ name: info.name, iconUrl: info.iconUrl }} size={72} className="mx-auto shadow-lg" /> : <Loader2 className="sh-spin mx-auto size-8 text-shasta-accent" />}

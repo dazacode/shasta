@@ -197,6 +197,8 @@ export interface RuntimeTarget {
   showVersion: boolean
   iconUrl: string | null
   originKey: string
+  /** curated controller/phone layout set by the Store owner (lib/gameInput.ts ControlsHint); absent on older servers */
+  controls?: unknown
 }
 
 // ---- developer / admin ----

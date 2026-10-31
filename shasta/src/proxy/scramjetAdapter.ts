@@ -6,6 +6,7 @@
 //
 // The engine (~3.8 MB) and the transports are loaded with dynamic imports so the browser shell
 // can paint before Scramjet has been parsed.
+import { ResumingTransport } from './resumingTransport'
 import type { Controller, Frame } from '@mercuryworkshop/scramjet-controller'
 import type { ContextInfo } from '@/lib/contextMenu'
 import type { MissingFeature } from '@/lib/browserSupport'
@@ -121,6 +122,11 @@ let activeWisp: string | null = null
 let probeTimer: number | null = null
 let retryDelay = 2000
 let probing = false
+/** failed health probes in a row; one alone never counts (see checkConnection) */
+let misses = 0
+/** probes that must fail in a row before the connection counts as lost */
+const MISSES_BEFORE_LOST = 2
+const HEALTH_PROBE_TIMEOUT_MS = 15_000
 let titleTimer: number | null = null
 
 export const byTab = new Map<string, Entry>()
@@ -275,7 +281,8 @@ async function makeTransport(wispUrl: string, transport: TransportName) {
       ? new (await import('@mercuryworkshop/epoxy-transport')).default({ wisp })
       : new (await import('@mercuryworkshop/libcurl-transport')).default({ wisp })
   await withTimeout(Promise.resolve(client.init()), 20_000, `${transport} transport startup`)
-  return client
+  // big downloads that break halfway continue where they stopped (proxy/resumingTransport.ts)
+  return new ResumingTransport(client, (url, from) => log('info', `Resuming ${url.host}${url.pathname} from byte ${from}`))
 }
 /** Opens (and immediately closes) a WebSocket to the Wisp endpoint to prove the server is reachable. */
 function probeWisp(wispUrl: string, timeoutMs = 6000): Promise<number> {
@@ -360,17 +367,28 @@ export async function checkConnection(): Promise<void> {
     if (!navigator.onLine) throw new Error('This device is offline')
     let rtt: number
     try {
-      rtt = await probeWisp(activeWisp ?? (await endpointsFor(currentOptions))[0])
+      // 15 s: a busy link (a game pulling 100+ MB through the tunnel) opens a NEW socket slowly while the old one is fine
+      rtt = await probeWisp(activeWisp ?? (await endpointsFor(currentOptions))[0], HEALTH_PROBE_TIMEOUT_MS)
+      // Only after a REAL loss (several probes in a row) is the transport replaced: swapping it, or rotating to another
+      // server, drops every download in flight. A single slow probe used to do that mid-download (a game's 100 MB wasm
+      // broke off with libcurl error 56 and the game stayed black).
       if (info.state === 'disconnected' || info.state === 'reconnecting') {
         log('info', 'Wisp reachable again; creating a fresh transport')
         const at = activeWisp ?? (await endpointsFor(currentOptions))[0]
         controller.setTransport(await makeTransport(at, currentOptions.transport))
       }
     } catch (e) {
+      misses++
+      if (misses < MISSES_BEFORE_LOST && navigator.onLine) {
+        // one miss: probably a busy link, not a dead one. Keep everything as it is and look again soon.
+        scheduleProbe(5000)
+        return
+      }
       // the active endpoint is down (or blocked): try the others before backing off
       if ((await endpointsFor(currentOptions)).length < 2) throw e
       rtt = (await rotateWisp()).rtt
     }
+    misses = 0
     retryDelay = 2000
     setConnection('connected', '', rtt)
     scheduleProbe(PROBE_INTERVAL_MS)

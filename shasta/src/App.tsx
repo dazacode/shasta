@@ -17,6 +17,8 @@ import { openSaveFromLink } from '@/lib/saveShasta'
 import { RecoveryKeyDialog } from '@/store/RecoveryKeyDialog'
 import { useAppearance } from '@/hooks/useAppearance'
 import { useShortcuts } from '@/hooks/useShortcuts'
+import { useGameInput } from '@/hooks/useGameInput'
+import { ControlsHost } from '@/components/game/ControlsDialog'
 import { useBrowserGuards } from '@/hooks/useBrowserGuards'
 import { PageContextMenu } from '@/components/browser/PageContextMenu'
 import { AssistantPanel } from '@/components/ai/AssistantPanel'
@@ -86,6 +88,7 @@ export default function App() {
   const { reducedMotion } = useAppearance()
   useBootstrap()
   useShortcuts()
+  useGameInput()
   useBrowserGuards()
   useWindowTitle()
   const showBar = useSettings((s) => s.settings.showBookmarksBar)
@@ -123,6 +126,7 @@ export default function App() {
         <PrivateTabDialog />
         <RecoveryKeyDialog />
         <ReportHost />
+        <ControlsHost />
         <SaveShastaHost />
         <Toasts />
         <PageContextMenu />

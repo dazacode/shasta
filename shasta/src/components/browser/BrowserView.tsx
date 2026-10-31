@@ -17,7 +17,9 @@ import { cn } from '@/lib/utils'
 import { useSettings, type PageAccess } from '@/stores/settingsStore'
 import { useUi } from '@/stores/uiStore'
 import { keysFor } from '@/lib/shortcuts'
-import { Gamepad2 } from 'lucide-react'
+import { Gamepad2, SlidersHorizontal } from 'lucide-react'
+import { GameLaunchOverlay } from '@/components/game/GameSplash'
+import { openControls } from '@/stores/gameControlsStore'
 
 // secondary pages load on demand to keep startup fast
 const HistoryPage = lazy(() => import('@/pages/History'))
@@ -143,7 +145,9 @@ const TabView = memo(function TabView({ tab, active }: { tab: Tab; active: boole
   return (
     <div className={cn('absolute inset-0', !active && 'pointer-events-none invisible')}>
       {tab.frame && (useDirect ? <DirectFrame tab={tab} active={active} /> : <ProxiedFrame tab={tab} active={active} />)}
-      {active && waiting && (
+      {/* game:// tabs open on the launcher splash and fade into the game once it is really on screen */}
+      {external && tab.frame && tab.app?.scheme === 'game' && <GameLaunchOverlay key={tab.frameKey} tab={tab} />}
+      {active && waiting && tab.app?.scheme !== 'game' && (
         <div className="absolute inset-0 z-[5] grid place-items-center bg-shasta-bg text-shasta-muted" role="status">
           <p className="text-sm">Waiting for {hostOf(url)}…</p>
         </div>
@@ -152,7 +156,7 @@ const TabView = memo(function TabView({ tab, active }: { tab: Tab; active: boole
       {/* a running app keeps its frame (and game state) while another tab is in front, like a proxied page does */}
       {page === 'app' && (
         <div className={cn('absolute inset-0 z-10 bg-shasta-bg', !active && 'pointer-events-none invisible')}>
-          <PageBoundary resetKey={url}><AppRuntime tabId={tab.id} appKey={appKeyOf(url)} active={active} /></PageBoundary>
+          <PageBoundary resetKey={url}><AppRuntime tabId={tab.id} appKey={appKeyOf(url)} active={active} isGame={url.startsWith('game:')} /></PageBoundary>
         </div>
       )}
       {/* the chat fills the tab and scrolls inside itself, unlike the document-style pages below */}
@@ -202,19 +206,31 @@ export function BrowserView() {
   const tabs = useTabs((s) => s.tabs)
   const activeId = useTabs((s) => s.activeId)
   const gameMode = useUi((s) => s.gameMode)
+  const activeTab = tabs.find((t) => t.id === activeId)
   return (
     <main className="relative min-h-0 flex-1 bg-shasta-bg" id="browser-view">
       {tabs.map((tab) => (
         <TabView key={tab.id} tab={tab} active={tab.id === activeId} />
       ))}
       {gameMode && (
-        <button
-          onClick={() => useUi.getState().setGameMode(false)}
-          className="absolute left-1/2 top-2 z-20 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/70 px-3 py-1 text-xs text-white opacity-60 shadow backdrop-blur transition-opacity hover:opacity-100 focus-visible:opacity-100"
-          title="Shasta's shortcuts are paused so the page gets every key. Click to leave game mode."
-        >
-          <Gamepad2 className="size-3.5" aria-hidden /> Game mode · {keysFor('toggleGameMode')} to exit
-        </button>
+        <div className="absolute left-1/2 top-2 z-20 flex -translate-x-1/2 items-center rounded-full bg-black/70 text-xs text-white opacity-60 shadow backdrop-blur transition-opacity hover:opacity-100 focus-within:opacity-100">
+          <button
+            onClick={() => useUi.getState().setGameMode(false)}
+            className="flex items-center gap-1.5 rounded-l-full py-1 pl-3 pr-2 outline-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/60"
+            title="Shasta's shortcuts are paused so the page gets every key. Click to leave game mode."
+          >
+            <Gamepad2 className="size-3.5" aria-hidden /> Game mode · {keysFor('toggleGameMode')} to exit
+          </button>
+          {activeTab && activeTab.app?.kind !== 'package' && !isInternalUrl(tabUrl(activeTab)) && (
+            <button
+              onClick={() => openControls(activeTab.id)}
+              className="flex items-center gap-1 rounded-r-full border-l border-white/20 py-1 pl-2 pr-3 outline-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/60"
+              title="Remap keys and set up a controller for this game"
+            >
+              <SlidersHorizontal className="size-3.5" aria-hidden /> Controls
+            </button>
+          )}
+        </div>
       )}
     </main>
   )

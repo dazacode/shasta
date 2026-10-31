@@ -8,7 +8,7 @@ export const tabs = (page: Page) => page.locator('[role=tab]')
 export const loadingBar = (page: Page) => page.getByRole('progressbar', { name: 'Loading page' })
 
 /** The proxied page inside the active tab's iframe. */
-export const pageFrame = (page: Page) => page.frameLocator('iframe:not([inert])')
+export const pageFrame = (page: Page) => page.frameLocator('iframe:not([inert]):not([title="Advertisement"])')
 
 export async function openShasta(page: Page, path = '/') {
   await page.goto(path)

@@ -290,6 +290,9 @@ function Privacy() {
       <Row title="Play Watch through Shasta" desc="Watch (anime, TV and films) sends the video through Shasta's own server, so a school filter that blocks the streaming host still lets it play, the CDN's referer rules are met and its ads are stripped by Shasta's ad blocker. Turn it off to fetch video straight from the source (a little faster on an open network, but a filter or CORS can then stop it)." htmlFor="watchproxy">
         <Toggle id="watchproxy" label="Play Watch through Shasta" checked={s.watchProxy} onChange={(watchProxy) => update({ watchProxy })} />
       </Row>
+      <Row title="Direct phone connection" desc="A phone you use as a game controller connects straight to this window when the network allows it, so buttons arrive in a few milliseconds instead of going through Shasta's server. To find each other, the phone and this computer learn each other's network address, and Cloudflare's address server (the company that already serves Shasta) sees them too. Turn it off to send every button through Shasta's server: a little slower, and the phone never sees this computer's address." htmlFor="phonedirect">
+        <Toggle id="phonedirect" label="Direct phone connection" checked={s.phoneDirect} onChange={(phoneDirect) => update({ phoneDirect })} />
+      </Row>
       <fieldset className="border-b border-shasta-line py-4">
         <legend className="text-sm font-medium">Features sites may ask for</legend>
         <p className="mt-0.5 mb-3 text-sm text-shasta-muted">

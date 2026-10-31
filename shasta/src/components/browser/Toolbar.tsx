@@ -1,4 +1,5 @@
-import { Bookmark, Flag, Gamepad2, HeartHandshake, MessagesSquare, RefreshCw, Share, ShieldCheck, Sparkles, VenetianMask, Film, Library, Store, ArrowLeft, Gauge, ArrowRight, Download, Home, Keyboard, MoreVertical, Printer, RotateCw, X } from 'lucide-react'
+import { SlidersHorizontal, Bookmark, Flag, Gamepad2, HeartHandshake, MessagesSquare, RefreshCw, Share, ShieldCheck, Sparkles, VenetianMask, Film, Library, Store, ArrowLeft, Gauge, ArrowRight, Download, Home, Keyboard, MoreVertical, Printer, RotateCw, X } from 'lucide-react'
+import { openControls } from '@/stores/gameControlsStore'
 import { openSaveShasta, siteAddress } from '@/lib/saveShasta'
 import { shouldSuggestApp } from '@/lib/shastaApp'
 import { IconButton } from './IconButton'
@@ -133,6 +134,11 @@ export function Toolbar() {
           <DropdownMenuItem onClick={() => perform({ action: 'toggleGameMode' })}>
             <Gamepad2 /> Game mode <DropdownMenuShortcut>{keysFor('toggleGameMode')}</DropdownMenuShortcut>
           </DropdownMenuItem>
+          {tab && external && tab.app?.kind !== 'package' && (
+            <DropdownMenuItem onClick={() => openControls(tab.id)}>
+              <SlidersHorizontal /> Controls & controller…
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => openInternal('history')}>
             History <DropdownMenuShortcut>{keysFor('history')}</DropdownMenuShortcut>
