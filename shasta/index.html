@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#13151b" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,10 +13,10 @@
       Everything below the <title> is read by school-filter classifiers, which fetch `/` without
       running JavaScript. Keep the education wording here, not only in the React app. See docs/unblocking.md.
     -->
-    <title>Shasta — a browser for school and learning</title>
+    <title>EDUShasta — a free browser for school and learning</title>
     <meta
       name="description"
-      content="Shasta is an education-friendly web browser for students: research, read and run classroom learning web apps from any school computer, with an on-device study assistant."
+      content="EDUShasta is a free, education-friendly web browser for students: research, read and run classroom learning apps from any school computer or Chromebook, with an on-device study assistant."
     />
     <meta
       name="keywords"
@@ -23,23 +25,43 @@
     <meta name="robots" content="index, follow, max-image-preview:large" />
     <meta name="color-scheme" content="light dark" />
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Shasta" />
-    <meta property="og:title" content="Shasta — a browser for school and learning" />
+    <meta property="og:site_name" content="EDUShasta" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:title" content="EDUShasta — a free browser for school and learning" />
     <meta
       property="og:description"
       content="An education-friendly browser for students and classrooms, with a study assistant and an app store of learning tools."
     />
     <meta property="og:url" content="%SITE_ORIGIN%/" />
+    <meta property="og:image" content="%SITE_ORIGIN%/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="EDUShasta — a free browser for school and learning" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="EDUShasta — a free browser for school and learning" />
+    <meta name="twitter:description" content="An education-friendly browser for students and classrooms, with a study assistant and an app store of learning tools." />
+    <meta name="twitter:image" content="%SITE_ORIGIN%/og-image.png" />
+    <meta name="application-name" content="EDUShasta" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@graph": [
           {
+            "@type": "WebSite",
+            "@id": "%SITE_ORIGIN%/#website",
+            "name": "EDUShasta",
+            "alternateName": ["Shasta", "Edu Shasta", "ShastaStudy"],
+            "url": "%SITE_ORIGIN%/",
+            "inLanguage": "en",
+            "publisher": { "@id": "%SITE_ORIGIN%/#org" }
+          },
+          {
             "@type": "WebApplication",
             "@id": "%SITE_ORIGIN%/#app",
-            "name": "Shasta",
+            "name": "EDUShasta",
+            "alternateName": "Shasta",
             "url": "%SITE_ORIGIN%/",
+            "image": "%SITE_ORIGIN%/og-image.png",
             "applicationCategory": "EducationalApplication",
             "operatingSystem": "Web",
             "browserRequirements": "Requires JavaScript and WebAssembly",
@@ -49,8 +71,10 @@
           {
             "@type": "EducationalOrganization",
             "@id": "%SITE_ORIGIN%/#org",
-            "name": "Shasta",
+            "name": "EDUShasta",
+            "alternateName": "Shasta",
             "url": "%SITE_ORIGIN%/",
+            "logo": "%SITE_ORIGIN%/icon-512.png",
             "description": "Free learning tools for students."
           }
         ]
@@ -68,9 +92,9 @@
         "students", "learning") instead of an empty shell.
       -->
       <main class="p-8 max-w-2xl space-y-3">
-        <h1 class="text-2xl font-semibold">Shasta — a browser for school and learning</h1>
+        <h1 class="text-2xl font-semibold">EDUShasta — a free browser for school and learning</h1>
         <p>
-          Shasta is an education-friendly web browser that runs in the browser. Students can research,
+          EDUShasta (Shasta for short) is a free, education-friendly web browser that runs in the browser. Students can research,
           study, read documents and run classroom learning web apps from any computer, including school
           Chromebooks, with tabs, bookmarks and an on-device study assistant.
         </p>
@@ -91,6 +115,19 @@
           <a href="https://scratch.mit.edu/">Scratch</a>,
           <a href="https://www.brainpop.com/">BrainPOP</a> and
           <a href="https://www.coolmathgames.com/">Coolmath</a>.
+        </p>
+        <h2 class="text-lg font-semibold">Questions</h2>
+        <h3 class="font-semibold">Is EDUShasta free?</h3>
+        <p>Yes. Everything that does something is free, with no account to create. Supporters can turn off adverts.</p>
+        <h3 class="font-semibold">Does it work on a school Chromebook?</h3>
+        <p>
+          Yes. EDUShasta runs in a normal Chrome tab, so there is nothing to install. On Chromebooks that allow it,
+          it can also be installed as an app.
+        </p>
+        <h3 class="font-semibold">What is the study assistant?</h3>
+        <p>
+          Shasta AI summarizes pages, explains a selection, makes quizzes and flashcards, and answers questions about
+          your notes and PDFs. It runs on your own device, so your files and recordings are not sent to a server.
         </p>
       </main>
     </div>

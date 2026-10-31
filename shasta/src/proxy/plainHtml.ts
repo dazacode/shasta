@@ -2,7 +2,7 @@
 // web host), so a tab opened on one shows source code. Game libraries (gn-math's games, after gn-math.dev went
 // offline) live there, so a page NAVIGATION to such a file is treated as the HTML it is. Only that host, only
 // .html/.htm, only text/plain: anything else keeps the type the server sent.
-const PLAIN_HTML_HOSTS = new Set(['cdn.jsdelivr.net', 'fastly.jsdelivr.net', 'gcore.jsdelivr.net', 'testingcf.jsdelivr.net'])
+const PLAIN_HTML_HOSTS = new Set(['cdn.jsdelivr.net', 'fastly.jsdelivr.net', 'gcore.jsdelivr.net', 'testingcf.jsdelivr.net', 'cdn.statically.io'])
 
 export function servePlainAsHtml(url: URL, destination: string, contentType: string | null): boolean {
   if (destination !== 'document' && destination !== 'iframe') return false

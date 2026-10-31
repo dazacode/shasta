@@ -214,6 +214,8 @@ interface Existing {
 	/** has a currently live version (used by `pending` to leave finished apps alone) */
 	live: boolean;
 	screenshots: number;
+	/** every version's linked URL (normalised), so a same-URL app from another source is not listed twice */
+	urls: string[];
 }
 const idCache = new Map<string, string>();
 const bump = (v: string) => {
@@ -224,7 +226,8 @@ const bump = (v: string) => {
 	return p.join(".");
 };
 const highest = (vs: string[]) => vs.slice().sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).pop();
-const devAppFields = (a: any): Existing => ({ tags: a.tags ?? [], versions: (a.versions ?? []).map((v: any) => v.version), draft: (a.versions ?? []).find((v: any) => v.state === "draft")?.version, live: (a.versions ?? []).some((v: any) => v.state === "live"), screenshots: (a.screenshots ?? []).length });
+const normUrl = (u: string) => u.trim().replace(/\/+$/, "").toLowerCase();
+const devAppFields = (a: any): Existing => ({ tags: a.tags ?? [], versions: (a.versions ?? []).map((v: any) => v.version), draft: (a.versions ?? []).find((v: any) => v.state === "draft")?.version, live: (a.versions ?? []).some((v: any) => v.state === "live"), screenshots: (a.screenshots ?? []).length, urls: (a.versions ?? []).map((v: any) => v.linkedUrl).filter(Boolean).map(normUrl) });
 
 export function appPayload(item: ImportItem, name: string) {
 	let description = (item.description || "").replace(/\s+/g, " ").trim();
@@ -264,12 +267,21 @@ export async function runImport(items: ImportItem[], opts: RunOptions = {}) {
 
 	const work = mkdtempSync(path.join(tmpdir(), "import-"));
 	const existing = new Map<string, Existing>();
+	/** normalised linked URL -> every app (by normalised name) that already opens it, so a same-URL row is not listed twice */
+	const urlOwner = new Map<string, Set<string>>();
+	const own = (u: string, k: string) => {
+		const set = urlOwner.get(u) ?? new Set<string>();
+		set.add(k);
+		urlOwner.set(u, set);
+	};
 	if (!opts.dry) {
 		await connect();
 		const { apps } = await api<{ apps: any[] }>("GET", "/api/dev/apps?all=1&brief=1");
 		for (const a of apps) {
-			existing.set(norm(a.name), devAppFields(a));
+			const fields = devAppFields(a);
+			existing.set(norm(a.name), fields);
 			idCache.set(norm(a.name), a.id);
+			for (const u of fields.urls) own(u, norm(a.name));
 		}
 	}
 
@@ -297,6 +309,16 @@ export async function runImport(items: ImportItem[], opts: RunOptions = {}) {
 			skipped++;
 			return;
 		}
+		// a same-URL app already exists under another name (this or another source), e.g. the catalogue names a wasm.rip
+		// port differently, or an earlier duplicate was removed: keep the existing listing, do not add a second one
+		if (!opts.dry && item.url) {
+			const owners = urlOwner.get(normUrl(item.url));
+			if (owners && [...owners].some((k) => k !== key)) {
+				skipped++;
+				skippedNames.push(name);
+				return;
+			}
+		}
 		if (opts.dry) {
 			console.log(`  · ${name}`);
 			return;
@@ -311,7 +333,8 @@ export async function runImport(items: ImportItem[], opts: RunOptions = {}) {
 				app = await api<any>("POST", "/api/dev/apps", { json: { ...appPayload(item, name), kind: isPackage ? "package" : "linked" } });
 				idCache.set(key, app.id);
 				// remember this name so a second entry with the same name bumps instead of colliding
-				existing.set(key, { tags: [item.source], versions: [version], draft: undefined, live: false, screenshots: 0 });
+				existing.set(key, { tags: [item.source], versions: [version], draft: undefined, live: false, screenshots: 0, urls: item.url ? [normUrl(item.url)] : [] });
+				if (item.url) own(normUrl(item.url), key);
 			}
 			const appId = app.id as string;
 

@@ -4,14 +4,42 @@
  * build, to the Shasta Store as linked apps. It is a directory, so metadata (blurb, image) is read from each play
  * page's Open Graph tags; the source site is credited as host.
  *
- * Hosts already imported wholesale (gn-math, wasm.rip, archive.org) are skipped here and come from their own script.
+ * Hosts already imported wholesale (gn-math.dev) are skipped here and come from their own script; everything else,
+ * including the gn-math.github.io mirror rows (served from the genizy repo via statically.io) and the wasm.rip rows
+ * (deduped against the wasm.rip import by name) is imported. A row whose host does not answer is still listed.
  *
- *   bun scripts/import-webports.ts [--dry] [--limit 50] [--jobs 8]
+ *   bun scripts/import-webports.ts [--dry] [--pending] [--limit 50] [--jobs 8]
  */
 import { runImport, summarize, type ImportItem } from "./lib/storeImport";
 
 const README = "https://raw.githubusercontent.com/Carter54git/Ultimate-Catalog-Of-Web-Game-Ports/main/README.md";
-const SKIP_HOSTS = /(^|\.)(gn-math\.dev|gn-math\.github\.io|wasm\.rip|archive\.org)$/i;
+// gn-math.dev (whole site dead 2026-10-31) is covered wholesale by the gn-math importer and its rows would each wait
+// out a 20 s timeout here, so they are left to that script. Everything else — the gn-math.github.io mirror rows, the
+// wasm.rip rows (deduped against the wasm.rip import by name) and one web.archive.org snapshot — is imported here.
+const SKIP_HOSTS = /(^|\.)gn-math\.dev$/i;
+
+// gn-math.github.io is dead (project Pages gone), and its "web-port" tree is the genizy/web-port repo; jsDelivr blocks
+// that user, so serve it from statically.io instead. A few catalogue dirs are actually sub-apps (or the row names a
+// different game than the dir), fixed here (key = the last path segment in the catalogue link).
+const GENIZY_MIRROR = "https://cdn.statically.io/gh/genizy/web-port/main";
+const GENIZY_FIX: Record<string, string> = {
+	fnaf: "https://cdn.jsdelivr.net/gh/freebuisness/html@main/38-fix2.html", // no fnaf dir in the repo; this is FNAF
+	"fears-to-fathom": `${GENIZY_MIRROR}/fears-to-fathom/home-alone/index.html`,
+	kindergarten: `${GENIZY_MIRROR}/kindergarten/1/index.html`, // the row is "Kindergarten 1 & 2"
+};
+const resolvePlay = (play: string): string => {
+	let u: URL;
+	try {
+		u = new URL(play);
+	} catch {
+		return play;
+	}
+	if (u.hostname === "gn-math.github.io") {
+		const dir = u.pathname.split("/").filter(Boolean).pop();
+		if (dir) return GENIZY_FIX[dir] ?? `${GENIZY_MIRROR}/${dir}/index.html`;
+	}
+	return play;
+};
 // The catalogue points a couple of entries at addresses that have since moved, or at a duplicate row the name-dedupe
 // below keeps instead of the working one. Correct them here so a re-run stays right (key = the app name it imports).
 const OVERRIDES: Record<string, { url: string; developer?: string; porters?: { name: string; url?: string }[]; host?: { name: string; url: string }; summary?: string; description?: string; tags?: string[] }> = {
@@ -71,7 +99,7 @@ for (const c of rows) {
 	const name = c[1].replace(/^[⭐▶\s]+/, "").replace(/\s*\(\d+\)$/, "").replace(/\s+/g, " ").trim();
 	if (!name || name.length < 2 || seen.has(name.toLowerCase())) continue;
 	seen.add(name.toLowerCase());
-	found.push({ name, url: OVERRIDES[name.toLowerCase()]?.url ?? play });
+	found.push({ name, url: OVERRIDES[name.toLowerCase()]?.url ?? resolvePlay(play) });
 	if (found.length >= limit) break;
 }
 console.log(`${found.length} catalogue entries with a direct play link`);
@@ -84,6 +112,11 @@ const prettyHost = (host: string) => {
 const scrape = async (r: Row): Promise<ImportItem | null> => {
 	const host = new URL(r.url).hostname.replace(/^www\./, "");
 	const override = OVERRIDES[r.name.toLowerCase()];
+	// the gn-math.github.io rows are now served from the genizy/web-port mirror; credit that repo, not the CDN, and
+	// leave the maker credit empty (the catalogue row does not name one) rather than inventing "Cdn"
+	const mirrored = host === "cdn.statically.io" || host === "cdn.jsdelivr.net";
+	const creditHost = mirrored ? { name: "genizy/web-port", url: "https://github.com/genizy/web-port" } : { name: host, url: `https://${host}` };
+	const creditDev = override?.developer ? [override.developer] : mirrored ? [] : [prettyHost(host)];
 	try {
 		const html = await (await fetch(r.url, { signal: AbortSignal.timeout(20000) })).text();
 		const meta = (p: string) => new RegExp(`<meta[^>]+(?:property|name)=["']${p}["'][^>]+content=["']([^"']+)["']`, "i").exec(html)?.[1];
@@ -97,9 +130,9 @@ const scrape = async (r: Row): Promise<ImportItem | null> => {
 			url: r.url,
 			summary: override?.summary ?? summarize(blurb || description, r.name),
 			description,
-			developers: [override?.developer ?? prettyHost(host)],
+			developers: creditDev,
 			porters: override?.porters,
-			host: override?.host ?? { name: host, url: `https://${host}` },
+			host: override?.host ?? creditHost,
 			tags: override?.tags ?? ["port", "browser"],
 			category: "games",
 			iconUrl: image,
@@ -108,7 +141,22 @@ const scrape = async (r: Row): Promise<ImportItem | null> => {
 			source: "webports",
 		};
 	} catch {
-		return null;
+		// the host is unreachable right now (dead DNS, timeout, parked domain): still list the entry so the catalogue
+		// is complete, with metadata built from the row alone. A later re-run upgrades it once the host answers.
+		const description = override?.description ?? `${r.name}, a browser port listed in the Ultimate Catalog of Web Game Ports and playable at ${host}.`;
+		return {
+			name: r.name.slice(0, 60),
+			url: r.url,
+			summary: override?.summary ?? summarize(description, r.name),
+			description,
+			developers: creditDev,
+			porters: override?.porters,
+			host: override?.host ?? creditHost,
+			tags: override?.tags ?? ["port", "browser"],
+			category: "games",
+			notes: `Found in the Ultimate Catalog of Web Game Ports (${host}); its host did not answer at import time.`,
+			source: "webports",
+		};
 	}
 };
 
@@ -124,4 +172,4 @@ await Promise.all(
 );
 const items = out.filter((x): x is ImportItem => !!x);
 console.log(`${items.length} entries with metadata`);
-await runImport(items, { dry: argv.includes("--dry"), only: opt("only"), jobs: Number(opt("jobs")) || 6 });
+await runImport(items, { dry: argv.includes("--dry"), only: opt("only"), jobs: Number(opt("jobs")) || 6, pending: argv.includes("--pending") });

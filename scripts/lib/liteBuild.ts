@@ -29,9 +29,10 @@ export function buildLite(out: string, statsId: string, base = "/", extraEnv: Re
 		VITE_EDITION: "lite",
 		VITE_WISP_URL: `wss://${new URL(FULL).host}/wisp/`,
 		VITE_WISP_URLS: "",
-		// share links and the canonical address name the full site, where a shared Store link actually opens
+		// share links name the full site, where a shared Store link actually opens; the canonical address is the
+		// public domain, so search engines index edushasta.lol and treat the Lite mirrors as copies of it
 		VITE_SHARE_ORIGIN: FULL,
-		VITE_SITE_ORIGIN: FULL,
+		VITE_SITE_ORIGIN: process.env.VITE_SITE_ORIGIN || "https://edushasta.lol",
 		VITE_STATS_URL: process.env.VITE_STATS_URL || "https://stats.176-100-37-63.sslip.io",
 		VITE_STATS_WEBSITE_ID: statsId,
 		// no adverts unless the host passes its own codes (adEnv): the root .env holds the Pages site's

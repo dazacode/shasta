@@ -8,11 +8,12 @@
 // (canonical, og:url, sitemap) pointed at the origin the site is actually served from.
 //
 // Set VITE_SITE_ORIGIN at build time to the real domain (e.g. https://shasta.example.org) so every
-// signal matches the deploy; it falls back to the Pages host used in private development. See
+// signal matches the deploy; it falls back to the public domain, so mirrors (pages.dev, the Lite hosts) all
+// name edushasta.lol as canonical and do not compete with it in search results. See
 // docs/unblocking.md for the whole play.
 import type { Plugin } from 'vite'
 
-const DEFAULT_ORIGIN = 'https://shasta-dtg.pages.dev'
+const DEFAULT_ORIGIN = 'https://edushasta.lol'
 
 export function seoPlugin({ origin }: { origin?: string } = {}): Plugin {
   const site = (origin ?? process.env.VITE_SITE_ORIGIN ?? DEFAULT_ORIGIN).replace(/\/+$/, '')
@@ -27,6 +28,7 @@ Sitemap: ${site}/sitemap.xml
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>${site}/</loc>
+    <lastmod>${new Date().toISOString().slice(0, 10)}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>

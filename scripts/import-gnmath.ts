@@ -1,37 +1,31 @@
 #!/usr/bin/env bun
 /**
- * Adds every game in gn-math's catalogue (https://gn-math.dev) to the Shasta Store as a linked app.
+ * Adds every game in gn-math's catalogue to the Shasta Store as a linked app.
  *
  * gn-math is a big browser-games site: ~850 games, its own JSON catalogue (id, name, cover, author, tags).
+ * gn-math.dev went offline (2026-10-31), but the catalogue and every game page live on jsDelivr (GitHub repos
+ * freebuisness/assets, /covers, /html), and that is what the apps open now: one game page each, no gn-math menu.
+ * jsDelivr serves those pages as text/plain; Shasta's proxy shows them as HTML (shasta/src/proxy/plainHtml.ts).
  * Games already in the Store (wasm.rip / Obsidian / store.app) are skipped, so there are no duplicate listings.
  *
  *   bun scripts/import-gnmath.ts [--dry] [--only Celeste] [--jobs 6]
  */
 import { runImport, summarize, type ImportItem } from "./lib/storeImport";
 
-const SITE = "https://gn-math.dev";
+const CDN = "https://cdn.jsdelivr.net/gh/freebuisness";
+const ZONES = `${CDN}/assets@main/zones.json`;
+const COVER_URL = `${CDN}/covers@main`;
+const HTML_URL = `${CDN}/html@main`;
+const HOST = { name: "gn-math", url: "https://github.com/freebuisness/html" };
 const argv = process.argv.slice(2);
 const opt = (n: string) => {
 	const i = argv.indexOf(`--${n}`);
 	return i >= 0 ? argv[i + 1] : undefined;
 };
 
-async function text(url: string): Promise<string> {
-	const r = await fetch(url);
-	if (!r.ok) throw new Error(`${r.status} for ${url}`);
-	return r.text();
-}
-
-const home = await text(`${SITE}/`);
-const grab = (name: string) => {
-	const m = new RegExp(`${name}\\s*=\\s*"([^"]+)"`).exec(home);
-	if (!m) throw new Error(`could not find ${name} in the gn-math page`);
-	return m[1];
-};
-const coverBase = grab("coverURL");
-const zonePath = grab("zonesURL");
-
-const zones = (await (await fetch(`${SITE}${zonePath}`)).json()) as {
+const res = await fetch(ZONES, { signal: AbortSignal.timeout(30_000) });
+if (!res.ok) throw new Error(`${res.status} for ${ZONES}`);
+const zones = (await res.json()) as {
 	id: number;
 	name: string;
 	cover?: string;
@@ -45,22 +39,24 @@ const items: ImportItem[] = [];
 for (const z of zones) {
 	if (typeof z.id !== "number" || z.id < 0) continue; // <0 is the "suggest a game" card
 	const name = (z.name || "").trim();
-	if (!name || !z.url) continue;
+	// every game is `{HTML_URL}/<file>.html`; anything else is not a game
+	if (!name || !z.url?.startsWith("{HTML_URL}/")) continue;
 	const tags = [...(Array.isArray(z.special) ? z.special : z.special ? [z.special] : []), "game"];
 	const by = z.author?.trim();
-	const description = `Play ${name} in your browser. ${by ? `Made by ${by}. ` : ""}A web port hosted on gn-math; nothing to install, it runs in the tab.`;
+	const description = `Play ${name} in your browser. ${by ? `Made by ${by}. ` : ""}A web port from gn-math's game library; nothing to install, it runs in the tab.`;
+	const cover = z.cover?.replace("{COVER_URL}", COVER_URL);
 	items.push({
 		name,
-		url: `${SITE}/?id=${z.id}#embed`,
+		url: z.url.replace("{HTML_URL}", HTML_URL),
 		summary: summarize(description, name),
 		description,
 		developers: by ? [by] : [],
-		host: { name: "gn-math", url: SITE },
+		host: HOST,
 		tags,
 		category: "games",
-		iconUrl: z.cover ? `${SITE}${z.cover.replace("{COVER_URL}", coverBase)}` : undefined,
-		bannerUrl: z.cover ? `${SITE}${z.cover.replace("{COVER_URL}", coverBase)}` : undefined,
-		notes: "A browser game hosted on gn-math.",
+		iconUrl: cover,
+		bannerUrl: cover,
+		notes: "A browser game from gn-math's library, loaded from jsDelivr.",
 		source: "gnmath",
 	});
 }

@@ -10,6 +10,11 @@ describe('servePlainAsHtml', () => {
     expect(servePlainAsHtml(new URL('https://cdn.jsdelivr.net/npm/pkg@1/demo/index.htm'), 'document', 'text/plain')).toBe(true)
   })
 
+  it('covers the genizy/web-port mirror on statically.io too', () => {
+    expect(servePlainAsHtml(new URL('https://cdn.statically.io/gh/genizy/web-port/main/fnaf/index.html'), 'iframe', 'text/plain')).toBe(true)
+    expect(servePlainAsHtml(new URL('https://cdn.statically.io/gh/a/b@main/x.txt'), 'document', 'text/plain')).toBe(false)
+  })
+
   it('leaves everything else alone', () => {
     expect(servePlainAsHtml(page, 'script', 'text/plain')).toBe(false)
     expect(servePlainAsHtml(page, 'empty', 'text/plain')).toBe(false)
