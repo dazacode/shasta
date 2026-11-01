@@ -143,7 +143,7 @@ const TabView = memo(function TabView({ tab, active }: { tab: Tab; active: boole
   const waiting = active && external && tab.pendingCommit && !tab.frameUrl && !tab.error
   const useDirect = useDirectEngine()
   return (
-    <div className={cn('absolute inset-0', !active && 'pointer-events-none invisible')}>
+    <div data-media-tab={tab.id} className={cn('absolute inset-0', !active && 'pointer-events-none invisible')}>
       {tab.frame && (useDirect ? <DirectFrame tab={tab} active={active} /> : <ProxiedFrame tab={tab} active={active} />)}
       {/* game:// tabs open on the launcher splash and fade into the game once it is really on screen */}
       {external && tab.frame && tab.app?.scheme === 'game' && <GameLaunchOverlay key={tab.frameKey} tab={tab} />}

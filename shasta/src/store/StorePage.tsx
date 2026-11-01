@@ -12,8 +12,8 @@ import { useStore } from './storeStore'
 import type { AppCard, Suggestions } from './types'
 import { SupporterBadge } from '@/components/SupporterBadge'
 import { FULL_SITE, LITE } from '@/lib/edition'
-import { useHalloweenLook } from '@/lib/seasonal'
-import { Pumpkin } from '@/components/seasonal/Halloween'
+import { useSeasonLook } from '@/lib/seasonal'
+import { THEMES } from '@/components/seasonal/Season'
 
 const StoreHome = lazy(() => import('./StoreHome'))
 const StoreSearch = lazy(() => import('./StoreSearch'))
@@ -72,7 +72,7 @@ function SearchBox() {
           if (active >= 0 && rows[active]) (setOpen(false), rows[active].run())
           else submit()
         }}
-        className="flex h-10 items-center gap-2 rounded-full bg-shasta-field px-4 ring-1 ring-shasta-line focus-within:ring-2 focus-within:ring-shasta-accent/60"
+        className="flex h-10 items-center gap-2 rounded-[10px] bg-shasta-field px-3 ring-1 ring-shasta-line transition-shadow duration-150 ease-shasta focus-within:ring-2 focus-within:ring-shasta-accent/60"
       >
         <Search className="size-4 shrink-0 text-shasta-muted" aria-hidden />
         <input
@@ -91,7 +91,7 @@ function SearchBox() {
           placeholder="Search games and apps"
           autoComplete="off"
           spellCheck={false}
-          className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-shasta-muted"
+          className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-shasta-faint"
         />
         {text && (
           <button type="button" aria-label="Clear search" onClick={() => (setText(''), setOpen(false))} className="rounded-full p-0.5 text-shasta-muted hover:text-shasta-fg">
@@ -100,25 +100,25 @@ function SearchBox() {
         )}
       </form>
       {open && q && (
-        <ul id="store-suggest" role="listbox" className="absolute inset-x-0 top-12 z-30 overflow-hidden rounded-2xl bg-popover p-1 shadow-xl ring-1 ring-shasta-line">
+        <ul id="store-suggest" role="listbox" className="absolute inset-x-0 top-12 z-30 overflow-hidden rounded-xl bg-popover p-1 shadow-xl ring-1 ring-shasta-line">
           {rows.map((r, i) => (
             <li key={r.key} role="option" aria-selected={i === active}>
               <button
                 type="button"
                 onMouseEnter={() => setActive(i)}
                 onClick={() => (setOpen(false), r.run())}
-                className={cn('flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm', i === active && 'bg-shasta-hover')}
+                className={cn('flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm', i === active && 'bg-shasta-hover')}
               >
                 {r.app ? <AppIcon app={r.app} size={32} /> : <Search className="size-4 text-shasta-muted" />}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">{r.label}</span>
-                  {r.sub && <span className="block truncate text-xs text-shasta-muted">{r.sub}</span>}
+                  {r.sub && <span className="block truncate text-xs text-shasta-faint">{r.sub}</span>}
                 </span>
               </button>
             </li>
           ))}
           <li>
-            <button type="button" onClick={submit} className="w-full rounded-xl px-3 py-2 text-left text-sm text-shasta-accent hover:bg-shasta-hover">
+            <button type="button" onClick={submit} className="w-full rounded-lg px-3 py-2 text-left text-sm text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg">
               {rows.length ? 'See all results for' : 'Search for'} “{text.trim()}”
             </button>
           </li>
@@ -137,13 +137,13 @@ function NavItem({ path, icon, label, badge, current }: { path: string; icon: Re
       onClick={() => go(path)}
       aria-current={current ? 'page' : undefined}
       className={cn(
-        'flex shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors md:w-full',
-        current ? 'bg-shasta-accent/15 text-shasta-fg' : 'text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg',
+        'flex h-9 shrink-0 items-center gap-2.5 rounded-lg px-3 text-sm transition-[color,background-color,box-shadow] duration-150 ease-shasta md:w-full',
+        current ? 'sh-selected' : 'text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg',
       )}
     >
-      <span className={cn('[&>svg]:size-[18px]', current && 'text-shasta-accent')}>{icon}</span>
+      <span className={cn('grid w-[18px] place-items-center [&>svg]:size-[18px]', current ? 'text-shasta-fg' : 'text-shasta-faint')}>{icon}</span>
       <span className="flex-1 text-left">{label}</span>
-      {!!badge && <span className="grid min-w-5 place-items-center rounded-full bg-shasta-accent px-1.5 text-[11px] font-semibold text-shasta-accent-fg">{badge}</span>}
+      {!!badge && <span className="sh-meta text-shasta-muted">{badge}</span>}
     </button>
   )
 }
@@ -156,10 +156,10 @@ function Sidebar() {
   const { go } = useStoreNav()
 
   return (
-    <nav aria-label="Store" className="flex shrink-0 gap-1 overflow-x-auto border-b border-shasta-line p-2 md:w-60 md:flex-col md:overflow-visible md:border-r md:border-b-0 md:p-3">
-      <button onClick={() => go('/')} className="hidden items-center gap-2.5 px-3 pt-2 pb-4 md:flex" aria-label="Store home">
-        <Logo className="size-7 text-shasta-accent" />
-        <span className="text-lg font-semibold tracking-tight">Store</span>
+    <nav aria-label="Store" className="flex shrink-0 gap-1 overflow-x-auto border-b border-shasta-line p-2 md:w-60 md:flex-col md:gap-0.5 md:overflow-visible md:border-r md:border-b-0 md:p-3">
+      <button onClick={() => go('/')} className="hidden h-9 items-center gap-2.5 px-3 mb-4 md:flex" aria-label="Store home">
+        <Logo className="size-[18px] text-shasta-fg" />
+        <span className="text-base font-medium">Store</span>
       </button>
       <NavItem path="/" icon={<Compass />} label="Discover" current={seg === ''} />
       <NavItem path="/search" icon={<LayoutGrid />} label="Explore" current={seg === 'search'} />
@@ -216,7 +216,7 @@ export function StorePage({ tabId, url }: { tabId: string; url: string }) {
   useStoreBoot()
   const offline = useStore((s) => s.offline)
   const noBackend = useStore((s) => s.noBackend)
-  const halloween = useHalloweenLook()
+  const season = useSeasonLook()
   const scroller = useRef<HTMLDivElement>(null)
   // each Store page starts at the top
   useEffect(() => {
@@ -229,25 +229,21 @@ export function StorePage({ tabId, url }: { tabId: string; url: string }) {
 
   return (
     <NavProvider tabId={tabId} url={url}>
-      <div className={cn('flex h-full flex-col text-shasta-fg md:flex-row', halloween && 'sh-theme hw-store')}>
+      <div className={cn('flex h-full flex-col text-shasta-fg md:flex-row', season && 'sh-theme')} style={season ? ({ '--sh-hue': THEMES[season.event.theme].hue } as React.CSSProperties) : undefined}>
         <Sidebar />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <header className="flex shrink-0 items-center gap-3 px-5 py-3 md:px-8">
+          <header className="flex shrink-0 items-center gap-4 px-5 py-3 md:px-8">
             <SearchBox />
-            {halloween && (
-              <span className="hidden items-center gap-1.5 rounded-full bg-orange-500/15 px-3 py-1 text-xs font-medium text-orange-600 ring-1 ring-orange-500/30 sm:flex dark:text-orange-300">
-                <Pumpkin className="size-4" /> Happy Halloween
-              </span>
-            )}
+            {season && <span className="hidden text-sm text-shasta-faint sm:block">{season.greeting}</span>}
             <SupporterBadge />
           </header>
           {offline && (
-            <div role="alert" className="mx-5 mb-2 flex items-center gap-2 rounded-xl bg-shasta-warn/15 px-4 py-2 text-sm text-shasta-warn md:mx-8">
+            <div role="alert" className="mx-5 mb-2 flex items-center gap-2 rounded-lg bg-shasta-warn/10 px-4 py-2 text-sm text-shasta-warn md:mx-8">
               <CloudOff className="size-4 shrink-0" /> {noBackend && LITE ? `The Store is on the full Shasta: ${FULL_SITE}` : noBackend ? "The Store isn't connected in this development build yet. Your library on this device still works." : "The Store server can't be reached. Browsing and your installed apps may be unavailable until you're back online."}
             </div>
           )}
           <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto px-5 pb-12 md:px-8">
-            <Suspense fallback={<p className="py-10 text-center text-sm text-shasta-muted">Loading…</p>}>
+            <Suspense fallback={<p className="py-10 text-center text-sm text-shasta-faint">Loading…</p>}>
               <Routes />
             </Suspense>
             <AdSlot format="native" className="mx-auto mt-8 max-w-3xl pb-4" minHeight={120} />

@@ -162,16 +162,16 @@ export default function BookmarksPage() {
     >
       <div className="relative mb-4">
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-shasta-muted" />
-        <input type="search" aria-label="Search bookmarks" placeholder="Search bookmarks" value={query} onChange={(e) => setQuery(e.target.value)} className="h-10 w-full rounded-full bg-shasta-field pr-4 pl-10 text-sm outline-none focus-visible:ring-2 focus-visible:ring-shasta-accent/60" />
+        <input type="search" aria-label="Search bookmarks" placeholder="Search bookmarks" value={query} onChange={(e) => setQuery(e.target.value)} className="h-10 w-full rounded-[10px] border border-shasta-line bg-shasta-field pr-4 pl-10 text-sm placeholder:text-shasta-faint outline-none transition-[border-color,box-shadow] duration-150 ease-shasta focus-visible:border-shasta-accent/50 focus-visible:ring-2 focus-visible:ring-shasta-accent/20" />
       </div>
 
       {!q && (
         <nav aria-label="Folder path" className="mb-3 flex flex-wrap items-center gap-1 text-sm">
-          <button onClick={() => setFolderId(null)} className="rounded-md px-1.5 py-0.5 hover:bg-shasta-hover">Bookmarks</button>
+          <button onClick={() => setFolderId(null)} className="rounded-md px-2 py-1 text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg">Bookmarks</button>
           {crumbs.map((c) => (
             <span key={c.id} className="flex items-center gap-1">
-              <ChevronRight className="size-3.5 text-shasta-muted" />
-              <button onClick={() => setFolderId(c.id)} className="rounded-md px-1.5 py-0.5 hover:bg-shasta-hover">{c.title}</button>
+              <ChevronRight className="size-3.5 text-shasta-faint" />
+              <button onClick={() => setFolderId(c.id)} className="rounded-md px-2 py-1 hover:bg-shasta-hover">{c.title}</button>
             </span>
           ))}
         </nav>
@@ -186,24 +186,24 @@ export default function BookmarksPage() {
       ) : (
         <ul>
           {rows.map((n) => (
-            <li key={n.id} className="group flex items-center gap-2 rounded-xl px-2 py-1 hover:bg-shasta-hover">
+            <li key={n.id} className="group flex h-10 items-center gap-2 rounded-lg px-2 transition-colors duration-150 ease-shasta hover:bg-shasta-hover">
               {n.type === 'folder' ? (
-                <button onClick={() => setFolderId(n.id)} className="flex min-w-0 flex-1 items-center gap-3 py-1.5 text-left text-sm">
-                  <Folder className="size-4 shrink-0 text-shasta-accent" />
+                <button onClick={() => setFolderId(n.id)} className="flex h-full min-w-0 flex-1 items-center gap-3 text-left text-sm">
+                  <Folder className="size-4 shrink-0 text-shasta-faint" />
                   <span className="min-w-0 flex-1 truncate">{n.title}</span>
-                  <span className="text-xs text-shasta-muted">{nodes.filter((c) => c.parentId === n.id).length} items</span>
+                  <span className="sh-meta">{nodes.filter((c) => c.parentId === n.id).length} items</span>
                 </button>
               ) : (
-                <button onClick={(e) => open(e, n.url)} onAuxClick={(e) => e.button === 1 && useTabs.getState().newTab(n.url, { background: true })} className="flex min-w-0 flex-1 items-center gap-3 py-1.5 text-left text-sm" title={n.url}>
+                <button onClick={(e) => open(e, n.url)} onAuxClick={(e) => e.button === 1 && useTabs.getState().newTab(n.url, { background: true })} className="flex h-full min-w-0 flex-1 items-center gap-3 text-left text-sm" title={n.url}>
                   <Favicon url={n.url} />
                   <span className="min-w-0 flex-1 truncate">{n.title}</span>
-                  <span className="hidden max-w-[40%] truncate text-xs text-shasta-muted sm:block">{displayUrl(n.url)}</span>
+                  <span className="sh-meta hidden max-w-[40%] truncate sm:block">{displayUrl(n.url)}</span>
                 </button>
               )}
-              <button aria-label={`Edit ${n.title}`} onClick={() => setEditing(n)} className="grid size-7 place-items-center rounded-full text-shasta-muted opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 hover:bg-shasta-line hover:text-shasta-fg">
+              <button aria-label={`Edit ${n.title}`} onClick={() => setEditing(n)} className="grid size-7 place-items-center rounded-md text-shasta-faint opacity-0 transition-[opacity,color,background-color] duration-150 ease-shasta group-focus-within:opacity-100 group-hover:opacity-100 hover:bg-shasta-line hover:text-shasta-fg">
                 <Pencil className="size-4" />
               </button>
-              <button aria-label={`Delete ${n.title}`} onClick={() => remove(n.id)} className="grid size-7 place-items-center rounded-full text-shasta-muted opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 hover:bg-shasta-line hover:text-shasta-danger">
+              <button aria-label={`Delete ${n.title}`} onClick={() => remove(n.id)} className="grid size-7 place-items-center rounded-md text-shasta-faint opacity-0 transition-[opacity,color,background-color] duration-150 ease-shasta group-focus-within:opacity-100 group-hover:opacity-100 hover:bg-shasta-line hover:text-shasta-danger">
                 <Trash2 className="size-4" />
               </button>
             </li>

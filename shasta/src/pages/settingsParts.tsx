@@ -2,14 +2,15 @@ import type { ReactNode } from 'react'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 
-export function Row({ title, desc, children, htmlFor }: { title: string; desc?: string; children?: ReactNode; htmlFor?: string }) {
+/** `stack`: the control goes under the words at full width (pickers, swatches, text fields) instead of beside them. */
+export function Row({ title, desc, children, htmlFor, stack = false }: { title: string; desc?: string; children?: ReactNode; htmlFor?: string; stack?: boolean }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-shasta-line py-4 last:border-0">
       <div className="min-w-0 flex-1 basis-64">
         <label htmlFor={htmlFor} className="text-sm font-medium">{title}</label>
         {desc && <p className="mt-0.5 text-sm text-shasta-muted">{desc}</p>}
       </div>
-      {children && <div className="flex shrink-0 items-center gap-2">{children}</div>}
+      {children && <div className={cn('flex min-w-0 max-w-full items-center gap-2', stack ? 'basis-full' : 'shrink-0')}>{children}</div>}
     </div>
   )
 }
@@ -20,14 +21,14 @@ export function Toggle({ id, checked, onChange, label, disabled }: { id: string;
 
 export function Segmented<T extends string>({ value, onChange, options, label }: { value: T; onChange: (v: T) => void; options: { value: T; label: string }[]; label: string }) {
   return (
-    <div role="radiogroup" aria-label={label} className="flex rounded-full bg-shasta-field p-0.5">
+    <div role="radiogroup" aria-label={label} className="flex w-fit max-w-full rounded-[10px] bg-shasta-field p-0.5">
       {options.map((o) => (
         <button
           key={o.value}
           role="radio"
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
-          className={cn('rounded-full px-3.5 py-1 text-sm transition-colors', value === o.value ? 'bg-shasta-accent text-shasta-accent-fg' : 'text-shasta-muted hover:text-shasta-fg')}
+          className={cn('h-7 rounded-lg px-3 text-sm transition-[color,background-color,box-shadow] duration-150 ease-shasta', value === o.value ? 'sh-selected' : 'text-shasta-muted hover:text-shasta-fg')}
         >
           {o.label}
         </button>

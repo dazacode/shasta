@@ -45,6 +45,8 @@ export interface RunOptions {
 	jobs?: number;
 	/** only touch apps that are new or not yet live under this source (skips re-uploading finished ones) */
 	pending?: boolean;
+	/** on a same-name collision from another source, add this suffix to our name and add it anyway (instead of skipping) */
+	collisionSuffix?: string;
 }
 
 const die = (msg: string): never => {
@@ -297,8 +299,19 @@ export async function runImport(items: ImportItem[], opts: RunOptions = {}) {
 	const publishOne = async (item: ImportItem) => {
 		let name = item.name.replace(/\s+/g, " ").trim().slice(0, 60);
 		if (name.length < 2) name = `${name} app`;
-		const key = norm(name);
-		const already = existing.get(key);
+		let key = norm(name);
+		let already = existing.get(key);
+		if (already && !already.tags.includes(item.source) && opts.collisionSuffix) {
+			// a same-named app from another source exists: add ours under a distinct name instead of skipping
+			const renamed = `${name.replace(/\s*\([^)]*\)$/, "")}${opts.collisionSuffix}`.trim().slice(0, 60);
+			const rk = norm(renamed);
+			const rAlready = existing.get(rk);
+			if (!rAlready || rAlready.tags.includes(item.source)) {
+				name = renamed;
+				key = rk;
+				already = rAlready;
+			}
+		}
 		if (already && !already.tags.includes(item.source)) {
 			skipped++;
 			skippedNames.push(name);

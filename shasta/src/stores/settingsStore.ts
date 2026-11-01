@@ -100,6 +100,8 @@ export interface Settings {
   /** immersive = the atmospheric page, classic = a plain logo and search, minimal = the search bar alone */
   newTabStyle: NewTabStyle
   newTabLogo: boolean
+  /** the big search bar (the address bar still searches); ignored by the minimal style, which is only the search bar */
+  newTabSearch: boolean
   newTabGreeting: boolean
   newTabShortcuts: boolean
   /** custom wording for the immersive page; empty = the default */
@@ -150,9 +152,9 @@ export interface Settings {
   supporter: SupporterRecord | null
   /** a supporter perk: try new features before everyone else (only a flag for now) */
   earlyPreviews: boolean
-  /** holiday looks (Halloween: new tab night, Store colours, Watch section); off = everything stays normal */
+  /** holiday looks (lib/events.ts: new tab photo + greeting, Store colours/shelves, Watch section); off = all normal */
   seasonalLooks: boolean
-  /** seasonal wallpapers this person claimed during their season, kept for good (lib/wallpaper.ts `claim`) */
+  /** holiday photos this person claimed while their event was on, kept for good (lib/wallpaper.ts `claim`) */
   claimedWallpapers: WallpaperName[]
   // advanced
   /**
@@ -205,6 +207,7 @@ export const defaultSettings = (): Settings => liteSettings({
   searchSuggestions: true,
   newTabStyle: 'immersive',
   newTabLogo: true,
+  newTabSearch: true,
   newTabGreeting: true,
   newTabShortcuts: true,
   newTabGreetingText: '',
@@ -296,6 +299,7 @@ export function mergeSettings(persisted: unknown, current: SettingsState): Setti
   settings.wispUrls = sanitizeUrls(settings.wispUrls)
   if (typeof settings.seasonalLooks !== 'boolean') settings.seasonalLooks = true
   if (typeof settings.phoneDirect !== 'boolean') settings.phoneDirect = true
+  if (typeof settings.newTabSearch !== 'boolean') settings.newTabSearch = true
   settings.claimedWallpapers = Array.isArray(settings.claimedWallpapers) ? settings.claimedWallpapers.filter(isWallpaper) : []
   return { ...current, settings: liteSettings(settings) }
 }

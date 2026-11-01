@@ -4,6 +4,7 @@ import { openSaveShasta, siteAddress } from '@/lib/saveShasta'
 import { shouldSuggestApp } from '@/lib/shastaApp'
 import { IconButton } from './IconButton'
 import { Omnibox } from './Omnibox'
+import { MediaHub } from './MediaHub'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -75,30 +76,32 @@ export function Toolbar() {
       {tab.private && (
         <Tooltip>
           <TooltipTrigger render={<span role="img" aria-label="Private tab: Shasta saves no history, session or bookmarks for it. Websites' cookies are still shared with normal tabs." className="grid size-8 shrink-0 place-items-center rounded-full text-shasta-accent" />}>
-            <VenetianMask className="size-[18px]" />
+            <VenetianMask className="size-[18px]" strokeWidth={1.6} />
           </TooltipTrigger>
           <TooltipContent>Private tab: no history, session or bookmarks saved. Site cookies are still shared with normal tabs, and your network and the proxy can still see this traffic.</TooltipContent>
         </Tooltip>
       )}
 
       <IconButton label="Shasta Store" onClick={() => openInternal('store')}>
-        <Store className="size-[18px]" />
+        <Store className="size-[18px]" strokeWidth={1.6} />
       </IconButton>
       <IconButton label="Library" onClick={() => openInternal('library')}>
-        <Library className="size-[18px]" />
+        <Library className="size-[18px]" strokeWidth={1.6} />
       </IconButton>
       <IconButton label="Watch" onClick={() => openInternal('watch')}>
-        <Film className="size-[18px]" />
+        <Film className="size-[18px]" strokeWidth={1.6} />
       </IconButton>
       {settings.ai.enabled && (
         <IconButton label="Shasta AI" shortcut={keysFor('toggleAssistant')} onClick={() => useUi.getState().toggleAssistant()} aria-pressed={assistantOpen}>
-          <Sparkles className={`size-[18px] ${assistantOpen ? 'text-shasta-accent' : ''}`} />
+          <Sparkles className={`size-[18px] ${assistantOpen ? 'text-shasta-accent' : ''}`} strokeWidth={1.6} />
         </IconButton>
       )}
 
+      <MediaHub />
+
       {downloads.length > 0 && (
         <IconButton label={running ? `${running} download${running > 1 ? 's' : ''} in progress` : 'Downloads'} onClick={() => openInternal('downloads')}>
-          <Download className="size-[18px]" />
+          <Download className="size-[18px]" strokeWidth={1.6} />
           {running > 0 && <span className="absolute top-1 right-1 size-2 rounded-full bg-shasta-accent" />}
         </IconButton>
       )}
@@ -107,9 +110,9 @@ export function Toolbar() {
         <DropdownMenuTrigger
           aria-label={updateReady ? 'Shasta menu, an update is ready' : 'Shasta menu'}
           title={updateReady ? 'Menu: restart to update Shasta' : 'Menu'}
-          className="relative grid size-8 shrink-0 place-items-center rounded-full text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg"
+          className="relative grid size-8 shrink-0 place-items-center rounded-full text-shasta-muted transition-colors duration-150 ease-shasta hover:bg-shasta-hover hover:text-shasta-fg"
         >
-          <MoreVertical className="size-[18px]" />
+          <MoreVertical className="size-[18px]" strokeWidth={1.6} />
           {/* like a browser's "update" pill: a new version is installed and waits for a restart */}
           {updateReady && <span aria-hidden className="absolute top-1 right-1 size-2 rounded-full bg-shasta-accent ring-2 ring-shasta-chrome" />}
         </DropdownMenuTrigger>

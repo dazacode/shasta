@@ -1,9 +1,13 @@
 // "Play with your phone": the QR code a phone scans to become a controller (lib/phonePad.ts), the code to type if
 // the camera won't scan, and who is connected. Shown on the game splash and in the Controls dialog.
+import { lazy, Suspense } from 'react'
 import { Loader2, Smartphone, X } from 'lucide-react'
 import { QrImage } from '@/components/DiscordQr'
 import { kickPhonePad, startPhonePads, stopPhonePads, usePhonePads } from '@/lib/phonePad'
 import { cn } from '@/lib/utils'
+
+// The animated demo (stageshow kit) loads in its own chunk, only when the offer is on screen
+const PhonePadDemo = lazy(() => import('@/components/whatsNew/PhonePadDemo').then((m) => ({ default: m.PhonePadDemo })))
 
 export const PLAYER_COLORS = ['#3b82f6', '#ef4444', '#22c55e', '#eab308']
 
@@ -14,20 +18,28 @@ export function PhonePadCard({ dark = false, className }: { dark?: boolean; clas
   // nothing is opened until the person asks: no room, no socket
   if (status === 'off') {
     return (
-      <button
-        onClick={startPhonePads}
-        className={cn('flex w-full items-center gap-3 rounded-2xl p-3 text-left text-sm outline-none focus-visible:ring-2', dark ? 'bg-white/10 ring-1 ring-white/10 hover:bg-white/15 focus-visible:ring-white/60' : 'bg-shasta-field ring-1 ring-shasta-line hover:bg-shasta-hover focus-visible:ring-shasta-accent', className)}
-      >
-        <span className={cn('grid size-10 shrink-0 place-items-center rounded-xl', dark ? 'bg-white/10' : 'bg-shasta-bg')}><Smartphone className="size-5" aria-hidden /></span>
-        <span className="min-w-0">
-          <span className="block font-medium">Use your phone as a controller</span>
-          <span className={cn('block text-xs', muted)}>Scan a code with its camera. No app, no account.</span>
-        </span>
-      </button>
+      <div className={cn('grid gap-2', className)}>
+        {/* what the button does, shown before anyone opens a room; gone once it is opened */}
+        <Suspense fallback={<div className="aspect-[520/236] max-h-[236px] w-full" aria-hidden />}>
+          <div aria-hidden>
+            <PhonePadDemo variant="card" theme={dark ? 'dark' : undefined} />
+          </div>
+        </Suspense>
+        <button
+          onClick={startPhonePads}
+          className={cn('flex w-full items-center gap-3 rounded-2xl p-3 text-left text-sm outline-none transition-colors duration-150 ease-shasta focus-visible:ring-2', dark ? 'bg-white/[0.06] ring-1 ring-white/10 hover:bg-white/10 focus-visible:ring-white/60' : 'bg-shasta-field ring-1 ring-shasta-line hover:bg-shasta-hover focus-visible:ring-shasta-accent')}
+        >
+          <span className={cn('grid size-10 shrink-0 place-items-center rounded-xl', dark ? 'bg-white/10' : 'bg-shasta-bg')}><Smartphone className="size-5" aria-hidden /></span>
+          <span className="min-w-0">
+            <span className="block font-medium">Use your phone as a controller</span>
+            <span className={cn('block text-xs', muted)}>Scan a code with its camera. No app, no account.</span>
+          </span>
+        </button>
+      </div>
     )
   }
   return (
-    <div className={cn('flex items-center gap-4 rounded-2xl p-3', dark ? 'bg-white/10 ring-1 ring-white/10' : 'bg-shasta-field ring-1 ring-shasta-line', className)}>
+    <div className={cn('flex items-center gap-4 rounded-2xl p-3', dark ? 'bg-white/[0.06] ring-1 ring-white/10' : 'bg-shasta-field ring-1 ring-shasta-line', className)}>
       <div className="grid size-32 shrink-0 place-items-center">
         {status === 'open' && link ? (
           <QrImage value={link} label="QR code: scan it with your phone's camera to use it as a controller" className="size-32 p-1" />
@@ -46,7 +58,7 @@ export function PhonePadCard({ dark = false, className }: { dark?: boolean; clas
         )}
         {code && (
           <p className={cn('mt-2 font-mono text-xs', muted)}>
-            Code <span className={cn('select-all text-base font-semibold tracking-[0.2em]', dark ? 'text-white' : 'text-shasta-fg')}>{code}</span>
+            Code <span className={cn('select-all text-base font-medium tracking-[0.2em]', dark ? 'text-white' : 'text-shasta-fg')}>{code}</span>
           </p>
         )}
         {on.length > 0 && (

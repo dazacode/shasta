@@ -1,49 +1,50 @@
-// Seasonal looks (Halloween 2026). Everything seasonal asks this file, so it switches itself off on the end date
-// without a release: the Watch shelves, the Store's theme and section, and the new tab's night scene.
+// Holiday looks. Everything seasonal (the new tab's scene and greeting, the Store's colours and shelves, Watch's
+// section) asks this file which event is on; the dates come from the recurring calendar in lib/events.ts, so nothing
+// here names a year and a look switches itself on and off without a release.
 import { useEffect, useState } from 'react'
 import { getSettings, useSettings } from '@/stores/settingsStore'
 import { useUi } from '@/stores/uiStore'
+import { activeEvent, msUntilChange, type ActiveEvent } from '@/lib/events'
+import type { WallpaperName } from '@/lib/wallpaper'
 
-/** Halloween 2026: from Oct 24 until local midnight on Nov 1. */
-const HALLOWEEN = { start: new Date(2026, 9, 24).getTime(), end: new Date(2026, 10, 1).getTime() }
-
-export function isHalloween(now = Date.now()) {
-  return now >= HALLOWEEN.start && now < HALLOWEEN.end
-}
-
-/** True while it is Halloween; re-renders when midnight on Nov 1 passes on a page left open. */
-export function useHalloween() {
-  const [on, setOn] = useState(isHalloween)
+/** The event on right now (or null); re-renders when it starts, ends or changes greeting on a page left open. */
+export function useSeason(): ActiveEvent | null {
+  const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
-    const left = HALLOWEEN.end - Date.now()
-    if (!on || left <= 0 || left > 2 ** 31 - 1) return
-    const t = setTimeout(() => setOn(false), left + 1000)
+    const t = setTimeout(() => setNow(Date.now()), msUntilChange(now) + 1000)
     return () => {
       clearTimeout(t)
     }
-  }, [on])
-  return on
+  }, [now])
+  return activeEvent(now)
 }
 
-/** Halloween AND the person has not turned holiday looks off (Settings: `seasonalLooks`). What the Store, Watch and
- *  the new tab use; the date alone (useHalloween) only decides whether the wallpaper can still be claimed. */
-export function useHalloweenLook() {
-  const season = useHalloween()
+/** The event on right now AND the person has not turned holiday looks off (Settings: `seasonalLooks`). What the
+ *  Store, Watch and the new tab use; the date alone (useSeason) only decides whether a wallpaper can be claimed. */
+export function useSeasonLook(): ActiveEvent | null {
+  const season = useSeason()
   const on = useSettings((s) => s.settings.seasonalLooks)
-  return season && on
+  return on ? season : null
 }
 
-/** Keep the Halloween night as this browser's wallpaper, also after the season. */
-export function claimHalloween() {
+/** Each event's photo is also a wallpaper (lib/wallpaper.ts, `claim: true`): shown for everyone while the event is on,
+ *  kept afterwards by people who claim it. */
+export const eventWallpaper = (season: ActiveEvent) => season.event.id as WallpaperName
+export const SEASONAL_WALLPAPERS: WallpaperName[] = ['halloween', 'thanksgiving', 'winter', 'newyear']
+
+/** Keep this event's photo as this browser's wallpaper, also after the event. */
+export function claimSeasonWallpaper(season: ActiveEvent) {
+  const name = eventWallpaper(season)
   const s = getSettings()
-  const claimed = s.claimedWallpapers.includes('halloween') ? s.claimedWallpapers : [...s.claimedWallpapers, 'halloween' as const]
-  useSettings.getState().update({ claimedWallpapers: claimed, wallpaper: 'halloween', newTabBg: 'preset', seasonalLooks: true })
-  useUi.getState().toast('The Halloween night is yours. It stays after Halloween; change it any time in Customize.')
+  const claimed = s.claimedWallpapers.includes(name) ? s.claimedWallpapers : [...s.claimedWallpapers, name]
+  useSettings.getState().update({ claimedWallpapers: claimed, wallpaper: name, newTabBg: 'preset', seasonalLooks: true })
+  useUi.getState().toast(`It's yours. It stays after ${season.event.name}; change it any time in Customize.`)
 }
 
-/** Back to normal everywhere (new tab, Store, Watch). A claim is kept, but the Halloween wallpaper is unpicked. */
-export function turnOffHalloween() {
+/** Back to normal everywhere (new tab, Store, Watch). Claims are kept, but a holiday wallpaper is unpicked. */
+export function turnOffSeason(season: ActiveEvent) {
   const s = getSettings()
-  useSettings.getState().update({ seasonalLooks: false, ...(s.wallpaper === 'halloween' ? { wallpaper: 'none' as const } : {}) })
-  useUi.getState().toast('Halloween look turned off. Customize on the new tab turns it back on.')
+  useSettings.getState().update({ seasonalLooks: false, ...(SEASONAL_WALLPAPERS.includes(s.wallpaper) ? { wallpaper: 'none' as const } : {}) })
+  const name = season.event.name
+  useUi.getState().toast(`${name[0].toUpperCase()}${name.slice(1)} look turned off. Customize on the new tab turns holiday looks back on.`)
 }

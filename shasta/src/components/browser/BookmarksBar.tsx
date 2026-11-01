@@ -45,11 +45,11 @@ export function BookmarksBar() {
 
   return (
     <nav aria-label="Bookmarks bar" className="flex h-8 items-center gap-0.5 overflow-hidden border-t border-shasta-line bg-shasta-tab px-2 text-[13px]">
-      {roots.length === 0 && <span className="px-2 text-xs text-shasta-muted">Bookmarks you save appear here. Press the star in the address bar.</span>}
+      {roots.length === 0 && <span className="px-2 text-xs text-shasta-faint">Bookmarks you save appear here. Press the star in the address bar</span>}
       {roots.map((n) =>
         n.type === 'folder' ? (
           <DropdownMenu key={n.id}>
-            <DropdownMenuTrigger className="flex h-6 max-w-44 shrink-0 items-center gap-1.5 rounded-md px-2 text-shasta-fg hover:bg-shasta-hover">
+            <DropdownMenuTrigger className="flex h-6 max-w-44 shrink-0 items-center gap-1.5 rounded-md px-2 text-shasta-fg transition-colors duration-150 ease-shasta hover:bg-shasta-hover">
               <FolderIcon className="size-3.5 text-shasta-muted" />
               <span className="truncate">{n.title}</span>
               <ChevronRight className="size-3 rotate-90 text-shasta-muted" />
@@ -66,7 +66,7 @@ export function BookmarksBar() {
                   title={`${n.title}\n${n.url}`}
                   onClick={(e) => (e.metaKey || e.ctrlKey ? useTabs.getState().newTab(n.url, { background: true }) : useTabs.getState().navigateTo(tab.id, n.url))}
                   onAuxClick={(e) => e.button === 1 && useTabs.getState().newTab(n.url, { background: true })}
-                  className="flex h-6 max-w-44 shrink-0 items-center gap-1.5 rounded-md px-2 text-shasta-fg hover:bg-shasta-hover"
+                  className="flex h-6 max-w-44 shrink-0 items-center gap-1.5 rounded-md px-2 text-shasta-fg transition-colors duration-150 ease-shasta hover:bg-shasta-hover"
                 />
               }
             >

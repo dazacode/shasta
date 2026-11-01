@@ -28,6 +28,7 @@ import { useLibrary } from './libraryStore'
 import { useUi } from './uiStore'
 import { trackEvent, trackSite } from '@/lib/usage'
 import { trackPage } from '@/lib/stats'
+import { setPrivateTabCheck } from '@/lib/netLog'
 
 const CLOSED_LIMIT = 25
 const SESSION_KEY = 'shasta-session'
@@ -606,6 +607,9 @@ export const useTabs = create<TabsState>()((set, get) => {
 })
 
 // ---- wiring ----------------------------------------------------------------------------
+
+// Settings -> Advanced -> Developer tools -> Network never records a private tab's requests
+setPrivateTabCheck((tabId) => !!useTabs.getState().tabs.find((t) => t.id === tabId)?.private)
 
 let saveTimer: number | null = null
 useTabs.subscribe((state) => {

@@ -27,8 +27,8 @@ export function SignInNotice({ tab }: { tab: Tab }) {
             <p>{SIGN_IN_WARNING}</p>
             {info.known && <p className="mt-0.5 text-xs text-shasta-muted"><strong>{info.known.title}.</strong> {info.known.body}</p>}
           </div>
-          <button onClick={() => openInHostBrowser(url)} className="rounded-full bg-shasta-hover px-3 py-0.5 font-medium hover:bg-shasta-line">Open the original site in my browser</button>
-          <button onClick={() => setLearn(true)} className="rounded-full px-3 py-0.5 text-shasta-muted hover:bg-shasta-hover">Learn more</button>
+          <button onClick={() => openInHostBrowser(url)} className="sh-press h-6 rounded-md bg-shasta-hover px-2.5 font-medium hover:bg-shasta-line">Open the original site in my browser</button>
+          <button onClick={() => setLearn(true)} className="sh-press h-6 rounded-md px-2.5 text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg">Learn more</button>
           <button aria-label="Dismiss" onClick={() => setDismissedHost(info.host)} className="rounded-full p-1 text-shasta-muted hover:bg-shasta-hover"><X className="size-4" /></button>
         </div>
       )}

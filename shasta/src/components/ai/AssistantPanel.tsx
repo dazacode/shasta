@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowUp, Check, Copy, FileText, Globe, Lightbulb, ListChecks, Loader2, Mic, Plus, Sparkles, SquarePen, Square, Table2, Volume2, X, Film, AudioLines, ImageIcon } from 'lucide-react'
+import { ArrowUp, Check, Copy, FileText, Globe, Lightbulb, ListChecks, Loader2, Mic, Plus, Mountain, SquarePen, Square, Table2, Volume2, X, Film, AudioLines, ImageIcon } from 'lucide-react'
 import { IconButton } from '@/components/browser/IconButton'
 import { ModelSetup } from './ModelSetup'
 import { AnswerBody } from './AnswerBody'
@@ -21,7 +21,7 @@ const ACCEPT = 'image/*,audio/*,video/*,.pdf,.docx,.pptx,.xlsx,.txt,.md,.csv,.js
 const KindIcon = ({ kind }: { kind: string }) => (kind === 'image' ? <ImageIcon className="size-3.5" /> : kind === 'video' ? <Film className="size-3.5" /> : kind === 'audio' ? <AudioLines className="size-3.5" /> : <FileText className="size-3.5" />)
 
 function Avatar() {
-  return <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full border border-shasta-line bg-shasta-bg text-shasta-accent" aria-hidden><Sparkles className="size-3.5" /></span>
+  return <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full border border-shasta-line bg-shasta-bg text-shasta-muted" aria-hidden><Mountain className="size-3.5" strokeWidth={1.5} /></span>
 }
 
 function Dots({ label }: { label: string }) {
@@ -58,7 +58,7 @@ function Message({ m }: { m: Msg }) {
             {m.files?.map((f, i) => <span key={i} className="inline-flex items-center gap-1 rounded-full border border-shasta-line px-2.5 py-1 text-xs text-shasta-muted"><KindIcon kind={f.kind} />{f.name.slice(0, 28)}</span>)}
           </div>
         ) : null}
-        <p className="max-w-[85%] whitespace-pre-wrap break-words rounded-3xl bg-shasta-field px-4 py-2.5 text-[15px] leading-6">{m.content}</p>
+        <p className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl bg-shasta-field px-4 py-2 text-[15px] leading-6">{m.content}</p>
       </div>
     )
   }
@@ -99,8 +99,8 @@ function Message({ m }: { m: Msg }) {
 
 function Suggestion({ icon: Icon, title, hint, disabled, onClick }: { icon: typeof FileText; title: string; hint: string; disabled?: boolean; onClick: () => void }) {
   return (
-    <button type="button" disabled={disabled} onClick={onClick} className="flex flex-col items-start gap-1 rounded-2xl border border-shasta-line p-3 text-left transition-colors hover:bg-shasta-field disabled:cursor-not-allowed disabled:opacity-50">
-      <Icon className="size-4 text-shasta-accent" aria-hidden />
+    <button type="button" disabled={disabled} onClick={onClick} className="flex flex-col items-start gap-1 rounded-xl border border-shasta-line p-3 text-left transition-colors duration-150 ease-shasta hover:bg-shasta-field disabled:cursor-not-allowed disabled:opacity-50">
+      <Icon className="size-4 text-shasta-muted" aria-hidden />
       <span className="text-sm font-medium">{title}</span>
       <span className="text-xs text-shasta-muted">{hint}</span>
     </button>
@@ -192,9 +192,9 @@ export function AssistantPanel() {
   return (
     <aside className="z-30 flex w-[28rem] max-w-full shrink-0 flex-col border-l border-shasta-line bg-shasta-bg max-sm:absolute max-sm:inset-0 max-sm:w-full" aria-label="Shasta AI assistant">
       <header className="flex items-center gap-1 px-3 py-2">
-        <h2 className="flex flex-1 items-center gap-2 text-sm font-semibold">
+        <h2 className="flex flex-1 items-baseline gap-2 text-sm font-medium">
           Shasta AI
-          <span className="rounded-full bg-shasta-field px-2 py-0.5 text-[11px] font-normal text-shasta-muted">on this device</span>
+          <span className="text-xs font-normal text-shasta-faint">on this device</span>
         </h2>
         <IconButton label="New chat" onClick={() => useAssistant.getState().clear()} disabled={!messages.length}><SquarePen className="size-[18px]" /></IconButton>
         <IconButton label="Close assistant" onClick={() => useUi.getState().closeAssistant()}><X className="size-[18px]" /></IconButton>
@@ -207,8 +207,8 @@ export function AssistantPanel() {
           <div ref={list} className="min-h-0 flex-1 overflow-y-auto" aria-live="polite">
             {messages.length === 0 ? (
               <div className="flex min-h-full flex-col items-center justify-center gap-5 px-5 py-8">
-                <span className="grid size-12 place-items-center rounded-full border border-shasta-line text-shasta-accent"><Sparkles className="size-6" /></span>
-                <h3 className="text-2xl font-semibold tracking-tight">How can I help?</h3>
+                <span className="grid size-12 place-items-center rounded-full border border-shasta-line text-shasta-muted"><Mountain className="size-6" strokeWidth={1.5} /></span>
+                <h3 className="text-2xl font-medium tracking-[-0.01em]">How can I help?</h3>
                 <div className="grid w-full max-w-md grid-cols-2 gap-2">
                   <Suggestion icon={FileText} title="Summarize this page" hint={pageTitle ? pageTitle.slice(0, 34) : 'Open a website first'} disabled={!pageTitle || busy} onClick={() => ask('Summarize this page in a short paragraph, then list the 3 most important points.')} />
                   <Suggestion icon={ListChecks} title="Quiz me on this" hint="Tap-to-answer questions" disabled={!pageTitle || busy} onClick={() => void useAssistant.getState().quick('quiz')} />
@@ -245,13 +245,13 @@ export function AssistantPanel() {
           <div className="px-3 pb-2 pt-1">
             {download && <p className="mb-2 px-1 text-xs text-shasta-muted" role="status">{download}</p>}
             {pageTitle && (
-              <button type="button" aria-pressed={usePage} onClick={() => setUsePage((v) => !v)} className={cn('mb-2 ml-1 inline-flex max-w-full items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors', usePage ? 'border-shasta-accent bg-shasta-accent/10 text-shasta-fg' : 'border-shasta-line text-shasta-muted hover:bg-shasta-field')}>
+              <button type="button" aria-pressed={usePage} onClick={() => setUsePage((v) => !v)} className={cn('mb-2 ml-1 inline-flex max-w-full items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-[color,background-color,box-shadow] duration-150 ease-shasta', usePage ? 'sh-selected border-transparent' : 'border-shasta-line text-shasta-muted hover:bg-shasta-field')}>
                 <Globe className="size-3.5 shrink-0" />
                 <span className="truncate">{usePage ? 'Reading' : 'Read'} “{pageTitle.slice(0, 40)}”</span>
                 {usePage && <Check className="size-3.5 shrink-0" />}
               </button>
             )}
-            <div className="rounded-[26px] border border-shasta-line bg-shasta-field/70 p-2 shadow-sm transition-colors focus-within:border-shasta-muted">
+            <div className="rounded-[20px] border border-shasta-line bg-shasta-field p-2 transition-colors duration-150 ease-shasta focus-within:border-shasta-faint">
               {files.length > 0 && <div className="mb-2 flex flex-wrap gap-2 px-1 pt-1">{files.map((f, i) => <Thumb key={`${f.name}${i}`} file={f} onRemove={() => setFiles((cur) => cur.filter((_, j) => j !== i))} />)}</div>}
               <textarea
                 ref={input}
@@ -273,7 +273,7 @@ export function AssistantPanel() {
                 rows={1}
                 placeholder={recording ? 'Listening… press the mic again to finish' : 'Ask anything'}
                 aria-label="Message"
-                className="block max-h-40 min-h-9 w-full resize-none bg-transparent px-3 py-1.5 text-[15px] leading-6 outline-none placeholder:text-shasta-muted"
+                className="block max-h-40 min-h-9 w-full resize-none bg-transparent px-3 py-1.5 text-[15px] leading-6 outline-none placeholder:text-shasta-faint"
               />
               <div className="flex items-center gap-1">
                 <input ref={picker} type="file" hidden multiple accept={ACCEPT} onChange={(e) => { addFiles(e.target.files ?? []); e.target.value = '' }} />
@@ -294,11 +294,11 @@ export function AssistantPanel() {
                 {busy ? (
                   <button type="button" aria-label="Stop" title="Stop" onClick={() => useAssistant.getState().stop()} className="grid size-8 place-items-center rounded-full bg-shasta-fg text-shasta-bg"><Square className="size-3.5 fill-current" /></button>
                 ) : (
-                  <button type="button" aria-label="Send" title="Send" disabled={!canSend} onClick={go} className="grid size-8 place-items-center rounded-full bg-shasta-fg text-shasta-bg transition-opacity disabled:opacity-25"><ArrowUp className="size-[18px]" /></button>
+                  <button type="button" aria-label="Send" title="Send" disabled={!canSend} onClick={go} className="sh-press grid size-8 place-items-center rounded-full bg-shasta-fg text-shasta-bg disabled:opacity-25"><ArrowUp className="size-[18px]" /></button>
                 )}
               </div>
             </div>
-            <p className="mt-2 text-center text-[11px] text-shasta-muted">Runs on this device{speed ? ` · ~${(speed * 0.75).toFixed(0)} words/s` : ''} · AI can make mistakes</p>
+            <p className="mt-2 text-center text-[11px] text-shasta-faint">Runs on this device{speed ? ` · ~${(speed * 0.75).toFixed(0)} words/s` : ''} · AI can make mistakes</p>
           </div>
         </>
       )}

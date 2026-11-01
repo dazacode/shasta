@@ -1,0 +1,172 @@
+/* shasta://get-app: the install demo (InstallDemo.tsx). The page is the ground: no plate, the windows fade out at
+   their foot instead of being cut by a hard line mid-page. */
+.idm .ss-stage {
+  --g: 24px;
+  overflow: hidden;
+  background: transparent;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent);
+}
+.idm .idm-rest { position: absolute; left: 446px; top: 268px; width: 1px; height: 1px; }
+.idm .ss-stage[data-layout='compact'] .idm-rest { left: 300px; top: 272px; }
+
+.idm .idm-browser {
+  position: absolute;
+  left: var(--g);
+  top: var(--g);
+  width: 456px;
+  height: 330px;
+  box-shadow: var(--ss-shadow-hero);
+  transition: opacity 400ms ease, filter 400ms ease;
+}
+.idm .idm-dl {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  margin-left: 8px;
+  border-radius: 50%;
+  color: var(--ss-icon);
+  transition: background-color 200ms ease, color 200ms ease;
+}
+.idm .idm-dl[data-on] { background: var(--ss-accent-soft, color-mix(in srgb, var(--ss-accent) 14%, transparent)); color: var(--ss-accent); }
+
+/* the site's get-app page, quiet: a title, two lines, the button */
+.idm .idm-page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 44px;
+  background: var(--ss-surface);
+}
+.idm .idm-page__title { font-size: 17px; font-weight: 600; line-height: 1.3; color: var(--ss-text-strong); }
+.idm .idm-page__line { width: 220px; height: 6px; margin-top: 12px; border-radius: 3px; background: var(--ss-line); }
+.idm .idm-page__line--short { width: 150px; margin-top: 7px; }
+.idm .idm-get {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 22px;
+  justify-content: center;
+  width: 132px; /* even box: the 14px icon sits on whole pixels */
+  height: 34px;
+  border-radius: 10px;
+  background: var(--ss-accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  will-change: transform;
+  transition: transform 80ms ease, filter 80ms ease;
+}
+.idm .idm-get[data-pressed] { transform: scale(0.97); filter: brightness(0.94); }
+
+/* Chrome's download bubble */
+.idm .idm-bubble {
+  position: absolute;
+  right: calc(528px - var(--g) - 456px + 8px);
+  top: calc(var(--g) + 40px);
+  width: 232px;
+  padding: 6px;
+  border-radius: 12px;
+  z-index: 3;
+}
+.idm .idm-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+.idm .idm-file[data-hover] { background: var(--ss-hover, color-mix(in srgb, var(--ss-text-strong) 6%, transparent)); }
+.idm .idm-file__icon { display: grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: 8px; background: var(--ss-canvas); color: var(--ss-icon); }
+.idm .idm-file__text { display: grid; gap: 3px; min-width: 0; flex: 1; }
+.idm .idm-file__name { font-size: 13px; font-weight: 600; line-height: 1.3; color: var(--ss-text-strong); }
+.idm .idm-file__meta { display: block; height: 15px; position: relative; }
+.idm .idm-file__state { position: absolute; inset: 0; display: flex; align-items: center; }
+.idm .idm-file__progress { position: absolute; left: 0; right: 0; top: 6px; height: 4px; border-radius: 2px; overflow: hidden; background: var(--ss-line); transition: opacity 250ms ease; }
+.idm .idm-file__progress > span { display: block; height: 100%; background: var(--ss-accent); transform-origin: left; transition: transform 1000ms cubic-bezier(0.45, 0, 0.1, 1); }
+.idm .idm-file__size { font-size: 11.5px; line-height: 1.3; color: var(--ss-text); opacity: 0; transition: opacity 250ms ease 120ms; }
+.idm .idm-file__state[data-done] .idm-file__progress { opacity: 0; }
+.idm .idm-file__state[data-done] .idm-file__size { opacity: 1; }
+
+/* Chrome's install confirmation */
+.idm .idm-dialog {
+  position: absolute;
+  left: calc(var(--g) + 228px - 136px);
+  top: calc(var(--g) + 56px);
+  width: 272px;
+  padding: 18px;
+  border-radius: 14px;
+  z-index: 3;
+}
+.idm .idm-dialog__head { display: flex; align-items: center; gap: 12px; }
+.idm .idm-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #5b6cff, #c04dff);
+  color: #fff;
+}
+.idm .idm-dialog__title { font-size: 15px; font-weight: 600; line-height: 1.3; color: var(--ss-text-strong); }
+.idm .idm-dialog__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.idm .idm-btn {
+  display: inline-grid;
+  place-items: center;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--ss-line);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ss-accent);
+}
+.idm .idm-btn--primary { border-color: var(--ss-accent); background: var(--ss-accent); color: #fff; transition: transform 80ms ease, filter 80ms ease; }
+.idm .idm-btn--primary[data-pressed] { transform: scale(0.96); filter: brightness(0.94); }
+
+/* the installed app, coming forward */
+.idm .idm-appwrap {
+  position: absolute;
+  left: 92px;
+  top: 74px;
+  width: 412px;
+  height: 300px;
+  z-index: 2;
+  opacity: 0;
+  transform: translateY(10px) scale(0.98);
+  will-change: transform;
+  transform-origin: 50% 0;
+  transition: opacity 650ms cubic-bezier(0.25, 0.8, 0.25, 1), transform 700ms cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.idm .idm-appwrap[data-show] { opacity: 1; transform: none; }
+.idm .idm-app { position: absolute; inset: 0; box-shadow: var(--ss-shadow-hero); }
+.idm .idm-shasta { position: absolute; inset: 0; background: var(--ss-surface); }
+.idm .idm-omni {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  margin: 10px 12px 0;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--ss-canvas);
+  color: var(--ss-text);
+  font-size: 12px;
+  line-height: 1.3;
+}
+.idm .idm-home { display: flex; flex-direction: column; align-items: center; padding-top: 30px; }
+.idm .idm-home__logo { width: 34px; height: 34px; color: var(--ss-text-strong); }
+.idm .idm-home__name { margin-top: 8px; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; color: var(--ss-text-strong); }
+.idm .idm-tiles { display: flex; gap: 14px; margin-top: 22px; }
+.idm .idm-tile { width: 44px; height: 44px; border-radius: 12px; background: var(--ss-canvas); }
+
+/* compact: the browser stands whole across (its download button must stay in), the app runs off the right */
+.idm .ss-stage[data-layout='compact'] { --g: 16px; }
+.idm .ss-stage[data-layout='compact'] .idm-browser { width: 326px; }
+.idm .ss-stage[data-layout='compact'] .idm-appwrap { left: 40px; top: 84px; width: 360px; }
+.idm .ss-stage[data-layout='compact'] .idm-bubble { right: auto; left: 102px; }
+.idm .ss-stage[data-layout='compact'] .idm-dialog { left: 43px; }

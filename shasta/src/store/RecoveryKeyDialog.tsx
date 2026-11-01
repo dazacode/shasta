@@ -40,7 +40,7 @@ export function RecoveryKeyDialog() {
     <Dialog open={!!key} onOpenChange={(o) => !o && close()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><KeyRound className="size-4 text-shasta-accent" /> Save your recovery key</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><KeyRound className="size-4 text-shasta-faint" /> Save your recovery key</DialogTitle>
           <DialogDescription>
             This is for Store staff access only (your library and settings do not use it). If you sign in on another device, or clear this browser's data, this key gets your staff access back. It is shown only once.
           </DialogDescription>

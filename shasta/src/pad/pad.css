@@ -1,12 +1,12 @@
 /* The phone controller (main.ts). Plain CSS: this page loads nothing of Shasta's own UI. */
 .bar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; min-height: 48px; }
-.badge { display: inline-grid; place-items: center; min-width: 40px; height: 28px; padding: 0 8px; border-radius: 999px; font-weight: 700; font-size: 13px; color: #fff; background: var(--line); }
-.title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.badge { display: inline-grid; place-items: center; min-width: 40px; height: 28px; padding: 0 8px; border-radius: 8px; font-weight: 500; font-size: 13px; color: #fff; background: var(--line); }
+.title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
 .title small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
 .route { font-size: 12px; color: var(--muted); white-space: nowrap; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: #eab308; flex: none; }
 .dot.on { background: #22c55e; }
-.chip { appearance: none; border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 999px; height: 32px; padding: 0 12px; font: inherit; font-size: 13px; }
+.chip { appearance: none; border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 10px; height: 32px; padding: 0 12px; font: inherit; font-size: 13px; }
 .chip:active { background: var(--line); }
 
 .pad { position: relative; flex: 1; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 4px 16px 16px; touch-action: none; }
@@ -15,7 +15,7 @@
 .sh { width: clamp(64px, 18vw, 120px); height: 40px; border-radius: 14px; }
 .sh.t { width: clamp(48px, 13vw, 88px); opacity: .85; }
 
-.btn { display: grid; place-items: center; border: 1px solid var(--line); background: var(--panel); color: var(--fg); font-weight: 700; font-size: 18px; transition: transform 40ms, background 40ms; }
+.btn { display: grid; place-items: center; border: 1px solid var(--line); background: var(--panel); color: var(--fg); font-weight: 500; font-size: 18px; transition: transform 40ms, background 40ms; }
 .btn.down { background: #fff; color: #000; transform: scale(.94); }
 
 .left, .right { display: grid; place-items: center; height: 100%; padding-top: 44px; }
@@ -48,17 +48,17 @@
 .face .btn.down { color: #000; }
 
 .mid { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-top: 44px; }
-.mid .btn { width: 64px; height: 30px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.mid .btn { width: 64px; height: 30px; border-radius: 999px; font-size: 12px; font-weight: 500; color: var(--muted); }
 
 .screen { flex: 1; display: grid; place-items: center; padding: 24px; text-align: center; }
-.screen h1 { font-size: 20px; margin: 0 0 8px; }
+.screen h1 { font-size: 20px; font-weight: 500; margin: 0 0 8px; }
 .screen p { color: var(--muted); margin: 0 auto 16px; max-width: 30em; }
-.screen input { font: 600 24px ui-monospace, monospace; letter-spacing: .25em; text-transform: uppercase; text-align: center; width: 9.5em; padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); }
-.screen button.primary { margin-top: 12px; appearance: none; border: 0; border-radius: 999px; background: #fff; color: #000; font: 600 15px system-ui; height: 44px; padding: 0 22px; }
+.screen input { font: 500 24px ui-monospace, monospace; letter-spacing: .25em; text-transform: uppercase; text-align: center; width: 9.5em; padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); }
+.screen button.primary { margin-top: 12px; appearance: none; border: 0; border-radius: 10px; background: var(--fg); color: var(--bg); font: 500 15px system-ui; height: 44px; padding: 0 20px; }
 .spinner { width: 28px; height: 28px; margin: 0 auto 16px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--fg); animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.banner { position: absolute; left: 50%; top: 56px; transform: translateX(-50%); background: #eab308; color: #000; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 999px; z-index: 2; white-space: nowrap; }
+.banner { position: absolute; left: 50%; top: 56px; transform: translateX(-50%); background: #eab308; color: #000; font-size: 13px; font-weight: 500; padding: 6px 12px; border-radius: 999px; z-index: 2; white-space: nowrap; }
 
 @media (orientation: portrait) {
   .pad { grid-template-columns: 1fr 1fr; grid-template-rows: auto 1fr; align-items: end; padding-bottom: max(32px, 8vh); }
@@ -71,28 +71,26 @@
 [hidden] { display: none !important; }
 
 /* Gamepad | Touchpad switch */
-.seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); flex: none; }
-.seg-btn { appearance: none; border: 0; background: transparent; color: var(--muted); font: 600 12px system-ui; height: 26px; padding: 0 11px; border-radius: 999px; }
-.seg-btn[aria-pressed="true"] { background: var(--fg); color: #000; }
+.seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); flex: none; }
+.seg-btn { appearance: none; border: 0; background: transparent; color: var(--muted); font: 500 12px system-ui; height: 28px; padding: 0 12px; border-radius: 8px; }
+.seg-btn[aria-pressed="true"] { background: #262b38; color: var(--fg); box-shadow: inset 0 0 0 1px #ffffff17; }
 
 /* Touchpad mode: trackpad on the left, mouse buttons + arrows on the right, a row of keys along the bottom */
 .tp { position: relative; flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr minmax(190px, 32%); grid-template-rows: 1fr auto; gap: 10px; padding: 2px 12px 12px; touch-action: none; }
-.tp-surface { position: relative; overflow: hidden; display: grid; place-items: center; border-radius: 22px; border: 1px solid var(--line); background:
-  radial-gradient(circle at 50% 120%, #3b82f622, transparent 60%),
-  linear-gradient(180deg, #1b1e2b, #13151f); box-shadow: inset 0 1px 0 #ffffff0d, 0 8px 24px #0006; touch-action: none; transition: border-color 120ms, box-shadow 120ms; }
-.tp-surface.touched { border-color: #3b82f688; }
-.tp-surface.pressing { box-shadow: inset 0 0 0 2px #3b82f6, 0 8px 24px #0006; }
+.tp-surface { position: relative; overflow: hidden; display: grid; place-items: center; border-radius: 20px; border: 1px solid var(--line); background: var(--panel); box-shadow: inset 0 1px 0 #ffffff0d; touch-action: none; transition: border-color 120ms, box-shadow 120ms; }
+.tp-surface.touched { border-color: #ffffff2e; }
+.tp-surface.pressing { box-shadow: inset 0 0 0 2px #ffffff66; }
 .tp-hint { display: grid; gap: 4px; max-width: 24em; padding: 0 20px; text-align: center; font-size: 12px; color: var(--muted); pointer-events: none; transition: opacity 200ms; }
-.tp-hint b { font-size: 15px; color: var(--fg); opacity: .5; letter-spacing: .02em; }
+.tp-hint b { font-size: 15px; font-weight: 500; color: var(--fg); opacity: .5; }
 .tp-surface.touched .tp-hint { opacity: .15; }
-.tp-speed { position: absolute; right: 10px; top: 10px; appearance: none; border: 1px solid var(--line); background: #0b0c12cc; color: var(--fg); border-radius: 12px; padding: 4px 10px; font: 600 12px system-ui; display: grid; line-height: 1.2; text-align: left; }
-.tp-speed small { font-weight: 500; font-size: 10px; color: var(--muted); }
-.tp-dot { position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; border-radius: 50%; background: radial-gradient(circle, #ffffff55, #3b82f633 60%, transparent 70%); pointer-events: none; transition: opacity 180ms, scale 180ms; }
+.tp-speed { position: absolute; right: 10px; top: 10px; appearance: none; border: 1px solid var(--line); background: #0b0c12cc; color: var(--fg); border-radius: 10px; padding: 4px 10px; font: 500 12px system-ui; display: grid; line-height: 1.2; text-align: left; }
+.tp-speed small { font-weight: 400; font-size: 11px; color: var(--muted); }
+.tp-dot { position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; border-radius: 50%; background: radial-gradient(circle, #ffffff40, transparent 70%); pointer-events: none; transition: opacity 180ms, scale 180ms; }
 .tp-dot.gone { opacity: 0; scale: 1.6; }
 
 .tp-side { display: grid; grid-template-rows: 1fr auto; gap: 10px; min-height: 0; }
 .tp-clicks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; min-height: 72px; }
-.tp-btn, .tp-key { display: grid; place-items: center; border: 1px solid var(--line); background: linear-gradient(180deg, #1d2030, #161823); color: var(--fg); font-weight: 600; border-radius: 16px; box-shadow: 0 2px 0 #0008, inset 0 1px 0 #ffffff0d; transition: transform 40ms, background 40ms, box-shadow 40ms; }
+.tp-btn, .tp-key { display: grid; place-items: center; border: 1px solid var(--line); background: #1a1e28; color: var(--fg); font-weight: 500; border-radius: 14px; box-shadow: 0 2px 0 #0008, inset 0 1px 0 #ffffff0d; transition: transform 40ms, background 40ms, box-shadow 40ms; }
 .tp-btn { font-size: 15px; }
 .tp-btn[data-m="1"] { border-radius: 20px 10px 10px 20px; }
 .tp-btn[data-m="2"] { border-radius: 10px 20px 20px 10px; }
@@ -111,8 +109,8 @@
 .chip.icon { width: 36px; padding: 0; font-size: 17px; flex: none; }
 .bar .title { min-width: 4.5em; }
 .tp-typing { position: absolute; left: 12px; right: 12px; top: 2px; z-index: 3; display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 14px; border-radius: 16px; background: #fff; color: #000; box-shadow: 0 8px 24px #0008; }
-.tp-typing-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; opacity: .55; flex: none; }
-.tp-typed { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; direction: rtl; text-align: left; font: 600 16px ui-monospace, monospace; }
+.tp-typing-label { font-size: 12px; font-weight: 500; opacity: .55; flex: none; }
+.tp-typed { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; direction: rtl; text-align: left; font: 500 16px ui-monospace, monospace; }
 .tp-typing .chip { background: #000; color: #fff; border-color: #000; }
 .tp-input { position: fixed; left: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; font-size: 16px; border: 0; padding: 0; }
 @media (orientation: portrait) {

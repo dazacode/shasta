@@ -40,6 +40,11 @@ import { startPulse } from '@/lib/pulse'
 import { startMaintenance } from '@/lib/maintenance'
 import { openSharedLink } from '@/lib/shareLink'
 import { showWhatsNewOnce } from '@/lib/whatsNew'
+import { openSharedHome } from '@/lib/home'
+import { useHome } from '@/stores/homeStore'
+import { ImportHomeDialog } from '@/components/home/HomeDialogs'
+import { useFocusAlarms } from '@/components/home/Home'
+import { applyMediaWatch } from '@/proxy/mediaWatch'
 
 function useBootstrap() {
   useEffect(() => {
@@ -66,6 +71,11 @@ function useBootstrap() {
     openSharedLink((path) => useTabs.getState().openInternal('store', path))
     // a phone that scanned "Save Shasta"'s code (?save=phone): show how to put Shasta on its home screen
     openSaveFromLink()
+    // someone's shared new tab page (?home=H1....): shown on a new tab, applied only if the person says so
+    openSharedHome((code) => {
+      useTabs.getState().newTab()
+      useHome.getState().setPendingImport(code)
+    })
     // idle tabs release their page; one timer for the whole app
     const timer = setInterval(() => useTabs.getState().suspendIdle(), 60_000)
     return () => {
@@ -91,6 +101,11 @@ export default function App() {
   useGameInput()
   useBrowserGuards()
   useWindowTitle()
+  useFocusAlarms()
+  // Shasta's own pages that play (Watch) show in the media hub too; proxied frames are watched by the plugin
+  useEffect(() => {
+    applyMediaWatch(window, null)
+  }, [])
   const showBar = useSettings((s) => s.settings.showBookmarksBar)
   const hidden = useUi((s) => s.chromeHidden)
   const setHidden = useUi((s) => s.setChromeHidden)
@@ -128,6 +143,7 @@ export default function App() {
         <ReportHost />
         <ControlsHost />
         <SaveShastaHost />
+        <ImportHomeDialog />
         <Toasts />
         <PageContextMenu />
       </TooltipProvider>

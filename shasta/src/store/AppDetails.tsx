@@ -9,7 +9,7 @@ import { useStore, installedMap } from './storeStore'
 import { storePath, useStoreNav } from './nav'
 import { CREDIT_LABEL } from './types'
 import { UninstallDialog } from './UninstallDialog'
-import { Chip, AppAction, AppIcon, AppTile, FollowButton, LoadError, Message, OfficialBadge, Section, Shelf, StoreAvatar } from './components'
+import { Chip, AppAction, AppIcon, AppTile, FollowButton, LoadError, Message, OfficialBadge, Section, Shelf, StoreAvatar, addressOf } from './components'
 import type { AppDetail } from './types'
 import { noteTaste } from './tasteStore'
 import { MEDIA_CORS } from '@/lib/appApi'
@@ -23,7 +23,7 @@ function Screenshots({ shots, name }: { shots: string[]; name: string }) {
     <>
       <Shelf>
         {shots.map((s, i) => (
-          <button key={s} onClick={() => setOpen(i)} aria-label={`Open screenshot ${i + 1} of ${shots.length}`} className="overflow-hidden rounded-xl ring-1 ring-shasta-line hover:ring-shasta-accent/60">
+          <button key={s} onClick={() => setOpen(i)} aria-label={`Open screenshot ${i + 1} of ${shots.length}`} className="overflow-hidden rounded-xl ring-1 ring-shasta-line transition-shadow duration-150 ease-shasta hover:ring-shasta-fg/25">
             <img crossOrigin={MEDIA_CORS} src={s} alt={`${name} screenshot ${i + 1}`} loading="lazy" className="h-56 w-auto max-w-none bg-shasta-field object-cover" />
           </button>
         ))}
@@ -87,7 +87,7 @@ export default function AppDetails({ slug }: { slug: string }) {
       </div>
     )
   }
-  if (!app) return <div className="pt-2">{back}<div className="h-64 animate-pulse rounded-3xl bg-shasta-home" /></div>
+  if (!app) return <div className="pt-2">{back}<div className="h-64 animate-pulse rounded-2xl bg-shasta-home" /></div>
 
   // a version only means something once the app has been updated (never for web apps)
   const credits = app.credits ?? []
@@ -98,26 +98,27 @@ export default function AppDetails({ slug }: { slug: string }) {
   return (
     <article className="mx-auto max-w-4xl pt-2" aria-busy={loading}>
       {back}
-      <header className="flex flex-wrap items-start gap-5">
-        <AppIcon app={app} size={112} className="shadow-md" />
+      <header className="flex flex-wrap items-start gap-6">
+        <AppIcon app={app} size={112} className="shadow-sm ring-1 ring-shasta-line" />
         <div className="min-w-0 flex-1">
-          <h1 className="text-3xl font-semibold tracking-tight">{app.name}</h1>
-          <p className="mt-1 text-sm">
-            <button onClick={() => go(`/search?q=${encodeURIComponent(app.developer)}`)} className="font-medium text-shasta-accent hover:underline">{app.developer}</button>
-            {app.category && <> · <button onClick={() => go(`/search?category=${app.category!.id}`)} className="text-shasta-muted hover:underline">{app.category.name}</button></>}
+          <h1 className="sh-title">{app.name}</h1>
+          <p className="sh-meta mt-1 select-all">{addressOf(app)}</p>
+          <p className="mt-2 text-sm">
+            <button onClick={() => go(`/search?q=${encodeURIComponent(app.developer)}`)} className="text-shasta-fg underline-offset-4 hover:underline">{app.developer}</button>
+            {app.category && <> <span className="text-shasta-faint">·</span> <button onClick={() => go(`/search?category=${app.category!.id}`)} className="text-shasta-muted hover:underline">{app.category.name}</button></>}
           </p>
           {app.storefront && (
             <div className="sh-theme mt-3 flex flex-wrap items-center gap-2" style={{ ['--sh-hue' as string]: app.storefront.accent }}>
-              <button onClick={() => go(storePath(app.storefront!.slug))} className="flex items-center gap-2 rounded-full bg-shasta-field py-1 pr-3 pl-1 text-sm hover:bg-shasta-hover" aria-label={`Open the ${app.storefront.name} storefront`}>
+              <button onClick={() => go(storePath(app.storefront!.slug))} className="flex h-9 items-center gap-2 rounded-lg bg-shasta-field pr-3 pl-1.5 text-sm transition-colors duration-150 ease-shasta hover:bg-shasta-hover" aria-label={`Open the ${app.storefront.name} storefront`}>
                 <StoreAvatar store={app.storefront} size={24} />
                 <span className="font-medium">{app.storefront.name}</span>
                 {app.storefront.official && <OfficialBadge />}
               </button>
-              {!app.storefront.isMine && <FollowButton store={app.storefront} following={!!library?.following.some((f) => f.id === app.storefront!.id)} />}
+              {!app.storefront.isMine && <FollowButton quiet store={app.storefront} following={!!library?.following.some((f) => f.id === app.storefront!.id)} />}
             </div>
           )}
-          <p className="mt-2 text-sm text-shasta-muted">{app.summary}</p>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
+          <p className="mt-3 max-w-2xl text-sm text-shasta-muted">{app.summary}</p>
+          <div className="mt-6 flex flex-wrap items-center gap-2">
             <AppAction app={app} size="lg" />
             {mine && <Button variant="ghost" onClick={() => setUninstalling(true)}><Trash2 /> Uninstall</Button>}
             <Button variant="ghost" aria-pressed={fav} onClick={() => void useStore.getState().setFavorite(app.id, !fav)}>
@@ -131,7 +132,7 @@ export default function AppDetails({ slug }: { slug: string }) {
             <Button variant="ghost" onClick={() => openReport({ appId: app.id, name: app.name, official: !!app.storefront?.official, isGame: !!app.category?.isGame, kind: app.kind, appVersion: app.version })}><Flag /> Report a problem</Button>
           </div>
           {mine?.updateAvailable && (
-            <div className="mt-3 rounded-lg bg-shasta-accent/12 px-3 py-2 text-sm">
+            <div className="mt-4 rounded-xl bg-shasta-home px-4 py-3 text-sm ring-1 ring-shasta-line">
               <p>
                 Version {mine.latestVersion} is available. You have {mine.installedVersion || 'an older version'}.{' '}
                 {mine.canStay ? 'The developer still offers your version, so updating is up to you.' : 'The developer retired your version, so it updates the next time you open it.'}
@@ -139,19 +140,19 @@ export default function AppDetails({ slug }: { slug: string }) {
               {mine.changelog.length > 0 && (
                 <ul className="mt-2 grid gap-1.5 text-shasta-muted">
                   {mine.changelog.map((c) => (
-                    <li key={c.version}><strong className="text-shasta-fg">{c.version}</strong>{c.notes ? <span className="whitespace-pre-line"> {c.notes}</span> : ' No notes.'}</li>
+                    <li key={c.version}><span className="font-mono text-shasta-fg">{c.version}</span>{c.notes ? <span className="whitespace-pre-line"> {c.notes}</span> : ' No notes.'}</li>
                   ))}
                 </ul>
               )}
               {mine.canStay && <p className="mt-2 text-xs text-shasta-muted">Saved progress is kept separately for each version.</p>}
             </div>
           )}
-          <p className="mt-3 text-xs text-shasta-muted">No account needed. Your library is kept on this device.</p>
+          <p className="mt-4 text-xs text-shasta-faint">No account needed. Your library is kept on this device.</p>
         </div>
       </header>
 
       {app.kind === 'linked' && (
-        <p className="mt-5 flex items-start gap-2 rounded-xl bg-shasta-field px-4 py-3 text-sm">
+        <p className="mt-6 flex items-start gap-2 rounded-xl bg-shasta-field px-4 py-3 text-sm">
           <ExternalLink className="mt-0.5 size-4 shrink-0 text-shasta-muted" aria-hidden />
           <span><strong>Linked web app.</strong> This opens {linkedHost ? <code>{linkedHost}</code> : 'a website'} in a normal Shasta tab through the proxy. It is not uploaded to Shasta, and it can change or go offline at any time.</span>
         </p>
@@ -168,7 +169,7 @@ export default function AppDetails({ slug }: { slug: string }) {
         )}
         {app.tags.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {app.tags.map((t) => <button key={t} onClick={() => go(`/search?q=${encodeURIComponent(t)}`)} className="rounded-full bg-shasta-field px-2.5 py-0.5 text-xs text-shasta-muted hover:text-shasta-fg">#{t}</button>)}
+            {app.tags.map((t) => <button key={t} onClick={() => go(`/search?q=${encodeURIComponent(t)}`)} className="rounded-md bg-shasta-field px-2 py-0.5 font-mono text-xs text-shasta-faint transition-colors duration-150 ease-shasta hover:text-shasta-fg">#{t}</button>)}
           </div>
         )}
       </Section>
@@ -180,7 +181,7 @@ export default function AppDetails({ slug }: { slug: string }) {
               <li key={`${c.role}-${c.name}`} className="flex items-center justify-between gap-4 px-4 py-2.5 text-sm">
                 <span className="text-shasta-muted">{CREDIT_LABEL[c.role]}</span>
                 {c.url ? (
-                  <button onClick={() => useTabs.getState().newTab(c.url!)} className="inline-flex items-center gap-1 font-medium text-shasta-accent hover:underline" title={c.url}>{c.name}<ExternalLink className="size-3" aria-hidden /></button>
+                  <button onClick={() => useTabs.getState().newTab(c.url!)} className="inline-flex items-center gap-1 font-medium underline-offset-4 hover:underline" title={c.url}>{c.name}<ExternalLink className="size-3" aria-hidden /></button>
                 ) : (
                   <button onClick={() => go(`/search?q=${encodeURIComponent(c.name)}`)} className="font-medium hover:underline">{c.name}</button>
                 )}
@@ -201,12 +202,12 @@ export default function AppDetails({ slug }: { slug: string }) {
           <p className="max-w-3xl text-sm whitespace-pre-line">{latest.notes || 'No release notes for this version.'}</p>
           {older.length > 0 && (
             <>
-              <button onClick={() => setShowAll(!showAll)} className="mt-3 text-sm font-medium text-shasta-accent hover:underline">{showAll ? 'Hide earlier versions' : `Version history (${older.length} earlier)`}</button>
+              <button onClick={() => setShowAll(!showAll)} className="mt-3 text-sm text-shasta-muted underline-offset-4 hover:text-shasta-fg hover:underline">{showAll ? 'Hide earlier versions' : `Version history (${older.length} earlier)`}</button>
               {showAll && (
                 <ol className="mt-3 grid max-w-3xl gap-3">
                   {older.map((v) => (
                     <li key={v.version} className="rounded-xl bg-shasta-home px-4 py-3 ring-1 ring-shasta-line">
-                      <p className="text-sm font-medium">Version {v.version} <span className="font-normal text-shasta-muted">· {formatDate(v.publishedAt)}</span></p>
+                      <p className="text-sm font-medium">Version {v.version} <span className="font-normal text-shasta-faint">· {formatDate(v.publishedAt)}</span></p>
                       <p className="mt-1 text-sm whitespace-pre-line text-shasta-muted">{v.notes || 'No release notes.'}</p>
                     </li>
                   ))}
@@ -232,7 +233,7 @@ export default function AppDetails({ slug }: { slug: string }) {
           <div className="rounded-2xl bg-shasta-home p-4 text-sm ring-1 ring-shasta-line">
             <p className="text-shasta-muted">{app.runtime.summary}</p>
             <ul className="mt-3 grid gap-1.5">
-              {app.runtime.can.map((c) => <li key={c} className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0 text-emerald-500" aria-hidden /> {c}</li>)}
+              {app.runtime.can.map((c) => <li key={c} className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-[#4cc38a]" aria-hidden /> {c}</li>)}
               {app.runtime.cannot.map((c) => <li key={c} className="flex gap-2 text-shasta-muted"><ShieldX className="mt-0.5 size-4 shrink-0" aria-hidden /> Cannot: {c.charAt(0).toLowerCase() + c.slice(1)}</li>)}
             </ul>
             <p className="mt-3 flex gap-2 border-t border-shasta-line pt-3 text-xs text-shasta-muted"><ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden /> {app.runtime.compatibility}</p>

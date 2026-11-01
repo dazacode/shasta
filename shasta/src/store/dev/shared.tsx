@@ -11,7 +11,7 @@ export function Card({ title, subtitle, children, className, id }: { title?: str
     <section id={id} className={cn('rounded-2xl bg-shasta-home p-5 ring-1 ring-shasta-line', className)} aria-label={title}>
       {title && (
         <header className="mb-4">
-          <h2 className="text-base font-semibold">{title}</h2>
+          <h2 className="text-base font-medium">{title}</h2>
           {subtitle && <p className="mt-0.5 text-sm text-shasta-muted">{subtitle}</p>}
         </header>
       )}

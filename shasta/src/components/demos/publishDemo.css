@@ -1,0 +1,58 @@
+/* Store -> Publish demo (PublishDemo.tsx). The page is the ground: no plate. The terminal fades out at its foot
+   (a mask on the window, not the stage) and the Store card straddles its right edge below the output. */
+.pbd .ss-stage {
+  --g: 24px;
+  overflow: hidden;
+  background: transparent;
+}
+
+.pbd .pbd-term {
+  position: absolute;
+  left: var(--g);
+  top: var(--g);
+  width: 488px;
+  height: 330px;
+  mask-image: linear-gradient(to bottom, #000 52%, transparent 82%);
+}
+.pbd .pbd-lines { font-size: 12px; padding-top: 10px; }
+.pbd .pbd-line { opacity: 0; transition: opacity 120ms linear; }
+.pbd .pbd-line[data-on] { opacity: 1; }
+
+/* the listing card: Store tile proportions (art, name, storefront line, status) */
+.pbd .pbd-card {
+  position: absolute;
+  right: var(--g);
+  top: 196px;
+  width: 280px;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px 12px 12px;
+  border-radius: 16px;
+  background: var(--ss-surface);
+  box-shadow: var(--ss-shadow-satellite), 0 24px 40px -20px rgb(0 0 0 / 0.35);
+  opacity: 0;
+  transform: translateY(14px);
+  will-change: transform;
+  transition: opacity 800ms cubic-bezier(0.25, 0.8, 0.25, 1), transform 800ms cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.pbd .pbd-card[data-on] { opacity: 1; transform: none; }
+.pbd .pbd-art {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 70% 30%, #fde68a 0 6%, transparent 7%),
+    radial-gradient(circle at 30% 65%, #fff 0 3%, transparent 4%),
+    linear-gradient(140deg, #312e81, #0e7490);
+}
+.pbd .pbd-text { display: grid; gap: 7px; min-width: 0; }
+.pbd .pbd-name { color: var(--ss-text-strong); font-size: 14px; font-weight: 600; line-height: 1.3; }
+
+/* compact: the terminal runs off the right, its lines wrap, the card sits under the output across the column */
+.pbd .ss-stage[data-layout='compact'] { --g: 16px; }
+.pbd .ss-stage[data-layout='compact'] .pbd-term { width: 400px; height: 440px; }
+.pbd .ss-stage[data-layout='compact'] .pbd-lines { font-size: 11px; }
+.pbd .ss-stage[data-layout='compact'] .pbd-lines > div { white-space: pre-wrap; max-width: 300px; }
+.pbd .ss-stage[data-layout='compact'] .pbd-card { top: 236px; width: 300px; right: auto; left: 29px; }

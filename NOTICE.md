@@ -29,6 +29,7 @@ at the commit pinned by the `scramjet/` submodule and named in `engine.pin` (the
 | @mercuryworkshop/epoxy-transport, libcurl-transport | AGPL-3.0-only | npm / https://github.com/MercuryWorkshop |
 | @mercuryworkshop/wisp-js (server, the fallback relay) | LGPL-3.0-or-later | npm / https://github.com/MercuryWorkshop/wisp-js |
 | Geist, Poppins, Urbanist fonts (Fontsource) | SIL OFL 1.1 | license texts shipped at `/licenses/` in every build |
+| New tab quotes and jokes (`shasta/src/lib/quotes.data.json`, built by `scripts/build-quotes.ts` at pinned commits): popular-movie-quotes by NikhilNamal17, AniQuotesAPI by Shinei Nouze, inspirational-quotes by vinitshahdeo, Inspirational-Quotes by akhiltak, Official Joke API by 15Dkatz | MIT | https://github.com/NikhilNamal17/popular-movie-quotes, https://github.com/Shineii86/AniQuotesAPI, https://github.com/vinitshahdeo/inspirational-quotes, https://github.com/akhiltak/inspirational-quotes, https://github.com/15Dkatz/official_joke_api |
 | Other npm dependencies (React, Base UI, Zustand, Motion, Lucide, transformers.js, ONNX Runtime, pdf.js, ...) | MIT / Apache-2.0 / ISC | their npm packages |
 
 AI model weights downloaded on the device (SmolLM2, Qwen3, SmolVLM, Whisper, MiniLM) carry their own licenses on

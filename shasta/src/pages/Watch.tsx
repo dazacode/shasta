@@ -12,8 +12,8 @@ import { useWatch } from '@/watch/store'
 import type { Candidate, Card, Featured, Kind, Row, Scope, Title } from '@/watch/types'
 import { cn } from '@/lib/utils'
 import { AdSlot } from '@/components/ads/AdSlot'
-import { useHalloweenLook } from '@/lib/seasonal'
-import { HalloweenSection } from '@/components/seasonal/Halloween'
+import { useSeasonLook } from '@/lib/seasonal'
+import { SeasonSection, THEMES } from '@/components/seasonal/Season'
 
 const SCOPES: { key: Scope; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -33,10 +33,11 @@ export function Watch({ tabId, initial }: { tabId: string; initial: string }) {
   const [searchError, setSearchError] = useState('')
   const [featured, setFeatured] = useState<Featured[]>([])
   const [rows, setRows] = useState<Row[] | null>(null)
-  // seasonal shelves come from the server tagged with a section; they are drawn as one block, and only while it is
-  // still Halloween here (the server drops them a little later, on its own clock)
-  const halloween = useHalloweenLook()
-  const spooky = useMemo(() => (halloween ? (rows ?? []).filter((r) => r.section === 'halloween') : []), [rows, halloween])
+  // holiday shelves come from the server tagged with their theme as `section`; they are drawn as one block, and only
+  // while that holiday is on HERE (lib/events.ts; the server's window is a little wider to cover every time zone)
+  const season = useSeasonLook()
+  const theme = season?.event.theme
+  const holiday = useMemo(() => (theme ? (rows ?? []).filter((r) => r.section === theme) : []), [rows, theme])
   const plainRows = useMemo(() => (rows ?? []).filter((r) => !r.section), [rows])
   const [detail, setDetail] = useState<{ kind: Kind; id: string; season: number; episode: number; play: boolean } | null>(null)
 
@@ -118,32 +119,32 @@ export function Watch({ tabId, initial }: { tabId: string; initial: string }) {
 
   const q = query.trim()
   return (
-    <div className="mx-auto w-full max-w-6xl pb-16">
+    <div className="mx-auto w-full max-w-[1600px] px-4 pb-16 sm:px-8">
       {/* header */}
-      <header className="sticky top-0 z-30 -mx-4 mb-4 flex flex-wrap items-center gap-3 border-b border-white/5 bg-shasta-bg/85 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
-        <h1 className="flex items-center gap-2 text-lg font-semibold"><Film className="size-5 text-shasta-accent" /> Watch</h1>
+      <header className="sticky top-0 z-30 -mx-4 mb-6 flex h-auto flex-wrap items-center gap-3 border-b border-shasta-line bg-shasta-bg px-4 py-3 sm:-mx-8 sm:h-16 sm:flex-nowrap sm:px-8 sm:py-0">
+        <h1 className="flex items-center gap-2 text-lg font-medium"><Film className="size-[18px] text-shasta-muted" strokeWidth={1.5} /> Watch</h1>
         <div className="relative order-3 w-full sm:order-2 sm:ml-auto sm:w-80">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-shasta-muted" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-shasta-faint" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Escape') setQuery('') }}
-            placeholder="Search anime, films and TV…"
+            placeholder="Search anime, films and TV"
             role="searchbox"
             spellCheck={false}
-            className="h-10 w-full rounded-xl border border-white/10 bg-shasta-field pl-9 pr-9 text-sm outline-none focus:border-shasta-accent"
+            className="h-9 w-full rounded-[10px] border border-shasta-line bg-shasta-field pl-9 pr-9 text-sm outline-none transition-colors duration-150 ease-shasta placeholder:text-shasta-faint focus:border-shasta-accent"
           />
           {searching ? <Loader2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-shasta-muted" /> : query && (
             <button onClick={() => setQuery('')} aria-label="Clear search" className="absolute right-2.5 top-1/2 -translate-y-1/2 text-shasta-muted hover:text-shasta-fg"><X className="size-4" /></button>
           )}
         </div>
-        <div className="order-2 flex gap-1 sm:order-3">
+        <div className="order-2 flex rounded-[10px] bg-shasta-field p-0.5 sm:order-3">
           {SCOPES.map((s) => (
             <button
               key={s.key}
               onClick={() => setScope(s.key)}
               aria-pressed={scope === s.key}
-              className={cn('rounded-full px-3 py-1.5 text-xs font-medium transition', scope === s.key ? 'bg-shasta-accent text-white' : 'bg-shasta-field text-shasta-muted hover:text-shasta-fg')}
+              className={cn('h-7 rounded-lg px-3 text-[13px] transition-[color,background-color,box-shadow] duration-150 ease-shasta', scope === s.key ? 'sh-selected' : 'text-shasta-muted hover:text-shasta-fg')}
             >
               {s.label}
             </button>
@@ -152,7 +153,7 @@ export function Watch({ tabId, initial }: { tabId: string; initial: string }) {
       </header>
 
       {!tmdb && (
-        <p className="mb-3 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-300">Films and TV need a TMDB key on the server; showing anime only.</p>
+        <p className="mb-4 rounded-lg border border-shasta-line bg-shasta-field px-3 py-2 text-xs text-shasta-warn">Films and TV need a TMDB key on the server; showing anime only.</p>
       )}
 
       {q ? (
@@ -167,7 +168,7 @@ export function Watch({ tabId, initial }: { tabId: string; initial: string }) {
         <>
           {scope === 'all' && featured.length > 0 && <Hero items={featured} onOpen={open} />}
 
-          <AdSlot className="my-5" minHeight={110} />
+          <AdSlot className="my-6" minHeight={110} />
 
           {/* personalized: only when there is real device data */}
           {progress.length > 0 && (
@@ -184,10 +185,10 @@ export function Watch({ tabId, initial }: { tabId: string; initial: string }) {
             </Rail>
           )}
 
-          {spooky.length > 0 && (
-            <HalloweenSection id="watch" title="Halloween at Shasta Watch" subtitle="Horror films, Halloween specials and spooky anime. Here until November 1.">
-              {spooky.map((r) => <RowSection key={r.key} rowKey={r.key} title={r.title} onOpen={open} />)}
-            </HalloweenSection>
+          {season && holiday.length > 0 && (
+            <SeasonSection place="watch" season={season} title={THEMES[season.event.theme].watch.title} subtitle={THEMES[season.event.theme].watch.subtitle}>
+              {holiday.map((r) => <RowSection key={r.key} rowKey={r.key} title={r.title} onOpen={open} />)}
+            </SeasonSection>
           )}
 
           {list.length > 0 && (
@@ -203,14 +204,14 @@ export function Watch({ tabId, initial }: { tabId: string; initial: string }) {
           )}
 
           {forYou.length > 0 && (
-            <Rail title="Recommended for You" subtitle="From your watch history on this device">
+            <Rail title="Recommended for you" subtitle="From your watch history on this device">
               {forYou.map((c) => <MediaCard key={`${c.kind}:${c.id}`} card={c} onOpen={open} fixed />)}
             </Rail>
           )}
 
           {/* discovery rows: server-registered, lazily fetched, empties hidden */}
           {rows === null ? (
-            <div className="mt-8 space-y-8">
+            <div className="mt-8 space-y-10">
               {Array.from({ length: 3 }, (_, i) => (
                 <div key={i}>
                   <div className="mb-3 h-4 w-40 animate-pulse rounded bg-shasta-field" />
@@ -232,9 +233,9 @@ export function Watch({ tabId, initial }: { tabId: string; initial: string }) {
 
 function Rail({ title, subtitle, icon, children }: { title: string; subtitle?: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="mt-6">
-      <h2 className="mb-1 flex items-center gap-2 px-1 text-sm font-semibold tracking-tight text-shasta-fg sm:text-base">
-        {icon}{title}{subtitle && <span className="text-xs font-normal text-shasta-muted">· {subtitle}</span>}
+    <section className="mt-8">
+      <h2 className="mb-2 flex items-baseline gap-2 px-1 text-base font-medium text-shasta-fg">
+        {icon && <span className="self-center text-shasta-faint">{icon}</span>}{title}{subtitle && <span className="text-[13px] font-normal text-shasta-faint">{subtitle}</span>}
       </h2>
       <Scroller>{children}</Scroller>
     </section>
@@ -259,7 +260,7 @@ function SearchResults({ query, results, searching, error, onOpen }: { query: st
         {searching ? <span className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" /> Searching…</span> : error ? error : `${results.length} result${results.length === 1 ? '' : 's'} for “${query}”`}
       </p>
       {!searching && !error && results.length === 0 && <p className="px-1 text-sm text-shasta-muted">Nothing matched. Try another spelling, or the anime's English or romaji name.</p>}
-      <div className="grid grid-cols-3 gap-x-3 gap-y-5 sm:grid-cols-4 md:grid-cols-6">
+      <div className="grid grid-cols-3 gap-x-3 gap-y-6 sm:grid-cols-4 md:grid-cols-6 xl:grid-cols-8">
         {results.map((c) => <MediaCard key={`${c.kind}:${c.id}`} card={c} onOpen={onOpen} />)}
       </div>
     </section>
@@ -361,8 +362,8 @@ function DetailView({ detail, onClose, onNavigate }: { detail: { kind: Kind; id:
   }, [title, sources, detail.play])
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 pb-16 pt-4 sm:px-6">
-      <button onClick={onClose} className="mb-3 flex items-center gap-1.5 text-sm text-shasta-muted hover:text-shasta-fg"><ArrowLeft className="size-4" /> Back</button>
+    <div className="mx-auto w-full max-w-[1600px] px-4 pb-16 pt-4 sm:px-8">
+      <button onClick={onClose} className="mb-4 flex h-8 items-center gap-1.5 rounded-lg px-2 -ml-2 text-sm text-shasta-muted transition-colors duration-150 ease-shasta hover:bg-shasta-hover hover:text-shasta-fg"><ArrowLeft className="size-4" /> Back</button>
 
       {loading && !title && <div className="grid h-40 place-items-center"><Loader2 className="size-6 animate-spin text-shasta-muted" /></div>}
       {error && <p className="text-sm text-shasta-warn">{error}</p>}
@@ -386,24 +387,24 @@ function DetailView({ detail, onClose, onNavigate }: { detail: { kind: Kind; id:
               onFailed={(c) => { if (sources.length < 2) return; const i = sources.findIndex((s) => s.id === c.id); const n = sources[(i + 1) % sources.length]; if (n && n.id !== c.id) setCandidate(n) }}
             />
           )}
-          {!candidate && !error && !loading && <p className="mb-4 rounded-lg bg-shasta-field px-3 py-2 text-sm text-shasta-muted">Discovery only right now — no playable source answered. {title.trailer && <button className="underline" onClick={() => setShowTrailer(true)}>Watch the trailer.</button>}</p>}
+          {!candidate && !error && !loading && <p className="mb-4 rounded-lg bg-shasta-field px-3 py-2 text-sm text-shasta-muted">No playable source answered right now. {title.trailer && <button className="underline underline-offset-2" onClick={() => setShowTrailer(true)}>Watch the trailer</button>}</p>}
 
-          <div className="mt-4 flex flex-col gap-5 sm:flex-row">
-            <div className="w-full shrink-0 sm:w-44">
-              {title.poster && <img src={artUrl(title.poster)} crossOrigin={MEDIA_CORS} alt="" className="hidden w-full rounded-xl ring-1 ring-white/10 sm:block" />}
-              <div className="mt-3 flex flex-wrap gap-2">
-                {candidate && <button onClick={() => setShowTrailer(false)} className="flex items-center gap-1.5 rounded-lg bg-shasta-accent px-3 py-1.5 text-xs font-semibold text-white hover:brightness-110"><Play className="size-3.5 fill-white" /> Play</button>}
-                {title.trailer && <button onClick={() => setShowTrailer((v) => !v)} className="rounded-lg bg-shasta-field px-3 py-1.5 text-xs font-medium hover:text-shasta-fg">Trailer</button>}
-                <button onClick={() => void toggleList(title)} className={cn('flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium', inList ? 'bg-shasta-accent/15 text-shasta-accent' : 'bg-shasta-field hover:text-shasta-fg')}>
-                  <Plus className={cn('size-3.5 transition-transform', inList && 'rotate-45')} /> {inList ? 'In My List' : 'My List'}
+          <div className="mt-6 flex flex-col gap-6 sm:flex-row sm:gap-8">
+            <div className="w-full shrink-0 sm:w-48">
+              {title.poster && <img src={artUrl(title.poster)} crossOrigin={MEDIA_CORS} alt="" className="hidden w-full rounded-xl ring-1 ring-shasta-line sm:block" />}
+              <div className="mt-4 flex flex-wrap gap-2">
+                {candidate && <button onClick={() => setShowTrailer(false)} className="sh-press flex h-8 items-center gap-1.5 rounded-lg bg-shasta-accent px-3 text-[13px] font-medium text-shasta-accent-fg hover:brightness-110"><Play className="size-3.5 fill-current" /> Play</button>}
+                {title.trailer && <button onClick={() => setShowTrailer((v) => !v)} className="sh-press h-8 rounded-lg border border-shasta-line bg-shasta-field px-3 text-[13px] hover:bg-shasta-raised">Trailer</button>}
+                <button onClick={() => void toggleList(title)} className={cn('sh-press flex h-8 items-center gap-1.5 rounded-lg border border-shasta-line px-3 text-[13px]', inList ? 'sh-selected' : 'bg-shasta-field hover:bg-shasta-raised')}>
+                  <Plus className={cn('size-3.5 transition-transform duration-150 ease-shasta', inList && 'rotate-45')} /> {inList ? 'In My List' : 'My List'}
                 </button>
               </div>
               {sources.length > 1 && (
-                <div className="mt-4">
-                  <p className="mb-1.5 text-xs font-medium text-shasta-muted">Sources</p>
+                <div className="mt-6">
+                  <p className="mb-2 text-xs text-shasta-faint">Sources</p>
                   <div className="flex flex-wrap gap-1.5">
                     {sources.map((s) => (
-                      <button key={s.id} onClick={() => setCandidate(s)} className={cn('rounded-full px-2.5 py-1 text-[11px] transition', s.id === candidate?.id ? 'bg-shasta-accent text-white' : 'bg-shasta-field text-shasta-muted hover:text-shasta-fg')}>{s.label}</button>
+                      <button key={s.id} onClick={() => setCandidate(s)} className={cn('h-7 rounded-md px-2.5 text-xs transition-[color,background-color,box-shadow] duration-150 ease-shasta', s.id === candidate?.id ? 'sh-selected' : 'bg-shasta-field text-shasta-muted hover:text-shasta-fg')}>{s.label}</button>
                     ))}
                   </div>
                 </div>
@@ -411,20 +412,20 @@ function DetailView({ detail, onClose, onNavigate }: { detail: { kind: Kind; id:
             </div>
 
             <div className="min-w-0 flex-1">
-              <h1 className="text-xl font-semibold sm:text-2xl">{title.title}</h1>
-              <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-shasta-muted">
+              <h1 className="sh-title">{title.title}</h1>
+              <p className="mt-2 flex flex-wrap items-center gap-2 text-[13px] text-shasta-muted">
                 {title.year && <span>{title.year}</span>}
                 {title.format && <span>· {title.format}</span>}
                 {title.runtime ? <span>· {title.runtime} min</span> : null}
-                {title.rating ? <span className="flex items-center gap-1 text-amber-400"><Star className="size-3 fill-amber-400" /> {title.rating}%</span> : null}
-                {title.status && <span className="uppercase">· {title.status.replace(/_/g, ' ')}</span>}
+                {title.rating ? <span className="flex items-center gap-1 tabular-nums text-amber-500 dark:text-amber-300"><Star className="size-3.5 fill-current" /> {title.rating}%</span> : null}
+                {title.status && <span>· {title.status.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase())}</span>}
               </p>
-              {title.genres.length > 0 && <p className="mt-2 flex flex-wrap gap-1.5">{title.genres.map((g) => <span key={g} className="rounded-full bg-shasta-field px-2 py-0.5 text-[11px] text-shasta-muted">{g}</span>)}</p>}
-              {title.overview && <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-shasta-muted">{title.overview}</p>}
-              {title.studio && <p className="mt-2 text-xs text-shasta-muted">Studio · {title.studio}</p>}
+              {title.genres.length > 0 && <p className="mt-1 text-[13px] text-shasta-faint">{title.genres.join(' · ')}</p>}
+              {title.overview && <p className="mt-4 max-w-3xl whitespace-pre-line text-sm leading-6 text-shasta-muted">{title.overview}</p>}
+              {title.studio && <p className="mt-2 text-xs text-shasta-faint">Studio · {title.studio}</p>}
 
               {(title.kind === 'tv' || title.kind === 'anime') && title.seasons && title.seasons.length > 0 && (
-                <select value={season} onChange={(e) => { const s = Number(e.target.value); setSeason(s); setEpisode(1) }} className="mt-4 h-9 rounded-lg border border-white/10 bg-shasta-field px-2 text-sm">
+                <select value={season} onChange={(e) => { const s = Number(e.target.value); setSeason(s); setEpisode(1) }} className="mt-6 h-9 rounded-lg border border-shasta-line bg-shasta-field px-2.5 text-sm">
                   {title.seasons.map((s) => <option key={s.number} value={s.number}>{s.name} ({s.episodes})</option>)}
                 </select>
               )}
@@ -434,11 +435,11 @@ function DetailView({ detail, onClose, onNavigate }: { detail: { kind: Kind; id:
                   {title.episodes.map((e) => {
                     const p = progressFor(detail.kind, detail.id, e.number)
                     return (
-                      <button key={e.number} onClick={() => { setEpisode(e.number); setShowTrailer(false) }} className={cn('flex items-center gap-3 rounded-lg border p-2 text-left text-xs transition', e.number === episode ? 'border-shasta-accent bg-shasta-field' : 'border-white/10 hover:bg-shasta-field')}>
-                        {e.still ? <img src={artUrl(e.still)} crossOrigin={MEDIA_CORS} alt="" loading="lazy" className="h-12 w-20 shrink-0 rounded object-cover" /> : <span className="grid h-12 w-20 shrink-0 place-items-center rounded bg-shasta-field"><TvIcon className="size-4" /></span>}
+                      <button key={e.number} onClick={() => { setEpisode(e.number); setShowTrailer(false) }} className={cn('flex items-center gap-3 rounded-[10px] border p-2 text-left text-[13px] transition-colors duration-150 ease-shasta', e.number === episode ? 'sh-selected border-transparent' : 'border-shasta-line hover:bg-shasta-field')}>
+                        {e.still ? <img src={artUrl(e.still)} crossOrigin={MEDIA_CORS} alt="" loading="lazy" className="h-12 w-20 shrink-0 rounded-md object-cover" /> : <span className="grid h-12 w-20 shrink-0 place-items-center rounded-md bg-shasta-field text-shasta-faint"><TvIcon className="size-4" /></span>}
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate font-medium">{e.number}. {e.title}</span>
-                          {p && <span className="mt-1 block h-0.5 w-full bg-white/10"><span className="block h-full bg-shasta-accent" style={{ width: `${p.duration ? Math.min(100, (p.position / p.duration) * 100) : 0}%` }} /></span>}
+                          <span className="block truncate"><span className="font-mono text-shasta-faint tabular-nums">{e.number}</span> {e.title}</span>
+                          {p && <span className="mt-2 block h-0.5 w-full bg-shasta-line"><span className="block h-full bg-shasta-accent" style={{ width: `${p.duration ? Math.min(100, (p.position / p.duration) * 100) : 0}%` }} /></span>}
                         </span>
                       </button>
                     )
@@ -447,14 +448,14 @@ function DetailView({ detail, onClose, onNavigate }: { detail: { kind: Kind; id:
               )}
 
               {title.cast && title.cast.length > 0 && (
-                <div className="mt-6">
-                  <h2 className="mb-2 text-sm font-semibold">Cast & staff</h2>
+                <div className="mt-8">
+                  <h2 className="mb-3 text-base font-medium">Cast & staff</h2>
                   <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {title.cast.map((p, i) => (
                       <div key={i} className="w-20 shrink-0 text-center">
-                        {p.image ? <img src={artUrl(p.image)} crossOrigin={MEDIA_CORS} alt="" loading="lazy" className="mx-auto size-20 rounded-full object-cover ring-1 ring-white/10" /> : <span className="mx-auto grid size-20 place-items-center rounded-full bg-shasta-field"><Clock className="size-5 text-shasta-muted" /></span>}
-                        <p className="mt-1 line-clamp-2 text-[11px] font-medium">{p.name}</p>
-                        <p className="line-clamp-2 text-[10px] text-shasta-muted">{p.role}</p>
+                        {p.image ? <img src={artUrl(p.image)} crossOrigin={MEDIA_CORS} alt="" loading="lazy" className="mx-auto size-20 rounded-full object-cover ring-1 ring-shasta-line" /> : <span className="mx-auto grid size-20 place-items-center rounded-full bg-shasta-field"><Clock className="size-5 text-shasta-muted" /></span>}
+                        <p className="mt-2 line-clamp-2 text-xs">{p.name}</p>
+                        <p className="line-clamp-2 text-[11px] text-shasta-faint">{p.role}</p>
                       </div>
                     ))}
                   </div>
@@ -462,8 +463,8 @@ function DetailView({ detail, onClose, onNavigate }: { detail: { kind: Kind; id:
               )}
 
               {title.recommendations && title.recommendations.length > 0 && (
-                <div className="mt-6">
-                  <h2 className="mb-2 text-sm font-semibold">More like this</h2>
+                <div className="mt-8">
+                  <h2 className="mb-3 text-base font-medium">More like this</h2>
                   <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {title.recommendations.map((c) => <MediaCard key={`${c.kind}:${c.id}`} card={c} onOpen={(x) => onNavigate(x.kind, x.id, 1, 1)} fixed />)}
                   </div>

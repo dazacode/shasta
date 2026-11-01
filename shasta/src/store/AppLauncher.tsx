@@ -31,7 +31,7 @@ function Fail({ title, message, recover, onRetry, onReport }: { title: string; m
     <div className="grid h-full place-items-center p-6" role="alert">
       <div className="max-w-md text-center">
         <div className="mx-auto mb-4 grid size-14 place-items-center rounded-2xl bg-shasta-field">{recover === 'retry' ? <WifiOff className="size-6 text-shasta-muted" /> : <AlertTriangle className="size-6 text-shasta-warn" />}</div>
-        <h1 className="text-lg font-semibold">{title}</h1>
+        <h1 className="sh-heading">{title}</h1>
         <p className="mt-1 text-sm text-shasta-muted">{message}</p>
         <div className="mt-5 flex justify-center gap-2">
           {recover === 'retry' && <Button onClick={onRetry}><RefreshCw /> Try again</Button>}

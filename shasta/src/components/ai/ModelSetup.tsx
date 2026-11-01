@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Download, Loader2, Sparkles } from 'lucide-react'
+import { Download, Loader2, Mountain } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CHAT_MODELS, backendFor } from '@/ai/catalog'
 import { activeTier, ai, totalSizeMb, useAi } from '@/ai/engine'
@@ -19,16 +19,16 @@ export function ModelSetup({ compact = false }: { compact?: boolean }) {
 
   return (
     <div className={compact ? 'p-4' : 'mx-auto max-w-md p-6 text-center'}>
-      <div className="mx-auto mb-3 grid size-12 place-items-center rounded-2xl bg-shasta-accent/15 text-shasta-accent"><Sparkles className="size-6" /></div>
-      <h2 className="text-base font-semibold">Set up Shasta AI</h2>
+      <div className="mx-auto mb-4 grid size-12 place-items-center rounded-full border border-shasta-line text-shasta-muted"><Mountain className="size-6" strokeWidth={1.5} /></div>
+      <h2 className="text-base font-medium">Set up Shasta AI</h2>
       <p className="mt-1 text-sm text-shasta-muted">
         The AI runs on this device. Your files, pictures, recordings and the pages you read never leave it. Shasta checks this device and downloads the models that suit it: chat, understanding pictures, and your voice.
       </p>
       <div className="mt-3 rounded-xl bg-shasta-field p-3 text-left text-xs text-shasta-muted" aria-live="polite">
         {ready ? (
           <>
-            <p><b className="text-shasta-fg">This device:</b> {profile.memoryGb ? `${profile.memoryGb} GB memory, ` : ''}{profile.cores} CPU cores, {backendFor(profile) === 'webgpu' ? 'graphics chip (WebGPU) available' : 'no WebGPU, so it will use the processor'}.</p>
-            <p className="mt-1"><b className="text-shasta-fg">Best fit:</b> the {CHAT_MODELS[activeTier()].label} model plus the picture and speech models, {mb} MB in total, downloaded once.</p>
+            <p><span className="font-medium text-shasta-fg">This device:</span> {profile.memoryGb ? `${profile.memoryGb} GB memory, ` : ''}{profile.cores} CPU cores, {backendFor(profile) === 'webgpu' ? 'graphics chip (WebGPU) available' : 'no WebGPU, so it will use the processor'}.</p>
+            <p className="mt-1"><span className="font-medium text-shasta-fg">Best fit:</span> the {CHAT_MODELS[activeTier()].label} model plus the picture and speech models, {mb} MB in total, downloaded once.</p>
           </>
         ) : (
           <p>Checking this device…</p>
@@ -36,7 +36,7 @@ export function ModelSetup({ compact = false }: { compact?: boolean }) {
       </div>
       {busy ? (
         <div className="mt-4" role="status">
-          <div className="h-2 overflow-hidden rounded-full bg-shasta-field"><div className="h-full rounded-full bg-shasta-accent transition-[width]" style={{ width: `${Math.round(setup.progress * 100)}%` }} /></div>
+          <div className="h-2 overflow-hidden rounded-full bg-shasta-field"><div className="h-full rounded-full bg-shasta-accent transition-[width] duration-300 ease-shasta" style={{ width: `${Math.round(setup.progress * 100)}%` }} /></div>
           <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-shasta-muted"><Loader2 className="size-3 animate-spin" /> Downloading the {setup.step}… {Math.round(setup.progress * 100)}%</p>
         </div>
       ) : (

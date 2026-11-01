@@ -1,5 +1,5 @@
 /** Bump when shasta://whats-new changes enough that everybody should see it again on their next start. */
-export const WHATS_NEW_VERSION = '2026-10-31-halloween'
+export const WHATS_NEW_VERSION = '2026-11-01-cloud'
 const KEY = 'shasta-whats-new'
 
 /** True when this browser had never seen What's new before this start: it then opens with a Welcome slide. */

@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState, type DragEvent, type KeyboardEvent, type MouseEvent } from 'react'
 import { motion } from 'motion/react'
-import { Bookmark, Copy, Download, Minus, Plus, X, Maximize2, Pin, VenetianMask } from 'lucide-react'
+import { Bookmark, Copy, Download, Minus, Plus, X, Maximize2, Pin, VenetianMask, Volume2, VolumeX } from 'lucide-react'
 import { IconButton } from './IconButton'
 import { Favicon } from './Favicon'
 import {
@@ -28,6 +28,8 @@ import { Input } from '@/components/ui/input'
 import { useTabs } from '@/stores/tabsStore'
 import { useLibrary } from '@/stores/libraryStore'
 import { useUi } from '@/stores/uiStore'
+import { useTabMedia } from '@/stores/mediaStore'
+import { setTabMuted } from '@/proxy/mediaWatch'
 import { ACCENTS, type AccentName } from '@/stores/settingsStore'
 import { tabTitle, tabUrl, type Tab, type TabGroup } from '@/lib/tabModel'
 import { isInternalUrl } from '@/lib/url'
@@ -92,8 +94,12 @@ const TabItem = memo(function TabItem({ tab, active, group, groups, tabIndex, dr
   const bookmarked = useLibrary((st) => st.bookmarks.some((b) => b.type === 'bookmark' && b.url === url))
   const hasClosed = useTabs((st) => st.closed.length > 0)
   const external = !isInternalUrl(url)
+  // the speaker icon, like a browser's: shown while the tab plays sound or is muted; a click mutes/unmutes it
+  const media = useTabMedia(tab.id)
+  const audible = media.some((m) => m.playing && !m.muted && m.volume > 0)
+  const muted = media.length > 0 && media.every((m) => m.muted)
 
-  const label = `${title}${tab.loading ? ', loading' : ''}${tab.error ? ', failed to load' : ''}${tab.pinned ? ', pinned' : ''}${tab.suspended ? ', suspended' : ''}`
+  const label = `${title}${audible ? ', playing audio' : muted ? ', muted' : ''}${tab.loading ? ', loading' : ''}${tab.error ? ', failed to load' : ''}${tab.pinned ? ', pinned' : ''}${tab.suspended ? ', suspended' : ''}`
 
   return (
     <ContextMenu>
@@ -125,11 +131,11 @@ const TabItem = memo(function TabItem({ tab, active, group, groups, tabIndex, dr
         onDrop={onDrop}
         onDragEnd={onDragEnd}
         className={cn(
-          'group relative flex h-tab-h cursor-default items-center gap-2 text-[13px] outline-offset-[-2px] transition-colors',
+          'group relative flex h-tab-h cursor-default items-center gap-2 text-[13px] outline-offset-[-2px] transition-colors duration-150 ease-shasta',
           tab.pinned ? 'size-[calc(var(--sh-tab-h)-0.5rem)] shrink-0 justify-center rounded-lg px-0' : 'w-52 min-w-28 shrink px-3',
-          !tab.pinned && (active ? 'rounded-t-[14px] border border-b-0 border-shasta-line bg-shasta-bg' : 'mb-1 h-[calc(var(--sh-tab-h)-0.25rem)] rounded-xl border border-white/10 bg-white/[.04]'),
+          !tab.pinned && (active ? 'rounded-t-xl border border-b-0 border-shasta-line bg-shasta-bg' : 'mb-1 h-[calc(var(--sh-tab-h)-0.25rem)] rounded-xl border border-shasta-line'),
           active ? 'text-shasta-fg' : 'text-shasta-muted hover:bg-shasta-hover',
-          tab.pinned && active && 'bg-white/10',
+          tab.pinned && active && 'bg-shasta-raised',
           tab.suspended && !active && 'opacity-70',
           drop?.id === tab.id && drop.side === 'before' && 'shadow-[inset_2px_0_0_var(--sh-accent)]',
           drop?.id === tab.id && drop.side === 'after' && 'shadow-[inset_-2px_0_0_var(--sh-accent)]',
@@ -138,6 +144,20 @@ const TabItem = memo(function TabItem({ tab, active, group, groups, tabIndex, dr
       >
         {tab.private && <VenetianMask className="size-4 shrink-0 text-shasta-accent" role="img" aria-label="Private tab" />}
         <Favicon url={url} loading={tab.loading} error={!!tab.error} appIcon={tab.app?.iconUrl} />
+        {(audible || muted) && (
+          <button
+            aria-label={muted ? 'Unmute tab' : 'Mute tab'}
+            title={muted ? 'Unmute tab' : 'Mute tab'}
+            tabIndex={-1}
+            onClick={(e) => {
+              e.stopPropagation()
+              setTabMuted(tab.id, !muted)
+            }}
+            className={cn('grid size-5 shrink-0 place-items-center rounded-md transition-colors duration-150 ease-shasta hover:bg-shasta-line hover:text-shasta-fg', muted ? 'text-shasta-muted' : 'text-shasta-accent')}
+          >
+            {muted ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
+          </button>
+        )}
         {!tab.pinned && (
           <>
             <span className="min-w-0 flex-1 truncate">{title}</span>
@@ -149,7 +169,7 @@ const TabItem = memo(function TabItem({ tab, active, group, groups, tabIndex, dr
                 s().closeTab(tab.id)
               }}
               className={cn(
-                'grid size-5 shrink-0 place-items-center rounded-full text-shasta-muted hover:bg-shasta-line hover:text-shasta-fg',
+                'grid size-5 shrink-0 place-items-center rounded-md text-shasta-muted transition-colors duration-150 ease-shasta hover:bg-shasta-line hover:text-shasta-fg',
                 !active && 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100',
               )}
             >
@@ -164,6 +184,7 @@ const TabItem = memo(function TabItem({ tab, active, group, groups, tabIndex, dr
         <ContextMenuSeparator />
         {external && <ContextMenuItem onClick={() => s().reload(tab.id)}>Reload</ContextMenuItem>}
         <ContextMenuItem onClick={() => s().duplicateTab(tab.id)}>Duplicate</ContextMenuItem>
+        {media.length > 0 && <ContextMenuItem onClick={() => setTabMuted(tab.id, !muted)}>{muted ? 'Unmute tab' : 'Mute tab'}</ContextMenuItem>}
         <ContextMenuItem onClick={() => s().pinTab(tab.id, !tab.pinned)}>{tab.pinned ? 'Unpin tab' : 'Pin tab'}</ContextMenuItem>
         {external && !tab.private && (
           <ContextMenuItem
@@ -308,9 +329,9 @@ function TabSearch() {
       <DropdownMenuTrigger
         aria-label="Search tabs"
         title="Search tabs"
-        className="grid size-7 shrink-0 place-items-center rounded-lg text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg"
+        className="grid size-7 shrink-0 place-items-center rounded-lg text-shasta-muted transition-colors duration-150 ease-shasta hover:bg-shasta-hover hover:text-shasta-fg"
       >
-        <Copy className="size-[17px]" strokeWidth={1.6} />
+        <Copy className="size-[18px]" strokeWidth={1.6} />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="max-h-96 w-72">
         <DropdownMenuGroup>
@@ -348,18 +369,18 @@ function StripActions() {
   const external = !isInternalUrl(tabUrl(tab))
   const newTab = useTabs((s) => s.newTab)
   const openInternal = useTabs((s) => s.openInternal)
-  const pod = 'mb-1 flex h-[calc(var(--sh-tab-h)-0.25rem)] shrink-0 items-center gap-0.5 rounded-xl border border-white/10 bg-white/[.05] px-1'
+  const pod = 'mb-1 flex h-[calc(var(--sh-tab-h)-0.25rem)] shrink-0 items-center gap-0.5 rounded-xl border border-shasta-line px-1'
   const btn = 'size-7 rounded-lg'
   return (
     <div className="flex shrink-0 items-end gap-2">
       <div className={pod}>
         <IconButton label="Bookmark this page" className={btn} disabled={!external || tab.private} onClick={() => useUi.getState().openBookmarkEditor()}>
-          <Bookmark className="size-[17px]" strokeWidth={1.6} />
+          <Bookmark className="size-[18px]" strokeWidth={1.6} />
         </IconButton>
       </div>
       <div className={pod}>
         <IconButton label="Downloads" className={btn} onClick={() => openInternal('downloads')}>
-          <Download className="size-[17px]" strokeWidth={1.6} />
+          <Download className="size-[18px]" strokeWidth={1.6} />
         </IconButton>
       </div>
       <div className={pod}>

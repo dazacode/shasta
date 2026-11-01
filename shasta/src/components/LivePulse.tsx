@@ -36,14 +36,11 @@ export function OnlineCount({ onOpenSite }: { onOpenSite: (url: string) => void 
   if (online === null) return null
   const apps = data?.apps.slice(0, 4) ?? []
   const sites = data?.sites.slice(0, 4) ?? []
-  const row = 'flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-shasta-hover'
+  const row = 'flex h-9 w-full items-center gap-2.5 rounded-lg px-2 text-left text-sm transition-colors duration-150 ease-shasta hover:bg-shasta-hover'
   return (
     <Popover onOpenChange={load}>
       <PopoverTrigger openOnHover delay={150} closeDelay={200} className="nt-online" aria-label={`${online.toLocaleString()} online. See what people are opening`}>
-        <span className="relative flex size-2">
-          <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60 motion-reduce:animate-none" />
-          <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
-        </span>
+        <span className="size-1.5 rounded-full bg-[#4cc38a]" aria-hidden />
         <span className="tabular-nums">{online.toLocaleString()}</span> online
       </PopoverTrigger>
       <PopoverContent align="center" className="w-72 p-2">
@@ -57,7 +54,7 @@ export function OnlineCount({ onOpenSite }: { onOpenSite: (url: string) => void 
           }}
           className={row}
         >
-          <MessagesSquare className="size-5 text-shasta-accent" />
+          <MessagesSquare className="size-5 text-shasta-muted" strokeWidth={1.5} />
           <span>Say hi in Community chat</span>
         </button>
         {!data && !failed && <p className="px-2 py-3 text-xs text-shasta-muted">Loading…</p>}
@@ -97,7 +94,8 @@ interface Pulse {
   apps: AppCard[]
 }
 
-export function LivePulse({ onOpenSite }: { onOpenSite: (url: string) => void }) {
+/** `embedded`: inside a new tab widget, which draws its own heading. */
+export function LivePulse({ onOpenSite, embedded = false }: { onOpenSite: (url: string) => void; embedded?: boolean }) {
   const launch = useStore((s) => s.launch)
   const openInternal = useTabs((s) => s.openInternal)
   const [data, setData] = useState<Pulse | null>(null)
@@ -121,14 +119,16 @@ export function LivePulse({ onOpenSite }: { onOpenSite: (url: string) => void })
     }
   }, [])
 
-  if (!data) return null
+  if (!data) return embedded ? <p className="py-3 text-sm text-shasta-muted">Loading what is popular...</p> : null
   const sites = data.sites.slice(0, 5)
   const apps = data.apps.slice(0, 5)
   return (
-    <section aria-label="Live on Shasta" className="mt-10 w-full">
-      <h2 className="mb-2 flex items-center gap-2 text-sm font-medium text-shasta-muted">
-        <Flame className="size-4" /> Trending now
-      </h2>
+    <section aria-label="Live on Shasta" className={embedded ? 'w-full' : 'mt-10 w-full'}>
+      {!embedded && (
+        <h2 className="mb-2 flex items-center gap-2 text-sm font-medium text-shasta-muted">
+          <Flame className="size-4" /> Trending now
+        </h2>
+      )}
       <ul className="flex flex-wrap gap-2">
         <li>
           <button
@@ -136,15 +136,15 @@ export function LivePulse({ onOpenSite }: { onOpenSite: (url: string) => void })
               trackEvent('newtab.chat')
               openInternal('chat')
             }}
-            className="flex items-center gap-2 rounded-full bg-shasta-accent/15 py-1.5 pr-3.5 pl-2 text-sm text-shasta-fg hover:bg-shasta-accent/25"
+            className="flex h-9 items-center gap-2 rounded-full bg-shasta-home pr-3.5 pl-2 text-sm text-shasta-fg ring-1 ring-shasta-line transition-colors duration-150 ease-shasta hover:bg-shasta-hover"
           >
-            <MessagesSquare className="size-5 text-shasta-accent" />
+            <MessagesSquare className="size-5 text-shasta-muted" strokeWidth={1.5} />
             <span>Community chat</span>
           </button>
         </li>
         {apps.map((a) => (
           <li key={a.id}>
-            <button onClick={() => void launch(a.id)} className="flex items-center gap-2 rounded-full bg-shasta-home py-1.5 pr-3.5 pl-1.5 text-sm text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg">
+            <button onClick={() => void launch(a.id)} className="flex h-9 items-center gap-2 rounded-full bg-shasta-home pr-3.5 pl-1.5 text-sm text-shasta-muted transition-colors duration-150 ease-shasta hover:bg-shasta-hover hover:text-shasta-fg">
               <AppIcon app={a} size={24} />
               <span className="max-w-40 truncate">{a.name}</span>
             </button>
@@ -152,7 +152,7 @@ export function LivePulse({ onOpenSite }: { onOpenSite: (url: string) => void })
         ))}
         {sites.map((s) => (
           <li key={s.name}>
-            <button onClick={() => onOpenSite(`https://${s.name}`)} className="flex items-center gap-2 rounded-full bg-shasta-home py-1.5 pr-3.5 pl-2 text-sm text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg">
+            <button onClick={() => onOpenSite(`https://${s.name}`)} className="flex h-9 items-center gap-2 rounded-full bg-shasta-home pr-3.5 pl-2 text-sm text-shasta-muted transition-colors duration-150 ease-shasta hover:bg-shasta-hover hover:text-shasta-fg">
               <Favicon url={`https://${s.name}`} className="size-5" />
               <span className="max-w-40 truncate">{s.name}</span>
             </button>

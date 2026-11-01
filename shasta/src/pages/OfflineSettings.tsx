@@ -28,7 +28,7 @@ type Tone = 'ok' | 'busy' | 'ready' | 'warn' | 'muted'
 const TONES: Record<Tone, string> = {
   ok: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
   busy: 'bg-shasta-field text-shasta-muted',
-  ready: 'bg-shasta-accent/15 text-shasta-accent',
+  ready: 'bg-shasta-field text-shasta-accent',
   warn: 'bg-shasta-danger/15 text-shasta-danger',
   muted: 'bg-shasta-field text-shasta-muted',
 }
@@ -102,12 +102,12 @@ function VersionCard() {
   }
 
   return (
-    <section aria-labelledby="version-title" aria-live="polite" className="mb-4 flex max-w-2xl flex-wrap items-start gap-4 rounded-2xl border border-shasta-line p-4">
-      <div aria-hidden className={`grid size-10 shrink-0 place-items-center rounded-full [&_svg]:size-5 ${TONES[tone]}`}>{icon}</div>
+    <section aria-labelledby="version-title" aria-live="polite" className="mb-4 flex max-w-2xl flex-wrap items-start gap-4 rounded-2xl border border-shasta-line bg-shasta-home p-5">
+      <div aria-hidden className={`grid size-10 shrink-0 place-items-center rounded-xl [&_svg]:size-5 ${TONES[tone]}`}>{icon}</div>
       <div className="min-w-0 flex-1 basis-60">
         <h3 id="version-title" className="font-medium">{title}</h3>
         <p className="mt-0.5 text-sm text-shasta-muted">{desc}</p>
-        <p className="mt-2 text-xs text-shasta-muted">
+        <p className="sh-meta mt-2">
           {version}
           {update?.checkedAt && !update.checking ? ` · ${ago(update.checkedAt, now)}` : ''}
         </p>
@@ -166,7 +166,7 @@ export function OfflineSection() {
       <Row title="Offline copy" desc={state}>
         {busy ? (
           <div className="h-1.5 w-40 overflow-hidden rounded-full bg-shasta-line" role="progressbar" aria-label="Offline download" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-            <div className="h-full bg-shasta-accent transition-[width]" style={{ width: `${pct}%` }} />
+            <div className="h-full bg-shasta-accent" style={{ width: `${pct}%` }} />
           </div>
         ) : (
           <Button variant="outline" disabled={!status?.enabled} onClick={() => void start()}>

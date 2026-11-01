@@ -39,7 +39,7 @@ export function QueueTab() {
               <AppIcon app={app} size={64} />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-lg font-semibold">{app.name}</h3>
+                  <h3 className="sh-heading">{app.name}</h3>
                   <StatusBadge status={app.status} />
                   <span className="rounded-full bg-shasta-field px-2 py-0.5 text-[11px] text-shasta-muted">{isUpdate ? `Update ${live?.version ?? app.version} → ${pending?.version ?? '?'}` : 'New app'}</span>
                 </div>

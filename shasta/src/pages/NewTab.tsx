@@ -1,7 +1,7 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { Bookmark as BookmarkIcon, Film, Mic, Pencil, Plus, Search, SlidersHorizontal, Square, Store, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { LayoutGrid, Mic, Search, SlidersHorizontal, Square } from 'lucide-react'
 import { RibbonWallpaper } from '@/components/RibbonWallpaper'
-import { WALLPAPERS, effectiveWallpaper, wallpaperBackground } from '@/lib/wallpaper'
+import { WALLPAPERS, effectiveWallpaper, isSeasonalWallpaper, wallpaperBackground } from '@/lib/wallpaper'
 import { useSupporter } from '@/stores/supporterStore'
 import { Logo } from '@/components/Logo'
 import { NewTabCustomizer } from './NewTabCustomizer'
@@ -11,133 +11,20 @@ import { useAssistant } from '@/ai/assistantStore'
 import { ai, useAi } from '@/ai/engine'
 import { AI_APP_SLUG, snapshot as aiSnapshot } from '@/ai/bridge'
 import { useUi } from '@/stores/uiStore'
-import { Favicon } from '@/components/browser/Favicon'
-import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { useTabs } from '@/stores/tabsStore'
-import { useLibrary, childrenOf } from '@/stores/libraryStore'
-import { useSettings, type NewTabSection, type Shortcut } from '@/stores/settingsStore'
+import { useSettings } from '@/stores/settingsStore'
 import { hexLuma, usePicture } from '@/lib/newTabBackground'
-import { SEARCH_ENGINES, displayUrl, hostOf, originOf, resolveInput } from '@/lib/url'
-import { uid } from '@/lib/tabModel'
+import { SEARCH_ENGINES, resolveInput } from '@/lib/url'
 import { useIsPrivateTab } from '@/hooks/usePrivateTab'
 import { useStore } from '@/store/storeStore'
 import { useStoreBoot } from '@/store/hooks'
-import { AppIcon } from '@/store/components'
-import { LivePulse, OnlineCount } from '@/components/LivePulse'
+import { OnlineCount } from '@/components/LivePulse'
+import { Home } from '@/components/home/Home'
 import { AdSlot } from '@/components/ads/AdSlot'
-import { claimHalloween, turnOffHalloween, useHalloween } from '@/lib/seasonal'
-import { HalloweenWallpaper, Pumpkin } from '@/components/seasonal/Halloween'
-
-function ShortcutTile({ s, onEdit, onRemove, onOpen }: { s: Shortcut; onEdit: () => void; onRemove: () => void; onOpen: () => void }) {
-  return (
-    <div className="group relative flex w-28 flex-col items-center gap-2">
-      <button onClick={onOpen} className="flex w-full flex-col items-center gap-2 rounded-2xl p-2 text-sm text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg" title={s.url}>
-        <span className="grid size-14 place-items-center rounded-2xl bg-shasta-home">
-          <Favicon url={s.url} className="size-7" />
-        </span>
-        <span className="w-full truncate text-center">{s.title}</span>
-      </button>
-      <div className="absolute top-0 right-0 flex gap-0.5 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100">
-        <button aria-label={`Edit ${s.title}`} onClick={onEdit} className="grid size-6 place-items-center rounded-full bg-shasta-field text-shasta-muted hover:text-shasta-fg">
-          <Pencil className="size-3" />
-        </button>
-        <button aria-label={`Remove ${s.title}`} onClick={onRemove} className="grid size-6 place-items-center rounded-full bg-shasta-field text-shasta-muted hover:text-shasta-danger">
-          <Trash2 className="size-3" />
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function ShortcutDialog({ editing, onClose }: { editing: Shortcut | 'new' | null; onClose: () => void }) {
-  const settings = useSettings((s) => s.settings)
-  const update = useSettings((s) => s.update)
-  const [title, setTitle] = useState('')
-  const [url, setUrl] = useState('')
-  const [error, setError] = useState('')
-  const [seed, setSeed] = useState<unknown>(null)
-  if (editing !== seed) {
-    setSeed(editing)
-    setTitle(editing && editing !== 'new' ? editing.title : '')
-    setUrl(editing && editing !== 'new' ? editing.url : '')
-    setError('')
-  }
-
-  const save = () => {
-    const r = resolveInput(url, settings.searchEngine)
-    if (r.kind !== 'url') return setError('Enter a web address such as example.com')
-    const entry: Shortcut = { id: editing && editing !== 'new' ? editing.id : uid(), title: title.trim() || hostOf(r.url), url: r.url }
-    update({ shortcuts: editing === 'new' ? [...settings.shortcuts, entry] : settings.shortcuts.map((s) => (s.id === entry.id ? entry : s)) })
-    onClose()
-  }
-
-  return (
-    <Dialog open={editing !== null} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{editing === 'new' ? 'Add shortcut' : 'Edit shortcut'}</DialogTitle>
-        </DialogHeader>
-        <form
-          className="grid gap-3"
-          onSubmit={(e) => {
-            e.preventDefault()
-            save()
-          }}
-        >
-          <label className="grid gap-1 text-xs text-muted-foreground">
-            Name
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Example" maxLength={30} />
-          </label>
-          <label className="grid gap-1 text-xs text-muted-foreground">
-            Address
-            <Input value={url} onChange={(e) => { setUrl(e.target.value); setError('') }} placeholder="https://example.com" aria-invalid={!!error} spellCheck={false} />
-          </label>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-            <Button type="submit">Save</Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-/** The user's installed Store apps: pinned first, then most recently used. Hidden until there is something to show. */
-function InstalledApps() {
-  useStoreBoot()
-  const library = useStore((s) => s.library)
-  const launch = useStore((s) => s.launch)
-  const openInternal = useTabs((s) => s.openInternal)
-  const items = useMemo(() => {
-    const ok = (library?.installed ?? []).filter((i) => i.available)
-    return [...ok].sort((a, b) => Number(b.pinned) - Number(a.pinned) || (b.lastLaunchedAt ?? b.installedAt) - (a.lastLaunchedAt ?? a.installedAt)).slice(0, 8)
-  }, [library])
-  if (!items.length) return null
-  return (
-    <section aria-label="Your apps" className="mt-10 w-full">
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-sm font-medium text-shasta-muted">
-          <Store className="size-4" /> Your apps
-        </h2>
-        <button onClick={() => openInternal('library')} className="text-xs text-shasta-accent hover:underline">Library</button>
-      </div>
-      <ul className="flex flex-wrap gap-x-1 gap-y-2">
-        {items.map((i) => (
-          <li key={i.app.id} className="w-24">
-            <button onClick={() => void launch(i.app.id)} className="relative flex w-full flex-col items-center gap-1.5 rounded-2xl p-2 text-xs text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg" title={i.updateAvailable ? `${i.app.name} (update available)` : i.app.name}>
-              <AppIcon app={i.app} size={52} />
-              {i.updateAvailable && <span className="absolute top-1 right-3 size-2.5 rounded-full bg-shasta-accent ring-2 ring-shasta-bg" aria-label="Update available" />}
-              <span className="w-full truncate text-center">{i.app.name}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </section>
-  )
-}
+import { claimSeasonWallpaper, eventWallpaper, turnOffSeason, useSeason } from '@/lib/seasonal'
+import { EVENT_ICON, SeasonPhoto } from '@/components/seasonal/Season'
+import { lastDay } from '@/lib/events'
 
 /** Time and date in the person's own locale; the minute is enough, so it ticks every few seconds. */
 function Clock({ hour12 }: { hour12: boolean }) {
@@ -150,7 +37,7 @@ function Clock({ hour12 }: { hour12: boolean }) {
   }, [])
   return (
     <div className="mb-6 text-center" aria-label="Current time">
-      <p className="text-6xl font-light tracking-tight tabular-nums text-shasta-fg">{now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12 })}</p>
+      <p className="text-6xl font-normal tracking-[-0.03em] tabular-nums text-shasta-fg">{now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12 })}</p>
       <p className="mt-1 text-sm text-shasta-muted">{now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}</p>
     </div>
   )
@@ -158,30 +45,12 @@ function Clock({ hour12 }: { hour12: boolean }) {
 
 export function NewTab({ tabId }: { tabId: string }) {
   const [query, setQuery] = useState('')
-  const [editing, setEditing] = useState<Shortcut | 'new' | null>(null)
+  const [editing, setEditing] = useState(false)
   const settings = useSettings((s) => s.settings)
   const { perks } = useSupporter()
-  const update = useSettings((s) => s.update)
-  const bookmarks = useLibrary((s) => s.bookmarks)
-  const history = useLibrary((s) => s.history)
   const isPrivate = useIsPrivateTab()
   const submit = useTabs((s) => s.submit)
   const navigateTo = useTabs((s) => s.navigateTo)
-  const openInternal = useTabs((s) => s.openInternal)
-
-  const topBookmarks = useMemo(() => childrenOf(bookmarks, null).filter((b) => b.type === 'bookmark').slice(0, 8), [bookmarks])
-  const recent = useMemo(() => {
-    const seen = new Set<string>()
-    const out = []
-    for (const h of history) {
-      const o = originOf(h.url)
-      if (!o || seen.has(o)) continue
-      seen.add(o)
-      out.push(h)
-      if (out.length === 6) break
-    }
-    return out
-  }, [history])
 
   const [customizing, setCustomizing] = useState(false)
   useStoreBoot()
@@ -214,24 +83,27 @@ export function NewTab({ tabId }: { tabId: string }) {
   const style = settings.newTabStyle
   const immersive = style === 'immersive'
   const minimal = style === 'minimal'
+  // the minimal page is only the search bar, so it always keeps it
+  const showSearch = minimal || settings.newTabSearch
   // a saved supporter wallpaper shows as the default while perks are off; the saved choice is kept
   const picture = usePicture(settings.newTabBg === 'image' ? settings.newTabBgImage : null)
   const customImage = settings.newTabBg === 'image' && picture
   const customColor = settings.newTabBg === 'color'
   const custom = customImage || customColor
   const wallpaper = custom ? 'none' : effectiveWallpaper(settings.wallpaper, perks, settings.claimedWallpapers)
-  // Halloween night replaces the wallpaper until Nov 1 unless holiday looks are off (lib/seasonal.ts), and stays for
-  // people who claimed it; the person's own picture or colour always wins
-  const season = useHalloween()
-  const halloweenLook = season && settings.seasonalLooks && !custom
-  const halloween = halloweenLook || wallpaper === 'halloween'
-  const offerClaim = halloweenLook && !isPrivate && !settings.claimedWallpapers.includes('halloween')
+  // the holiday photo replaces the wallpaper while its event is on (lib/events.ts) unless holiday looks are off, and
+  // stays for people who claimed it; the person's own picture or colour always wins
+  const season = useSeason()
+  const seasonLook = season && settings.seasonalLooks && !custom ? season : null
+  const photo = seasonLook ? eventWallpaper(seasonLook) : isSeasonalWallpaper(wallpaper) ? wallpaper : null
+  const offerClaim = seasonLook && !isPrivate && !settings.claimedWallpapers.includes(eventWallpaper(seasonLook)) ? seasonLook : null
+  const ClaimIcon = offerClaim ? EVENT_ICON[offerClaim.event.id] : null
   // text colour follows what is behind it, after the dimming
   const luma = customImage ? picture.luma : customColor ? hexLuma(settings.newTabBgColor) : 1
   const customDark = luma * (1 - settings.newTabBgDim / 100) < 0.5
-  const dark = immersive || halloween || (custom ? customDark : !!WALLPAPERS[wallpaper].dark)
-  const greeting = settings.newTabGreetingText.trim() || (isPrivate ? 'Private tab at Shasta' : halloweenLook ? 'Happy Halloween from Shasta' : 'Happy to see you at Shasta')
-  const headline = settings.newTabHeadlineText.trim() || (halloweenLook && !isPrivate ? 'Trick or treat? Ask away.' : 'How can I help you?')
+  const dark = immersive || !!photo || (custom ? customDark : !!WALLPAPERS[wallpaper].dark)
+  const greeting = settings.newTabGreetingText.trim() || (isPrivate ? 'Private tab at Shasta' : seasonLook ? seasonLook.greeting : 'Happy to see you at Shasta')
+  const headline = settings.newTabHeadlineText.trim() || (seasonLook && !isPrivate ? seasonLook.headline : 'How can I help you?')
   const recording = useAssistant((s) => s.recording)
   const transcribing = useAssistant((s) => s.transcribing)
   const engine = SEARCH_ENGINES[settings.searchEngine].label
@@ -276,7 +148,7 @@ export function NewTab({ tabId }: { tabId: string }) {
   const fancySearch = (
     <form className="nt-search" role="search" onSubmit={(e) => void onFancySearch(e)}>
       <span className="nt-caret" aria-hidden />
-      <input aria-label={searchLabel} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search now" spellCheck={false} autoComplete="off" className="nt-input" />
+      <input aria-label={searchLabel} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search or type a web address" spellCheck={false} autoComplete="off" className="nt-input" />
       <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => { pickPicture(e.target.files?.[0]); e.target.value = '' }} />
       <button type="button" className="nt-eye" aria-label="Search with a picture" title="Search with a picture" onClick={() => fileRef.current?.click()}>
         <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -291,88 +163,11 @@ export function NewTab({ tabId }: { tabId: string }) {
   )
 
   const plainSearch = (
-    <form className="flex h-14 w-full max-w-2xl items-center gap-3 rounded-full bg-shasta-home px-5 shadow-sm ring-1 ring-shasta-line focus-within:ring-2 focus-within:ring-shasta-accent/60" role="search" onSubmit={onSearch}>
+    <form className="flex h-14 w-full max-w-2xl items-center gap-3 rounded-full bg-shasta-home px-5 shadow-sm ring-1 ring-shasta-line transition-shadow duration-150 ease-shasta focus-within:ring-2 focus-within:ring-shasta-accent/60" role="search" onSubmit={onSearch}>
       <Search className="size-5 shrink-0 text-shasta-muted" />
       <input aria-label={searchLabel} value={query} onChange={(e) => setQuery(e.target.value)} placeholder={searchLabel} spellCheck={false} autoComplete="off" className="min-w-0 flex-1 bg-transparent text-base text-shasta-fg outline-none placeholder:text-shasta-muted" />
     </form>
   )
-
-  const sections: Record<NewTabSection, React.ReactNode> = {
-    shortcuts: !minimal && settings.newTabShortcuts && (
-      <section aria-label="Shortcuts" className="mt-10 flex flex-wrap justify-center gap-x-2 gap-y-3">
-        {settings.shortcuts.map((s) => (
-          <ShortcutTile key={s.id} s={s} onOpen={() => navigateTo(tabId, s.url)} onEdit={() => setEditing(s)} onRemove={() => update({ shortcuts: settings.shortcuts.filter((x) => x.id !== s.id) })} />
-        ))}
-        <button onClick={() => openInternal('store')} className="flex w-28 flex-col items-center gap-2 rounded-2xl p-2 text-sm text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg">
-          <span className="grid size-14 place-items-center rounded-2xl bg-shasta-accent/15">
-            <Store className="size-7 text-shasta-accent" />
-          </span>
-          Store
-        </button>
-        <button onClick={() => openInternal('watch')} className="flex w-28 flex-col items-center gap-2 rounded-2xl p-2 text-sm text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg">
-          <span className="grid size-14 place-items-center rounded-2xl bg-shasta-accent/15">
-            <Film className="size-7 text-shasta-accent" />
-          </span>
-          Watch
-        </button>
-        {settings.shortcuts.length < 12 && (
-          <button onClick={() => setEditing('new')} className="flex w-28 flex-col items-center gap-2 rounded-2xl p-2 text-sm text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg">
-            <span className="grid size-14 place-items-center rounded-2xl border border-dashed border-shasta-line">
-              <Plus className="size-6" />
-            </span>
-            Add shortcut
-          </button>
-        )}
-      </section>
-    ),
-
-    apps: !minimal && settings.newTabApps && <InstalledApps />,
-    live: !minimal && !isPrivate && settings.newTabLive && <LivePulse onOpenSite={(url) => navigateTo(tabId, url)} />,
-
-    bookmarks: !minimal && settings.newTabBookmarks && topBookmarks.length > 0 && (
-      <section aria-label="Bookmarks" className="mt-10 w-full">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-medium text-shasta-muted">
-            <BookmarkIcon className="size-4" /> Bookmarks
-          </h2>
-          <button onClick={() => openInternal('bookmarks')} className="text-xs text-shasta-accent hover:underline">View all</button>
-        </div>
-        <ul className="grid gap-1 sm:grid-cols-2">
-          {topBookmarks.map((b) =>
-            b.type === 'bookmark' ? (
-              <li key={b.id}>
-                <button onClick={() => navigateTo(tabId, b.url)} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm hover:bg-shasta-hover">
-                  <Favicon url={b.url} />
-                  <span className="min-w-0 flex-1 truncate">{b.title}</span>
-                </button>
-              </li>
-            ) : null,
-          )}
-        </ul>
-      </section>
-    ),
-    recent: !minimal && !isPrivate && settings.newTabRecent && recent.length > 0 && (
-      <section aria-label="Recently visited" className="mt-8 w-full">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-medium text-shasta-muted">Recently visited</h2>
-          <button onClick={() => openInternal('history')} className="text-xs text-shasta-accent hover:underline">History</button>
-        </div>
-        <ul className="grid gap-1 sm:grid-cols-2">
-          {recent.map((h) => (
-            <li key={h.id}>
-              <button onClick={() => navigateTo(tabId, h.url)} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm hover:bg-shasta-hover">
-                <Favicon url={h.url} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate">{h.title}</span>
-                  <span className="block truncate text-xs text-shasta-muted">{displayUrl(h.url)}</span>
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
-    ),
-  }
 
   const privateNote = isPrivate && (
     <p role="note" className="mt-8 max-w-md text-center text-xs text-shasta-muted">
@@ -382,9 +177,7 @@ export function NewTab({ tabId }: { tabId: string }) {
 
   const extras = (
     <div className="nt-extra">
-      {settings.newTabOrder.map((k) => (
-        <Fragment key={k}>{sections[k]}</Fragment>
-      ))}
+      {!minimal && <Home tabId={tabId} isPrivate={isPrivate} editing={editing} setEditing={setEditing} />}
       <AdSlot className="mt-10" />
       {privateNote}
     </div>
@@ -392,8 +185,8 @@ export function NewTab({ tabId }: { tabId: string }) {
 
   return (
     <div className={cn(immersive ? 'nt' : 'nt-plain', dark && 'dark', 'text-shasta-fg')} data-wallpaper={wallpaper} data-style={style}>
-      {halloween ? (
-        <HalloweenWallpaper />
+      {photo ? (
+        <SeasonPhoto id={photo} />
       ) : wallpaper === 'ribbon' ? (
         <RibbonWallpaper />
       ) : customImage ? (
@@ -409,7 +202,7 @@ export function NewTab({ tabId }: { tabId: string }) {
       {!minimal && !isPrivate && settings.newTabLive && <OnlineCount onOpenSite={(url) => navigateTo(tabId, url)} />}
       <div className="nt-hero">
         {!minimal && settings.newTabClock !== 'off' && <Clock hour12={settings.newTabClock === '12'} />}
-        {immersive && !halloween && (
+        {immersive && !photo && (
           <svg className="nt-ridge" viewBox="0 0 1600 260" preserveAspectRatio="none" aria-hidden>
             <defs>
               <linearGradient id="nt-ridge-fill" x1="0" y1="0" x2="0" y2="1">
@@ -429,52 +222,69 @@ export function NewTab({ tabId }: { tabId: string }) {
                 <h1 className="nt-title">{headline}</h1>
               </>
             )}
-            {fancySearch}
-            <p className="nt-hint" aria-live="polite">{aiRoute ? 'Questions go to Shasta AI, on this device. Web addresses open as usual.' : `Searches ${engine}. Type a web address to go straight there.`}</p>
+            {showSearch && (
+              <>
+                {fancySearch}
+                <p className="nt-hint" aria-live="polite">{aiRoute ? 'Questions go to Shasta AI, on this device. Web addresses open as usual.' : `Searches ${engine}. Type a web address to go straight there.`}</p>
+              </>
+            )}
           </>
         ) : (
           <>
             {!minimal && settings.newTabLogo && (
-              <div className="mb-4 grid size-24 place-items-center rounded-[1.75rem] bg-shasta-home">
-                <Logo className="size-12 text-shasta-accent" />
+              <div className="mb-4 grid size-24 place-items-center rounded-3xl bg-shasta-home ring-1 ring-shasta-line">
+                <Logo className="size-12 text-shasta-fg" />
               </div>
             )}
             {!minimal && settings.newTabGreeting && (
               <>
-                <h1 className="text-4xl font-semibold tracking-tight">Shasta</h1>
-                <p className="mt-1 mb-8 text-shasta-muted">Your web. Your way.</p>
+                <h1 className="text-4xl font-medium tracking-[-0.03em]">Shasta</h1>
+                <p className="mt-2 mb-8 text-shasta-muted">The whole web, in one tab</p>
               </>
             )}
-            {plainSearch}
+            {showSearch && plainSearch}
           </>
         )}
         {extras}
       </div>
-      {offerClaim && (
-        <div className="nt-claim" role="region" aria-label="Halloween background">
-          <Pumpkin className="size-9 shrink-0" />
+      {offerClaim && ClaimIcon && (
+        <div className="nt-claim" role="region" aria-label={`${offerClaim.event.name} background`}>
+          <ClaimIcon className="mt-0.5 size-5 shrink-0 text-white/80" aria-hidden />
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-white">Like the Halloween night?</p>
-            <p className="text-xs text-white/65">Keep it as your background after Halloween. Only until Oct 31.</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <button onClick={claimHalloween} className="rounded-full bg-orange-500 px-3 py-1 text-xs font-semibold text-white hover:bg-orange-400">Keep it</button>
-              <button onClick={turnOffHalloween} className="rounded-full px-3 py-1 text-xs text-white/70 ring-1 ring-white/20 hover:bg-white/10 hover:text-white">Not for me, turn off Halloween</button>
+            <p className="text-sm font-medium text-white">Keep this background?</p>
+            <p className="mt-0.5 text-xs text-white/65">Keep it after {offerClaim.event.name}. The offer ends {lastDay(offerClaim.window)}.</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button onClick={() => claimSeasonWallpaper(offerClaim)} className="sh-press h-7 rounded-lg bg-white px-3 text-xs font-medium text-black hover:bg-white/85">Keep it</button>
+              <button onClick={() => turnOffSeason(offerClaim)} className="sh-press h-7 rounded-lg px-3 text-xs text-white/70 ring-1 ring-white/15 hover:bg-white/10 hover:text-white">Turn off holiday looks</button>
             </div>
           </div>
         </div>
       )}
-      <button onClick={() => setCustomizing(true)} className="nt-customize" aria-label="Customize this page" title="Customize this page">
-        <SlidersHorizontal className="size-4" /> <span>Customize</span>
-      </button>
+      {!editing && (
+        <div className="nt-corner">
+          {!minimal && (
+            <button onClick={() => setEditing(true)} className="nt-customize" title="Add, move and resize widgets">
+              <LayoutGrid className="size-4" /> <span>Edit page</span>
+            </button>
+          )}
+          <button onClick={() => setCustomizing(true)} className="nt-customize" aria-label="Customize this page" title="Background, style and greeting">
+            <SlidersHorizontal className="size-4" /> <span>Customize</span>
+          </button>
+        </div>
+      )}
       <Dialog open={customizing} onOpenChange={setCustomizing}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+        <DialogContent className="max-h-[85vh] overflow-x-hidden overflow-y-auto sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Customize this page</DialogTitle>
           </DialogHeader>
-          <NewTabCustomizer />
+          <NewTabCustomizer
+            onEditPage={() => {
+              setCustomizing(false)
+              setEditing(true)
+            }}
+          />
         </DialogContent>
       </Dialog>
-      <ShortcutDialog editing={editing} onClose={() => setEditing(null)} />
     </div>
   )
 }

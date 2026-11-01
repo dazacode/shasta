@@ -1,0 +1,209 @@
+/* shasta://support demo (SupportDemo.tsx). The page is the ground: no plate; the window fades out at its foot. */
+.spd .ss-stage {
+  overflow: hidden;
+  background: transparent;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 56px), transparent);
+}
+.spd .spd-rest { position: absolute; left: 600px; top: 200px; width: 2px; height: 2px; }
+
+.spd .spd-window {
+  position: absolute;
+  left: 168px;
+  top: 24px;
+  width: 560px;
+  height: 440px;
+  box-shadow: var(--ss-shadow-hero);
+}
+
+/* ── the new tab ── */
+.spd .spd-tab { position: absolute; inset: 0; background: var(--ss-surface); }
+.spd .spd-col { position: absolute; left: 150px; top: 36px; width: 300px; display: grid; }
+.spd .spd-search {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  margin-bottom: 20px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--ss-canvas);
+  box-shadow: inset 0 0 0 1px var(--ss-line);
+}
+.spd .spd-ad {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 72px;
+  padding: 0 12px;
+  margin-bottom: 20px;
+  border-radius: 12px;
+  background: var(--ss-canvas);
+  box-shadow: inset 0 0 0 1px var(--ss-line);
+}
+.spd .spd-ad__label {
+  position: absolute;
+  right: 8px;
+  top: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ss-text);
+  letter-spacing: 0.04em;
+}
+.spd .spd-ad__art { width: 48px; height: 48px; flex: none; border-radius: 8px; background: linear-gradient(135deg, #f59e0b, #ef4444); opacity: 0.85; }
+.spd .spd-ad__lines { display: grid; gap: 8px; }
+.spd .spd-tiles { display: flex; justify-content: space-between; }
+.spd .spd-tile { display: grid; justify-items: center; gap: 8px; }
+.spd .spd-tile__icon { width: 40px; height: 40px; border-radius: 12px; background: var(--ss-canvas); box-shadow: inset 0 0 0 1px var(--ss-line); }
+
+.spd .spd-pill {
+  position: absolute;
+  right: 104px;
+  top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ss-accent) 15%, transparent);
+  color: var(--ss-accent);
+  font-size: 11.5px;
+  font-weight: 600;
+  opacity: 0;
+  transform: scale(0.9);
+  will-change: transform;
+  transition: opacity 400ms cubic-bezier(0.25, 0.8, 0.25, 1) 250ms, transform 400ms cubic-bezier(0.25, 0.8, 0.25, 1) 250ms;
+}
+.spd .spd-pill[data-on] { opacity: 1; transform: none; }
+
+/* ── the Discord chat (satellite, left) ── */
+.spd .spd-chat {
+  position: absolute;
+  left: 24px;
+  top: 64px;
+  width: 244px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  background: var(--ss-surface);
+  box-shadow: var(--ss-shadow-satellite), 0 24px 40px -20px rgb(0 0 0 / 0.35);
+  overflow: hidden;
+}
+.spd .spd-chat__head { display: flex; align-items: center; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--ss-line); font-size: 12px; line-height: 1.3; }
+.spd .spd-chat__app { font-weight: 600; color: var(--ss-text-strong); }
+.spd .spd-chat__sep, .spd .spd-chat__chan { color: var(--ss-text); }
+.spd .spd-me { display: flex; align-items: center; gap: 10px; padding: 12px; }
+.spd .spd-me__text { display: grid; gap: 2px; }
+.spd .spd-me__name { font-size: 13px; font-weight: 600; line-height: 1.3; color: var(--ss-text-strong); }
+.spd .spd-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--ss-canvas);
+  box-shadow: inset 0 0 0 1px var(--ss-line);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ss-text-strong);
+  opacity: 0;
+  transform: translateY(4px);
+  will-change: transform;
+  transition: opacity 500ms cubic-bezier(0.25, 0.8, 0.25, 1), transform 500ms cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.spd .spd-role__dot { width: 7px; height: 7px; border-radius: 50%; background: #e3628c; }
+.spd .spd-role[data-on] { opacity: 1; transform: none; }
+.spd .spd-me__via { margin-left: auto; align-self: flex-end; font-size: 10.5px; line-height: 1.3; color: var(--ss-text); opacity: 0; transition: opacity 500ms ease 200ms; }
+.spd .spd-me__via[data-on] { opacity: 1; }
+
+.spd .spd-feed { display: grid; padding: 0 12px; }
+.spd .spd-msg { margin-bottom: 8px; border-radius: 10px; font-size: 12px; line-height: 1.35; }
+.spd .spd-msg--me { width: fit-content; margin-left: auto; padding: 6px 10px; background: var(--ss-accent); color: #fff; }
+.spd .spd-slash { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; }
+.spd .spd-msg--bot { display: grid; gap: 2px; padding: 8px 10px; background: var(--ss-canvas); box-shadow: inset 0 0 0 1px var(--ss-line); }
+.spd .spd-only { font-size: 10.5px; color: var(--ss-text); }
+.spd .spd-code { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.spd .spd-code__text { font: 600 11.5px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ss-text-strong); white-space: nowrap; transition: opacity 200ms ease; }
+.spd .spd-code__text[data-gone] { opacity: 0.35; }
+.spd .spd-copy {
+  flex: none;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--ss-surface);
+  box-shadow: inset 0 0 0 1px var(--ss-line);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ss-text-strong);
+}
+.spd .spd-copy[data-hover] { background: var(--ss-canvas); }
+.spd .spd-composer {
+  margin: 4px 12px 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--ss-canvas);
+  font-size: 12px;
+  line-height: 1.3;
+}
+.spd .spd-composer__ph { color: var(--ss-text); }
+.spd .spd-composer__text { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ss-text-strong); }
+
+/* ── Shasta's "Add a code" (satellite, lower right) ── */
+.spd .spd-code-card {
+  position: absolute;
+  left: 300px;
+  top: 236px;
+  width: 316px;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--ss-surface);
+  box-shadow: var(--ss-shadow-satellite), 0 24px 40px -20px rgb(0 0 0 / 0.35);
+}
+.spd .spd-card__title { font-size: 12.5px; font-weight: 600; line-height: 1.3; color: var(--ss-text-strong); }
+.spd .spd-card__row { display: flex; align-items: center; gap: 8px; }
+.spd .spd-field { flex: 1; min-width: 0; }
+.spd .spd-field .ss-field__value, .spd .spd-field .ss-field__placeholder { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+.spd .spd-redeem {
+  flex: none;
+  display: grid;
+  place-items: center;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--ss-accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background-color 200ms ease;
+}
+.spd .spd-redeem[data-state='done'] { background: var(--ss-success, #16a34a); }
+
+@keyframes spd-chip-in { from { opacity: 0; } }
+.spd .spd-fly__chip {
+  animation: spd-chip-in 160ms ease both;
+  will-change: transform;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--ss-surface);
+  box-shadow: var(--ss-shadow-float);
+  font: 600 11px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--ss-text-strong);
+  white-space: nowrap;
+}
+
+/* ── compact: the new tab on top (its advert whole), the chat under it, Shasta's code field at the foot ── */
+.spd .ss-stage[data-layout='compact'] .spd-window { left: 16px; top: 16px; width: 460px; }
+.spd .ss-stage[data-layout='compact'] .spd-col { left: 24px; }
+.spd .ss-stage[data-layout='compact'] .spd-pill { right: auto; left: 236px; }
+.spd .ss-stage[data-layout='compact'] .spd-chat { left: 16px; top: 214px; width: 268px; }
+.spd .ss-stage[data-layout='compact'] .spd-code-card { left: 26px; top: 452px; width: 316px; }
+.spd .ss-stage[data-layout='compact'] .spd-rest { left: 320px; top: 220px; }
+.spd .ss-stage[data-layout='compact'] { mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent); }

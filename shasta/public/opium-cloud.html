@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Cloud games</title>
+<!--
+  Opium Cloud player — self-contained, no build step.
+  - Served standalone at /opium-cloud.html -> browse + play the whole cloud catalogue.
+  - Baked into a Store package per game (window.__OPIUM__ set) -> auto-plays that game.
+  - Linked apps open /opium-cloud.html?g=<key>.
+
+  Talks straight to the public "stratus" API on the mirror hosts (CORS reflects our origin).
+  Protocol recovered by REA from opium.best's own main.js; see ../opium-recon/README.md.
+-->
+<style>
+  :root { --bg:#0a0b10; --panel:#14161f; --line:#232634; --fg:#e7e9ee; --muted:#9aa0ad; --accent:#7c8cff; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  #app { display:flex; flex-direction:column; height:100%; }
+  header { display:flex; gap:10px; align-items:center; padding:12px 14px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--bg); z-index:3; }
+  header h1 { font-size:16px; margin:0; font-weight:600; letter-spacing:.2px; }
+  header .count { color:var(--muted); font-size:12px; }
+  input[type=search] { margin-left:auto; width:min(320px,40vw); background:var(--panel); border:1px solid var(--line); color:var(--fg); border-radius:10px; padding:9px 12px; outline:none; }
+  input[type=search]:focus { border-color:var(--accent); }
+  #status { padding:6px 14px; color:var(--muted); font-size:12px; min-height:18px; }
+  #grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(158px,1fr)); gap:12px; padding:12px 14px 40px; overflow:auto; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; cursor:pointer; transition:transform .12s ease, border-color .12s ease; }
+  .card:hover { transform:translateY(-2px); border-color:var(--accent); }
+  .card img { width:100%; aspect-ratio:16/10; object-fit:cover; display:block; background:#0d0f16; }
+  .card .m { padding:8px 9px; }
+  .card .m b { display:block; font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card .m span { display:block; font-size:10.5px; color:var(--muted); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .empty { padding:40px; color:var(--muted); text-align:center; grid-column:1/-1; }
+  /* player */
+  #player { position:fixed; inset:0; background:#000; display:none; z-index:20; }
+  #player.on { display:block; }
+  #video { width:100%; height:100%; object-fit:contain; background:#000; touch-action:none; }
+  #overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; text-align:center; padding:20px; }
+  #overlay.gone { display:none; }
+  #overlay img { width:140px; border-radius:12px; box-shadow:0 10px 40px #000; }
+  #overlay b { font-size:18px; }
+  #overlay small { color:var(--muted); }
+  .bar { position:absolute; top:0; left:0; right:0; display:flex; gap:8px; align-items:center; padding:10px 12px; background:linear-gradient(#000c,#0000); opacity:0; transition:opacity .2s; }
+  #player.showbar .bar, #player:hover .bar { opacity:1; }
+  .bar .t { font-weight:600; font-size:13px; }
+  .bar .sp { flex:1; }
+  .btn { background:#ffffff14; border:1px solid #ffffff22; color:#fff; border-radius:9px; padding:7px 11px; cursor:pointer; font-size:12.5px; }
+  .btn:hover { background:#ffffff22; }
+  .spin { width:22px; height:22px; border:2px solid #fff3; border-top-color:#fff; border-radius:50%; animation:sp .8s linear infinite; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+  .err { color:#ff9d9d; }
+  #hint { position:absolute; bottom:12px; left:0; right:0; text-align:center; color:#ffffff88; font-size:12px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Cloud games</h1>
+    <span class="count" id="count"></span>
+    <input id="q" type="search" placeholder="Search cloud games…" autocomplete="off" />
+  </header>
+  <div id="status">starting…</div>
+  <div id="grid"></div>
+</div>
+
+<div id="player">
+  <video id="video" autoplay playsinline></video>
+  <div id="overlay">
+    <img id="pcover" alt="" />
+    <b id="pname"></b>
+    <div id="pmsg"><span class="spin"></span></div>
+    <small id="psub"></small>
+  </div>
+  <div class="bar">
+    <span class="t" id="pbar"></span>
+    <span class="sp"></span>
+    <button class="btn" id="pfull">Full screen</button>
+  </div>
+  <div id="hint"></div>
+</div>
+
+<script>
+// Baked config for a package build; null when this is the browsable page.
+window.__OPIUM__ = /*__CONFIG__*/null;
+// Where the cloud API lives (self-hosted stratus-api or the mirrors). null = built-in default.
+window.__OPIUM_API__ = /*__API__*/null;
+</script>
+<script>
+(() => {
+  "use strict";
+  const MIRRORS = [
+    "cdn.vipersfutbol.com", "cdn.northstreetumc.org", "cdn.pcesc.org",
+    "cdn.kcchallengevbc.com", "cdn.slcbmooc.org", "cdn.topstargym.net",
+    "cdn.goaplytexas.org", "cdn.clearfieldswimming.org", "cdn.richardacademy.cfd",
+  ];
+  const $ = (id) => document.getElementById(id);
+  const qs = new URLSearchParams(location.search);
+  const cfg = window.__OPIUM__ || (qs.get("g") ? { key: qs.get("g"), name: qs.get("n") || "", cover: qs.get("c") || "" } : null);
+  let HOST = qs.get("h") || null;
+
+  // Where the cloud API lives. Default: opium's /stratus mirrors. Point at a self-hosted
+  // x8rr/stratus-api instead with window.__OPIUM_API__ = { base, prefix:"cloud/v1", key, catalog }
+  // (or ?api=&prefix=cloud/v1&key=&catalog=). The two speak the same session/WebRTC protocol.
+  const API = Object.assign(
+    { base: qs.get("api") || "", prefix: qs.get("prefix") || "stratus", key: qs.get("key") || "", catalog: qs.get("catalog") || "" },
+    window.__OPIUM_API__ || {},
+  );
+  const V1 = API.prefix === "cloud/v1";
+  const apiBase = () => (API.base || `https://${HOST}`).replace(/\/+$/, "");
+  const apiHdr = (json) => { const h = {}; if (API.key) h["x-api-key"] = API.key; if (json) h["content-type"] = "application/json"; return h; };
+  const urlFor = (p) => `${apiBase()}/${V1 ? "cloud/v1" : "stratus"}/${p}`;
+  const jfetch = (p, opt = {}) => fetch(urlFor(p), { method: opt.method || "GET", headers: apiHdr(!!opt.body), body: opt.body ? JSON.stringify(opt.body) : undefined, credentials: "include" }).then((r) => r.json());
+  const rndKey = () => [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, "0")).join("");
+
+  // ---- cloud API adapter: /stratus (opium mirrors) <-> /cloud/v1 (stratus-api) ----
+  const norm = (g) => (g && (g.key || g.game_key) && g.name ? { key: g.key || g.game_key, name: g.name, image: g.image, cover: g.cover, tags: g.tags, description: g.description } : null);
+  async function createSession(key) {
+    if (V1) {
+      const r = await fetch(urlFor("createSession"), { method: "POST", headers: apiHdr(true), body: JSON.stringify({ game_key: key }) });
+      const text = await r.text();
+      let last = null;
+      for (const line of text.split("\n")) {
+        if (!line.trim()) continue;
+        let ev; try { ev = JSON.parse(line); } catch { continue; }
+        if (ev.status === "error") return { error: ev.error };
+        last = ev;
+      }
+      if (!last) return { error: "no session" };
+      if (last.status === "queue") return { uuid: last.uuid, state: "queued", queue_pos: last.queue_pos };
+      if (last.status === "finished_queue") return { uuid: last.uuid, state: "finished_queue" };
+      return { error: last.error || "no session" };
+    }
+    return jfetch("session", { method: "POST", body: { game_key: key, relay: false, client_key: rndKey() } });
+  }
+  async function pollSession(uuid) {
+    if (V1) { const j = await fetch(urlFor(`getQueue?uuid=${uuid}`), { headers: apiHdr() }).then((r) => r.json()); return { state: j.status === "finished_queue" ? "finished_queue" : "queued", queue_pos: j.queue_pos, error: j.error }; }
+    return jfetch(`session/${uuid}`);
+  }
+  const startSession = (uuid) => (V1 ? fetch(urlFor("startGame"), { method: "POST", headers: apiHdr(true), body: JSON.stringify({ uuid }) }).then((r) => r.json()) : jfetch(`session/${uuid}/start`, { method: "POST", body: {} }));
+  const signalUrl = (uuid, st) => (V1 ? st.signaling_ws : `${apiBase().replace(/^http/, "ws")}/stratus/signal/${uuid}`);
+  function quitSession(uuid) {
+    if (V1) return void fetch(urlFor("quitSession"), { method: "POST", headers: apiHdr(true), body: JSON.stringify({ uuid }), keepalive: true }).catch(() => {});
+    return void fetch(urlFor(`session/${uuid}/quit`), { method: "POST", headers: { "content-type": "application/json" }, body: "{}", keepalive: true }).catch(() => {});
+  }
+
+  async function pickHost() {
+    if (HOST) return HOST;
+    // the relays are independent and churn: prefer one that is up with spare machines
+    const probes = await Promise.all(MIRRORS.map(async (h) => {
+      try {
+        const r = await fetch(`https://${h}/stratus/status`, { signal: AbortSignal.timeout(5000) });
+        if (!r.ok) return null;
+        const j = await r.json();
+        return { h, idle: j?.pool?.idle ?? 0, down: !!j?.pool?.health?.down };
+      } catch { return null; }
+    }));
+    const up = probes.filter((x) => x && !x.down).sort((a, b) => b.idle - a.idle);
+    return (HOST = (up[0] || probes.find(Boolean) || { h: MIRRORS[0] }).h);
+  }
+
+  // ---- catalogue ------------------------------------------------------
+  let GAMES = [];
+  async function loadCatalog() {
+    $("status").textContent = "finding a cloud server…";
+    if (!API.base) await pickHost();
+    const tryJson = async (u) => { try { const r = await fetch(u, { cache: "no-cache" }); if (!r.ok) return null; const j = await r.json(); return Array.isArray(j) ? j : j.games; } catch { return null; } };
+    // snapshot next to the page/API -> self-hosted catalogue -> the API's own /stratus/games
+    let raw = await tryJson(API.catalog || "./opium-cloud.json");
+    if (!raw && V1 && API.base) raw = await tryJson(`${apiBase()}/cloud.json`);
+    if (!raw && !V1) { const j = await jfetch("games").catch(() => ({})); raw = j.games || []; }
+    const games = (raw || []).map(norm).filter(Boolean);
+    GAMES = games;
+    $("status").textContent = `${games.length} games · via ${HOST}`;
+    $("count").textContent = games.length ? `${games.length} titles` : "";
+    render("");
+    if (cfg && cfg.key) start(cfg.key, cfg.name, cfg.cover);
+  }
+
+  function render(filter) {
+    const q = filter.trim().toLowerCase();
+    const list = GAMES.filter((g) => !q || g.name.toLowerCase().includes(q) || (g.tags || []).join(" ").toLowerCase().includes(q));
+    const grid = $("grid");
+    if (!list.length) { grid.innerHTML = `<div class="empty">No games match “${filter}”.</div>`; return; }
+    const frag = document.createDocumentFragment();
+    for (const g of list) {
+      const c = document.createElement("div");
+      c.className = "card";
+      const img = document.createElement("img");
+      img.loading = "lazy"; img.decoding = "async"; img.alt = "";
+      img.src = g.image || g.cover || "";
+      const m = document.createElement("div");
+      m.className = "m";
+      const b = document.createElement("b"); b.textContent = g.name;
+      const s = document.createElement("span"); s.textContent = (g.tags || []).slice(0, 3).join(" · ");
+      m.append(b, s); c.append(img, m);
+      c.onclick = () => start(g.key, g.name, g.cover || g.image);
+      frag.appendChild(c);
+    }
+    grid.replaceChildren(frag);
+  }
+
+  // ---- input frames (binary over the data channel) --------------------
+  let dc = null;
+  function sendMouse(kind, e, wheel = 0, dx = 0, dy = 0) {
+    if (!dc || dc.readyState !== "open") return;
+    const v = $("video");
+    const r = v.getBoundingClientRect();
+    const vw = v.videoWidth || 16, vh = v.videoHeight || 9;
+    const s = Math.min(r.width / vw, r.height / vh), w = vw * s, h = vh * s;
+    const l = r.left + (r.width - w) / 2, t = r.top + (r.height - h) / 2;
+    const px = Math.max(0, Math.min(10000, ((e.clientX - l) / w) * 10000));
+    const py = Math.max(0, Math.min(10000, ((e.clientY - t) / h) * 10000));
+    const buf = new ArrayBuffer(12), d = new DataView(buf);
+    d.setUint8(0, 1); d.setUint8(1, 11); d.setUint8(2, kind); d.setUint8(3, 8);
+    d.setUint16(4, px); d.setUint16(6, py);
+    d.setInt8(8, Math.max(-127, Math.min(127, dx))); d.setInt8(9, Math.max(-127, Math.min(127, dy)));
+    d.setUint8(10, e.buttons || 0); d.setInt8(11, Math.max(-127, Math.min(127, wheel)));
+    dc.send(buf);
+  }
+  const pressed = new Map();
+  function sendKey(e, down) {
+    if (!dc || dc.readyState !== "open") return;
+    if (down) pressed.set(e.keyCode, 1); else pressed.delete(e.keyCode);
+    const buf = new ArrayBuffer(24), d = new DataView(buf);
+    d.setUint8(0, 1); d.setUint8(2, 1); d.setUint8(3, 1);
+    d.setUint16(4, e.keyCode); d.setUint8(6, down ? 1 : 0);
+    let o = 7;
+    for (const c of pressed.keys()) if (c !== e.keyCode && c > 0 && c < 255 && o < 21) { d.setUint16(o, c); o += 2; d.setUint8(o, 1); o++; }
+    d.setUint8(o++, 255); d.setUint8(1, o - 1);
+    dc.send(buf.slice(0, o));
+    e.preventDefault();
+  }
+  let last = null;
+  function bindInput() {
+    const v = $("video");
+    const on = (t, fn, o) => v.addEventListener(t, fn, o);
+    on("mousemove", (e) => { last = e; sendMouse(2, e, 0, document.pointerLockElement ? e.movementX : 0, document.pointerLockElement ? e.movementY : 0); });
+    on("mousedown", (e) => sendMouse(0, e));
+    on("mouseup", (e) => sendMouse(1, e));
+    on("wheel", (e) => { sendMouse(3, e, -e.deltaY / 3); e.preventDefault(); }, { passive: false });
+    on("click", () => { v.focus(); if (!document.pointerLockElement) v.requestPointerLock?.(); });
+    on("contextmenu", (e) => e.preventDefault());
+    addEventListener("keydown", (e) => { if (player.classList.contains("on")) sendKey(e, true); });
+    addEventListener("keyup", (e) => { if (player.classList.contains("on")) sendKey(e, false); });
+    clearInterval(bindInput._h);
+    bindInput._h = setInterval(() => { if (last && player.classList.contains("on") && !document.pointerLockElement) sendMouse(2, last); }, 300);
+  }
+
+  // ---- session + webrtc ----------------------------------------------
+  const player = $("player");
+  let ws = null, pc = null, uuid = null, busy = false;
+  let iceServers = [], closing = false, signalTries = 0, readyTimer = null, SIG = null;
+  const sub = (t) => { $("psub").textContent = t; };
+  const fail = (m) => { $("pmsg").innerHTML = `<span class="err">${m}</span>`; $("overlay").classList.remove("gone"); };
+  const phase = (m) => { $("pmsg").innerHTML = `<span class="spin"></span><div style="margin-top:8px;color:#9aa0ad;font-size:13px">${m}</div>`; $("overlay").classList.remove("gone"); };
+
+  // The relay 502s/timeouts while an instance is still attaching, so a socket that dies before
+  // game_ready (or after) is retried instead of failing the launch.
+  function openSignal() {
+    const url = SIG || `${apiBase().replace(/^http/, "ws")}/${V1 ? "cloud/v1" : "stratus"}/signal/${uuid}`;
+    ws = new WebSocket(url);
+    clearTimeout(readyTimer);
+    readyTimer = setTimeout(() => { if (ws && ws.readyState === 1) { try { ws.close(); } catch {} } }, 12000);
+    ws.onmessage = async (ev) => {
+      let m; try { m = JSON.parse(ev.data); } catch { return; }
+      if (m.type === "game_ready") { clearTimeout(readyTimer); signalTries = 0; if (!pc) await negotiate(iceServers); }
+      else if (m.type === "rtc_answer") await pc?.setRemoteDescription(m.sdp).catch(() => {});
+      else if (m.type === "rtc_candidate") await pc?.addIceCandidate(m.candidate).catch(() => {});
+      else if (m.type === "ping") { clearTimeout(readyTimer); if (ws.readyState === 1) ws.send(JSON.stringify({ type: "ping" })); }
+      else if (m.type === "time_left") sub(`${m.time_left}s left`);
+      else if (m.type === "game_cap") end("time is up", m.message);
+      else if (m.type === "game_ended") end("session ended", m.message);
+    };
+    ws.onerror = () => {};
+    ws.onclose = () => { if (!closing && uuid) reconnect(); };
+  }
+
+  async function reconnect() {
+    if (closing || !uuid || busy) return;
+    if (signalTries++ > 10) return fail("lost the connection to the cloud server");
+    phase(`reconnecting… (${signalTries})`);
+    await new Promise((r) => setTimeout(r, Math.min(800 * signalTries, 4000)));
+    if (closing) return;
+    try { pc?.close(); } catch {}
+    pc = null;
+    openSignal();
+  }
+
+  async function start(key, name, cover) {
+    if (busy || !key) return;
+    busy = true;
+    player.classList.add("on", "showbar");
+    $("pname").textContent = name || key; $("pbar").textContent = name || key;
+    $("pcover").src = cover || "";
+    $("pcover").style.display = cover ? "" : "none";
+    closing = false; signalTries = 0; sub(""); phase("requesting a machine…");
+    try {
+      if (!API.base) await pickHost();
+      // session creation and boot are retried: the pool drops requests while it respawns machines
+      let o = null;
+      for (let i = 0; i < 3 && (!o || o.error); i++) {
+        o = await createSession(key).catch(() => null);
+        if (!o || o.error) await new Promise((r) => setTimeout(r, 1200));
+      }
+      if (!o || o.error) return fail((o && o.error) || "could not start a session");
+      uuid = o.uuid;
+      while (o.state === "queued") {
+        phase(`queued · position #${o.queue_pos ?? "?"}`);
+        await new Promise((r) => setTimeout(r, V1 ? 3200 : 2000));
+        o = await pollSession(uuid).catch(() => ({}));
+      }
+      phase("booting…");
+      let st = null;
+      for (let i = 0; i < 3 && (!st || st.error); i++) {
+        st = await startSession(uuid).catch(() => null);
+        if (!st || st.error) await new Promise((r) => setTimeout(r, 1500));
+      }
+      if (!st || st.error) return fail((st && st.error) || "the machine did not boot");
+      iceServers = st.ice_servers || [];
+      SIG = signalUrl(uuid, st);
+      openSignal();
+    } catch (e) { fail(String(e.message || e)); }
+    finally { busy = false; }
+  }
+
+  async function negotiate(servers) {
+    phase("connecting video…");
+    pc = new RTCPeerConnection({ iceServers: servers || [], bundlePolicy: "max-bundle", rtcpMuxPolicy: "require" });
+    pc.addTransceiver("audio", { direction: "recvonly" });
+    const v = pc.addTransceiver("video", { direction: "recvonly" });
+    try {
+      const caps = RTCRtpReceiver.getCapabilities("video");
+      if (caps) {
+        const h264 = caps.codecs.filter((c) => /h264/i.test(c.mimeType));
+        const av1 = caps.codecs.filter((c) => /av1/i.test(c.mimeType));
+        const rest = caps.codecs.filter((c) => !/h264|av1/i.test(c.mimeType));
+        v.setCodecPreferences([...h264, ...av1, ...rest]);
+      }
+    } catch {}
+    const stream = new MediaStream();
+    pc.ontrack = (e) => { stream.addTrack(e.track); $("video").srcObject = stream; $("video").play().catch(() => {}); };
+    pc.onicecandidate = (e) => e.candidate && ws.readyState === 1 && ws.send(JSON.stringify({ type: "rtc_candidate", candidate: e.candidate.toJSON() }));
+    pc.onconnectionstatechange = () => { if (pc && ["connected", "completed"].includes(pc.iceConnectionState)) { $("overlay").classList.add("gone"); $("hint").textContent = "click for pointer lock · Esc to release"; } if (pc && pc.connectionState === "failed") reconnect(); };
+
+    dc = pc.createDataChannel("JYSDK", { id: 1, ordered: false, maxRetransmits: 0, priority: "high" });
+    dc.onopen = () => bindInput();
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    ws.send(JSON.stringify({ type: "rtc_offer", sdp: offer.sdp }));
+  }
+
+  function end(reason, msg) { fail(`${reason}${msg ? " — " + msg : ""}`); setTimeout(teardown, 1500); }
+  function teardown() {
+    closing = true; clearTimeout(readyTimer);
+    try { dc?.close(); } catch {}
+    try { pc?.close(); } catch {}
+    try { ws?.close(); } catch {}
+    if (uuid) quitSession(uuid);
+    dc = pc = ws = uuid = null; SIG = null;
+    document.exitPointerLock?.();
+    player.classList.remove("on");
+    if (!cfg) phase("");
+    else phase("starting…");
+    $("overlay").classList.remove("gone");
+  }
+
+  // ---- wiring ---------------------------------------------------------
+  $("q").addEventListener("input", (e) => render(e.target.value));
+  $("pfull").addEventListener("click", () => (document.fullscreenElement ? document.exitFullscreen() : player.requestFullscreen?.().catch(() => {})));
+  addEventListener("keydown", (e) => { if (e.key === "Escape" && player.classList.contains("on") && !document.pointerLockElement) { /* let Esc free the pointer first */ } });
+  addEventListener("pagehide", () => { if (uuid) teardown(); });
+
+  loadCatalog().catch((e) => { $("status").textContent = "could not load the catalogue: " + e.message; });
+})();
+</script>
+</body>
+</html>

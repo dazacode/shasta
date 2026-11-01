@@ -95,7 +95,7 @@ export default function HistoryPage() {
             setQuery(e.target.value)
             setLimit(PAGE)
           }}
-          className="h-10 w-full rounded-full bg-shasta-field pr-4 pl-10 text-sm outline-none focus-visible:ring-2 focus-visible:ring-shasta-accent/60"
+          className="h-10 w-full rounded-[10px] border border-shasta-line bg-shasta-field pr-4 pl-10 text-sm placeholder:text-shasta-faint outline-none transition-[border-color,box-shadow] duration-150 ease-shasta focus-visible:border-shasta-accent/50 focus-visible:ring-2 focus-visible:ring-shasta-accent/20"
         />
       </div>
 
@@ -105,18 +105,18 @@ export default function HistoryPage() {
         <>
           {groups.map((g) => (
             <section key={g.label} className="mb-6" aria-label={g.label}>
-              <h2 className="mb-1 px-2 text-sm font-medium text-shasta-muted">{g.label}</h2>
+              <h2 className="mb-2 px-2 text-sm font-medium text-shasta-muted">{g.label}</h2>
               <ul>
                 {g.items.map((h) => (
-                  <li key={h.id} className="group flex items-center gap-2 rounded-xl px-2 py-1 hover:bg-shasta-hover">
+                  <li key={h.id} className="group flex h-10 items-center gap-3 rounded-lg px-2 transition-colors duration-150 ease-shasta hover:bg-shasta-hover">
                     <input type="checkbox" aria-label={`Select ${h.title}`} checked={selected.has(h.id)} onChange={() => toggle(h.id)} className="size-4 accent-[var(--sh-accent)]" />
-                    <span className="w-14 shrink-0 text-xs text-shasta-muted tabular-nums">{new Date(h.visitedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
-                    <button onClick={(e) => open(e, h.url)} onAuxClick={(e) => e.button === 1 && useTabs.getState().newTab(h.url, { background: true })} className="flex min-w-0 flex-1 items-center gap-3 py-1.5 text-left text-sm" title={h.url}>
+                    <span className="sh-meta w-16 shrink-0">{new Date(h.visitedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
+                    <button onClick={(e) => open(e, h.url)} onAuxClick={(e) => e.button === 1 && useTabs.getState().newTab(h.url, { background: true })} className="flex h-full min-w-0 flex-1 items-center gap-3 text-left text-sm" title={h.url}>
                       <Favicon url={h.url} />
                       <span className="min-w-0 flex-1 truncate">{h.title || hostOf(h.url)}</span>
-                      <span className="hidden max-w-[40%] truncate text-xs text-shasta-muted sm:block">{displayUrl(h.url)}</span>
+                      <span className="sh-meta hidden max-w-[40%] truncate sm:block">{displayUrl(h.url)}</span>
                     </button>
-                    <button aria-label={`Remove ${h.title} from history`} onClick={() => del([h.id])} className="grid size-7 place-items-center rounded-full text-shasta-muted opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 hover:bg-shasta-line hover:text-shasta-fg">
+                    <button aria-label={`Remove ${h.title} from history`} onClick={() => del([h.id])} className="grid size-7 place-items-center rounded-md text-shasta-faint opacity-0 transition-[opacity,color,background-color] duration-150 ease-shasta group-focus-within:opacity-100 group-hover:opacity-100 hover:bg-shasta-line hover:text-shasta-fg">
                       <Trash2 className="size-4" />
                     </button>
                   </li>

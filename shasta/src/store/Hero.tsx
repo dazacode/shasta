@@ -35,10 +35,10 @@ function HeroArt({ app }: { app: AppCard }) {
   const icon = !app.bannerUrl
   return (
     <>
-      {art('absolute inset-0 size-full scale-125 object-cover opacity-70 blur-2xl saturate-150')}
+      {art('absolute inset-0 size-full scale-125 object-cover opacity-60 blur-2xl')}
       <div className="absolute inset-0 bg-black/25" aria-hidden />
       <div className="absolute inset-y-0 right-0 hidden w-[44%] items-center justify-center px-12 pt-16 pb-28 md:flex" aria-hidden>
-        {art(cn('max-h-full max-w-full shadow-2xl ring-1 ring-white/20', icon ? 'aspect-square w-56 rounded-[22%] object-cover' : 'rounded-2xl object-contain'))}
+        {art(cn('max-h-full max-w-full shadow-2xl ring-1 ring-white/15', icon ? 'aspect-square w-56 rounded-[22%] object-cover' : 'rounded-2xl object-contain'))}
       </div>
     </>
   )
@@ -78,7 +78,7 @@ export function Hero({ apps }: { apps: AppCard[] }) {
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
-      className="relative mb-8 overflow-hidden rounded-3xl ring-1 ring-shasta-line"
+      className="relative mb-10 overflow-hidden rounded-2xl ring-1 ring-shasta-line"
     >
       <div
         className="relative flex min-h-72 flex-col justify-end gap-3 overflow-hidden p-6 sm:min-h-[26rem] sm:p-10"
@@ -87,26 +87,26 @@ export function Hero({ apps }: { apps: AppCard[] }) {
         {/* <img>, not CSS backgrounds: only an image element can load in CORS mode, which the installed app needs */}
         <HeroArt key={app.id} app={app} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" aria-hidden />
-        <span className="relative w-fit rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-white uppercase backdrop-blur">Featured</span>
+        <span className="relative text-sm text-white/70">Featured</span>
         <div className="relative flex flex-wrap items-end gap-4 text-white">
-          <AppIcon app={app} size={96} eager className="shadow-2xl ring-2 ring-white/25" />
+          <AppIcon app={app} size={96} eager className="shadow-xl ring-1 ring-white/15" />
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-3xl font-bold tracking-tight sm:text-5xl">{app.name}</h2>
-            <p className="mt-2 line-clamp-2 max-w-xl text-sm text-white/85 sm:text-base">{app.summary}</p>
-            <p className="mt-1 text-xs text-white/70">{[app.developer, app.genres?.length ? app.genres.slice(0, 2).map((g) => g.name).join(', ') : app.category?.name].filter(Boolean).join(' · ')}</p>
+            <h2 className="truncate text-4xl leading-[1.08] font-medium tracking-[-0.02em] sm:text-[56px] sm:tracking-[-0.03em]">{app.name}</h2>
+            <p className="mt-2 line-clamp-2 max-w-xl text-sm text-white/80 sm:text-base">{app.summary}</p>
+            <p className="mt-2 text-xs text-white/60">{[app.developer, app.genres?.length ? app.genres.slice(0, 2).map((g) => g.name).join(', ') : app.category?.name].filter(Boolean).join(' · ')}</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary" className="h-10 rounded-full px-5" onClick={() => go(appPath(app.slug))}>Details</Button>
+            <Button variant="secondary" className="h-10 rounded-lg border-white/15 bg-white/10 px-4 text-white hover:bg-white/20" onClick={() => go(appPath(app.slug))}>Details</Button>
             <AppAction app={app} size="lg" />
           </div>
         </div>
       </div>
       {n > 1 && (
         <>
-          <button aria-label="Previous featured app" onClick={() => setI((i - 1 + n) % n)} className="absolute top-1/2 left-3 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-black/45 text-white hover:bg-black/65">
+          <button aria-label="Previous featured app" onClick={() => setI((i - 1 + n) % n)} className="absolute top-1/2 left-3 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-black/45 text-white transition-colors duration-150 ease-shasta hover:bg-black/65">
             <ChevronLeft className="size-5" />
           </button>
-          <button aria-label="Next featured app" onClick={() => setI((i + 1) % n)} className="absolute top-1/2 right-3 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-black/45 text-white hover:bg-black/65">
+          <button aria-label="Next featured app" onClick={() => setI((i + 1) % n)} className="absolute top-1/2 right-3 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-black/45 text-white transition-colors duration-150 ease-shasta hover:bg-black/65">
             <ChevronRight className="size-5" />
           </button>
           <div className="absolute top-4 right-5 hidden gap-2 sm:flex" role="tablist" aria-label="Choose a featured app">
@@ -117,14 +117,14 @@ export function Hero({ apps }: { apps: AppCard[] }) {
                 aria-selected={k === i}
                 aria-label={a.name}
                 onClick={() => setI(k)}
-                className={cn('overflow-hidden rounded-xl ring-2 transition-all', k === i ? 'scale-110 opacity-100 ring-white' : 'opacity-60 ring-transparent hover:opacity-100')}
+                className={cn('overflow-hidden rounded-[10px] ring-2 transition-[opacity,box-shadow] duration-150 ease-shasta', k === i ? 'opacity-100 ring-white/90' : 'opacity-55 ring-transparent hover:opacity-100')}
               >
                 <AppIcon app={a} size={36} />
               </button>
             ))}
           </div>
           <div className="absolute top-4 right-5 flex gap-1.5 sm:hidden" aria-hidden>
-            {apps.map((a, k) => <span key={a.id} className={cn('h-1.5 rounded-full transition-all', k === i ? 'w-6 bg-white' : 'w-1.5 bg-white/50')} />)}
+            {apps.map((a, k) => <span key={a.id} className={cn('size-1.5 rounded-full transition-colors duration-150 ease-shasta', k === i ? 'bg-white' : 'bg-white/40')} />)}
           </div>
         </>
       )}

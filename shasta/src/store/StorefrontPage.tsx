@@ -1,5 +1,5 @@
 import { useEffect, useMemo, type ReactNode } from 'react'
-import { ArrowLeft, BadgeCheck, Link2, PackageOpen, Pencil, ShieldCheck, Users } from 'lucide-react'
+import { ArrowLeft, BadgeCheck, Link2, PackageOpen, Pencil, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useTabs } from '@/stores/tabsStore'
 import { useUi } from '@/stores/uiStore'
@@ -14,28 +14,28 @@ import type { SearchResult, StoreCard, StoreDetail } from './types'
 /** The storefront masthead: cover, logo, name, badges, stats. Shared by the page and the editor's live preview. */
 export function StorefrontHeader({ store, actions }: { store: Pick<StoreDetail, 'name' | 'tagline' | 'description' | 'accent' | 'logoUrl' | 'bannerUrl' | 'official' | 'apps' | 'followers'>; actions?: ReactNode }) {
   return (
-    <header className="overflow-hidden rounded-3xl ring-1 ring-shasta-line">
+    <header className="overflow-hidden rounded-2xl ring-1 ring-shasta-line">
       <div className="relative">
         <StoreCover store={store} className="h-40 sm:h-56" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" aria-hidden />
         {store.official && (
-          <span className="absolute top-4 left-5 inline-flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1 text-xs font-medium text-white backdrop-blur sm:left-7">
+          <span className="absolute top-4 left-5 inline-flex items-center gap-1.5 rounded-md bg-black/40 px-2 py-1 text-xs text-white sm:left-8">
             <BadgeCheck className="size-4" aria-hidden /> Official Shasta storefront
           </span>
         )}
       </div>
       <div className="bg-shasta-home px-5 pb-6 sm:px-8">
         <div className="-mt-12 flex flex-wrap items-end gap-x-5 gap-y-3">
-          <StoreAvatar store={store} size={96} className="relative z-10 shadow-xl ring-4 ring-shasta-home" />
+          <StoreAvatar store={store} size={96} className="relative z-10 shadow-md ring-4 ring-shasta-home" />
           <div className="min-w-0 flex-1 pt-12">
-            <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight sm:text-3xl">{store.name}{store.official && <OfficialBadge />}</h1>
-            {store.tagline && <p className="mt-0.5 text-sm text-shasta-muted sm:text-base">{store.tagline}</p>}
+            <h1 className="sh-title flex flex-wrap items-center gap-2">{store.name}{store.official && <OfficialBadge />}</h1>
+            {store.tagline && <p className="mt-1 text-sm text-shasta-muted sm:text-base">{store.tagline}</p>}
           </div>
           {actions && <div className="flex flex-wrap items-center gap-2 pt-2">{actions}</div>}
         </div>
-        <dl className="mt-5 flex flex-wrap gap-3 text-sm">
-          <div className="rounded-xl bg-shasta-field px-4 py-2"><dt className="text-xs text-shasta-muted">Apps</dt><dd className="font-semibold tabular-nums">{store.apps}</dd></div>
-          <div className="rounded-xl bg-shasta-field px-4 py-2"><dt className="flex items-center gap-1 text-xs text-shasta-muted"><Users className="size-3" aria-hidden /> Followers</dt><dd className="font-semibold tabular-nums">{store.followers}</dd></div>
+        <dl className="mt-6 flex flex-wrap gap-8 text-sm">
+          <div><dt className="text-xs text-shasta-muted">Apps</dt><dd className="mt-1 text-xl font-medium tabular-nums">{store.apps}</dd></div>
+          <div><dt className="text-xs text-shasta-muted">Followers</dt><dd className="mt-1 text-xl font-medium tabular-nums">{store.followers}</dd></div>
         </dl>
       </div>
     </header>
@@ -82,7 +82,7 @@ export function Storefront({ slug }: { slug: string }) {
       </div>
     )
   }
-  if (!s) return <div className="pt-2">{back}<div className="h-72 animate-pulse rounded-3xl bg-shasta-home" /></div>
+  if (!s) return <div className="pt-2">{back}<div className="h-72 animate-pulse rounded-2xl bg-shasta-home" /></div>
 
   const link = internalUrl('store', `/storefront/${s.slug}`)
   const small = items.length <= 6
@@ -142,9 +142,9 @@ export function Storefront({ slug }: { slug: string }) {
             <div className="flex justify-between gap-4"><dt className="text-shasta-muted">On the Store since</dt><dd>{formatDate(s.createdAt)}</dd></div>
             <div className="flex justify-between gap-4"><dt className="text-shasta-muted">Published apps</dt><dd>{s.apps}</dd></div>
             <div className="flex justify-between gap-4"><dt className="text-shasta-muted">Publisher</dt><dd>{s.official ? 'The Shasta team' : 'Approved contributor'}</dd></div>
-            <div className="flex justify-between gap-4"><dt className="text-shasta-muted">Address</dt><dd><code className="text-xs">{link}</code></dd></div>
+            <div className="flex justify-between gap-4"><dt className="text-shasta-muted">Address</dt><dd><code className="sh-meta select-all">{link}</code></dd></div>
           </dl>
-          <p className="mt-4 flex gap-2 text-xs text-shasta-muted"><ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden /> Apps from this storefront run in Shasta's isolated sandbox. They can't see your Shasta account, bookmarks or history.</p>
+          <p className="mt-4 flex gap-2 text-xs text-shasta-faint"><ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden /> Apps from this storefront run in Shasta's isolated sandbox. They can't see your Shasta account, bookmarks or history.</p>
         </div>
       </Section>
     </div>
@@ -156,8 +156,8 @@ export function StoresDirectory() {
   const { data, error, offline, reload } = useApi<{ stores: StoreCard[] }>('/api/catalog/stores')
   return (
     <div className="pt-2">
-      <h1 className="text-2xl font-semibold tracking-tight">Storefronts</h1>
-      <p className="mb-5 text-sm text-shasta-muted">Every publisher has their own storefront. Follow the ones you like to hear about new releases.</p>
+      <h1 className="sh-title">Storefronts</h1>
+      <p className="mt-1 mb-6 text-sm text-shasta-muted">Every publisher has their own storefront. Follow the ones you like to hear about new releases.</p>
       {error && !data ? (
         <LoadError message={error} offline={offline} onRetry={reload} />
       ) : !data ? (
@@ -178,17 +178,17 @@ export function StoresDirectory() {
 function OfficialFeature({ store }: { store: StoreCard }) {
   const { go } = useStoreNav()
   return (
-    <button onClick={() => go(`/storefront/${store.slug}`)} aria-label={`${store.name} official storefront`} className="sh-theme relative mb-6 block w-full overflow-hidden rounded-3xl text-left ring-1 ring-shasta-line transition hover:ring-shasta-accent/60" style={{ ['--sh-hue' as string]: store.accent }}>
+    <button onClick={() => go(`/storefront/${store.slug}`)} aria-label={`${store.name} official storefront`} className="sh-theme relative mb-6 block w-full overflow-hidden rounded-2xl text-left ring-1 ring-shasta-line transition-shadow duration-150 ease-shasta hover:ring-shasta-fg/25" style={{ ['--sh-hue' as string]: store.accent }}>
       <StoreCover store={store} className="absolute inset-0" />
       <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/25 to-transparent" aria-hidden />
       <div className="relative flex flex-wrap items-center gap-5 p-6 text-white sm:p-8">
-        <StoreAvatar store={store} size={84} className="shadow-xl ring-4 ring-white/20" />
+        <StoreAvatar store={store} size={84} className="shadow-md ring-1 ring-white/15" />
         <div className="min-w-0 flex-1">
-          <p className="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight">{store.name}<span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase"><BadgeCheck className="size-3.5" aria-hidden /> Official</span></p>
-          <p className="mt-1 max-w-xl text-sm text-white/85">{store.tagline}</p>
-          <p className="mt-2 text-xs text-white/70">{store.apps} app{store.apps === 1 ? '' : 's'}{store.followers > 0 && ` · ${store.followers} follower${store.followers === 1 ? '' : 's'}`}</p>
+          <p className="flex flex-wrap items-center gap-2 text-2xl font-medium tracking-[-0.015em]">{store.name}<span className="inline-flex items-center gap-1 text-xs font-normal tracking-normal text-white/70"><BadgeCheck className="size-3.5" aria-hidden /> Official</span></p>
+          <p className="mt-1 max-w-xl text-sm text-white/80">{store.tagline}</p>
+          <p className="mt-2 text-xs text-white/60 tabular-nums">{store.apps} app{store.apps === 1 ? '' : 's'}{store.followers > 0 && ` · ${store.followers} follower${store.followers === 1 ? '' : 's'}`}</p>
         </div>
-        <span className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-black">Visit storefront</span>
+        <span className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black">Visit storefront</span>
       </div>
     </button>
   )

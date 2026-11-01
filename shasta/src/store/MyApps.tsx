@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { AlertTriangle, FolderPlus, Heart, Library, MoreHorizontal, Pencil, Pin, PinOff, RefreshCw, Search, Trash2 } from 'lucide-react'
+import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react'
+import { AlertTriangle, FolderPlus, Heart, MoreHorizontal, Pencil, Pin, PinOff, RefreshCw, Search, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -10,9 +10,12 @@ import { errorMessage } from './api'
 import { timeAgo } from './hooks'
 import { useStore } from './storeStore'
 import { appPath, useStoreNav } from './nav'
-import { AppIcon, AppRow, Chip, Message, Section, StoreTile } from './components'
+import { AppIcon, AppRow, Chip, Message, Section, StoreTile, addressOf } from './components'
 import { UninstallDialog } from './UninstallDialog'
 import type { InstalledApp } from './types'
+
+// the empty Library's demo (install -> into the Library -> open), loaded only when the Library is empty
+const LibraryDemo = lazy(() => import('@/components/demos/LibraryDemo'))
 
 type Sort = 'recent' | 'name' | 'category'
 
@@ -30,23 +33,23 @@ function LauncherTile({ item, folders, onUninstall, onChanged }: { item: Install
     }
   }
   return (
-    <div className={cn('group relative flex flex-col items-center gap-2 rounded-2xl p-3 text-center hover:bg-shasta-hover', !item.available && 'opacity-70')}>
+    <div className={cn('group relative flex flex-col items-center gap-2 rounded-2xl p-3 text-center transition-colors duration-150 ease-shasta hover:bg-shasta-hover', !item.available && 'opacity-70')}>
       <button
         onClick={() => (item.available ? void launch(app.id) : go(appPath(app.slug)))}
         aria-label={item.available ? `Open ${app.name}${item.updateAvailable ? ' (update available)' : ''}` : `${app.name} is unavailable`}
         className="flex w-full flex-col items-center gap-2 rounded-xl"
       >
         <span className="relative">
-          <AppIcon app={app} size={76} className="shadow-md transition group-hover:scale-105" />
+          <AppIcon app={app} size={76} className="shadow-sm ring-1 ring-shasta-line" />
           {item.updateAvailable && <span className="absolute -top-1 -right-1 grid size-5 place-items-center rounded-full bg-shasta-accent text-shasta-accent-fg ring-2 ring-shasta-bg" title="Update available"><RefreshCw className="size-3" aria-hidden /></span>}
           {!item.available && <span className="absolute -top-1 -right-1 grid size-5 place-items-center rounded-full bg-shasta-warn text-black ring-2 ring-shasta-bg" title={item.unavailableReason ?? ''}><AlertTriangle className="size-3" aria-hidden /></span>}
-          {item.pinned && <Pin className="absolute -bottom-1 -left-1 size-4 rounded-full bg-shasta-bg p-0.5 text-shasta-accent" aria-label="Pinned" />}
+          {item.pinned && <Pin className="absolute -bottom-1 -left-1 size-4 rounded-full bg-shasta-bg p-0.5 text-shasta-muted" aria-label="Pinned" />}
         </span>
         <span className="w-full truncate text-sm font-medium">{app.name}</span>
-        <span className="w-full truncate text-xs text-shasta-muted">{item.available ? (item.updateAvailable ? (item.canStay ? `Update ${item.latestVersion} available` : `Updates to ${item.latestVersion} on open`) : app.category?.name ?? app.developer) : item.unavailableReason}</span>
+        <span className={cn('w-full truncate', item.available && !item.updateAvailable ? 'sh-meta' : 'text-xs text-shasta-muted')}>{item.available ? (item.updateAvailable ? (item.canStay ? `Update ${item.latestVersion} available` : `Updates to ${item.latestVersion} on open`) : addressOf(app)) : item.unavailableReason}</span>
       </button>
       <DropdownMenu>
-        <DropdownMenuTrigger aria-label={`More options for ${app.name}`} className="absolute top-2 right-2 grid size-7 place-items-center rounded-full bg-shasta-bg/80 text-shasta-muted opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 hover:text-shasta-fg">
+        <DropdownMenuTrigger aria-label={`More options for ${app.name}`} className="absolute top-2 right-2 grid size-7 place-items-center rounded-lg bg-shasta-bg/80 text-shasta-muted opacity-0 transition-opacity duration-150 ease-shasta group-focus-within:opacity-100 group-hover:opacity-100 hover:text-shasta-fg">
           <MoreHorizontal className="size-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
@@ -103,7 +106,7 @@ function FolderDialog({ folder, onClose }: { folder: { id: string; name: string 
   )
 }
 
-export default function MyApps() {
+export default function MyApps({ actions }: { actions?: ReactNode }) {
   const { go } = useStoreNav()
   const library = useStore((s) => s.library)
   const error = useStore((s) => s.libraryError)
@@ -138,7 +141,7 @@ export default function MyApps() {
     setChecking(true)
     await useStore.getState().refreshLibrary()
     const n = useStore.getState().library?.installed.filter((i) => i.updateAvailable).length ?? 0
-    useUi.getState().toast(n ? `${n} update${n > 1 ? 's' : ''} available.` : 'Everything is up to date.', { tone: n ? 'info' : 'success' })
+    useUi.getState().toast(n ? `${n} update${n > 1 ? 's' : ''} available` : 'Everything is up to date', { tone: n ? 'info' : 'success' })
     setChecking(false)
   }
 
@@ -147,24 +150,25 @@ export default function MyApps() {
 
   return (
     <div className="pt-2">
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Library</h1>
-          <p className="text-sm text-shasta-muted">{`${installed.length} installed app${installed.length === 1 ? '' : 's'} on this device`}</p>
+          <h1 className="sh-title">Library</h1>
+          <p className="mt-1 text-sm text-shasta-muted tabular-nums">{`${installed.length} installed app${installed.length === 1 ? '' : 's'} on this device`}</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" disabled={checking} onClick={check}><RefreshCw className={cn(checking && 'sh-spin')} /> Check for updates</Button>
-          <Button variant="secondary" onClick={() => setFolderDlg('new')}><FolderPlus /> New folder</Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {installed.length > 0 && <Button variant="secondary" className="h-9 px-3" disabled={checking} onClick={check}><RefreshCw className={cn(checking && 'sh-spin')} /> Check for updates</Button>}
+          {installed.length > 0 && <Button variant="secondary" className="h-9 px-3" onClick={() => setFolderDlg('new')}><FolderPlus /> New folder</Button>}
+          {actions}
         </div>
       </div>
 
-      <div className="mb-5 flex gap-2" role="tablist" aria-label="Library sections">
+      <div className="mb-6 flex gap-2" role="tablist" aria-label="Library sections">
         <Chip active={tab === 'apps'} role="tab" aria-selected={tab === 'apps'} onClick={() => setTab('apps')}>Installed</Chip>
-        <Chip active={tab === 'following'} role="tab" aria-selected={tab === 'following'} onClick={() => setTab('following')}>Following{library?.following.length ? ` (${library.following.length})` : ''}</Chip>
-        <Chip active={tab === 'favorites'} role="tab" aria-selected={tab === 'favorites'} onClick={() => setTab('favorites')}><Heart className="mr-1 inline size-3.5" />Favorites{library?.favorites.length ? ` (${library.favorites.length})` : ''}</Chip>
+        <Chip active={tab === 'following'} role="tab" aria-selected={tab === 'following'} onClick={() => setTab('following')}>Following{library?.following.length ? <span className="font-mono text-xs text-shasta-faint tabular-nums">{library.following.length}</span> : null}</Chip>
+        <Chip active={tab === 'favorites'} role="tab" aria-selected={tab === 'favorites'} onClick={() => setTab('favorites')}>Favorites{library?.favorites.length ? <span className="font-mono text-xs text-shasta-faint tabular-nums">{library.favorites.length}</span> : null}</Chip>
       </div>
 
-      {error && <p role="alert" className="mb-4 rounded-xl bg-shasta-danger/10 px-4 py-2 text-sm text-shasta-danger">{error}</p>}
+      {error && <p role="alert" className="mb-4 rounded-lg bg-shasta-danger/10 px-4 py-2 text-sm text-shasta-danger">{error}</p>}
 
       {tab === 'following' ? (
         library?.following.length ? (
@@ -179,28 +183,37 @@ export default function MyApps() {
           <Message icon={<Heart className="size-5" />} title="No favorites yet" body="Tap Favorite on an app's page to keep it here, even if you haven't installed it." action={<Button onClick={() => go('/')}>Discover apps</Button>} />
         )
       ) : installed.length === 0 ? (
-        <Message icon={<Library className="size-5" />} title="Your library is empty" body="Apps and games you install show up here, ready to launch. No account to create: your library lives on this device." action={<Button onClick={() => go('/')}>Browse the Store</Button>} />
+        <div className="flex flex-col items-center pt-4 pb-8 text-center" role="status">
+          <div className="mb-8 min-h-[200px] w-[600px] max-w-full" aria-hidden>
+            <Suspense fallback={null}>
+              <LibraryDemo />
+            </Suspense>
+          </div>
+          <p className="sh-heading">Your library is empty</p>
+          <p className="mt-2 max-w-md text-sm text-shasta-muted">Apps and games you install show up here, ready to launch. No account to create: your library lives on this device.</p>
+          <Button className="mt-6 h-10 rounded-lg bg-shasta-accent px-4 text-shasta-accent-fg hover:bg-shasta-accent/85" onClick={() => go('/')}>Browse the Store</Button>
+        </div>
       ) : (
         <>
           {updates.length > 0 && (
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-shasta-accent/12 px-4 py-3 ring-1 ring-shasta-accent/30" role="status">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-shasta-home px-4 py-3 ring-1 ring-shasta-line" role="status">
               <div className="text-sm">
-                <p><strong>{updates.length} update{updates.length > 1 ? 's' : ''} available:</strong> {updates.map((u) => `${u.app.name} ${u.latestVersion}`).join(', ')}</p>
-                <p className="mt-0.5 text-xs text-shasta-muted">
+                <p><span className="font-medium">{updates.length} update{updates.length > 1 ? 's' : ''} available:</span> {updates.map((u) => `${u.app.name} ${u.latestVersion}`).join(', ')}</p>
+                <p className="mt-1 text-xs text-shasta-muted">
                   {optional.length === updates.length ? 'You can keep using your current versions: their developers still offer them.' : optional.length ? `${optional.length} of these are optional. The others had their old version retired and update when you next open them.` : 'The old versions were retired by their developers, so these update automatically when you next open them.'}
                 </p>
               </div>
-              <Button size="sm" onClick={async () => { for (const u of updates) await useStore.getState().update(u.app.id) }}>Update all</Button>
+              <Button size="sm" className="bg-shasta-accent text-shasta-accent-fg hover:bg-shasta-accent/85" onClick={async () => { for (const u of updates) await useStore.getState().update(u.app.id) }}>Update all</Button>
             </div>
           )}
           <div className="mb-5 flex flex-wrap items-center gap-3">
-            <label className="flex h-9 min-w-52 flex-1 items-center gap-2 rounded-full bg-shasta-field px-3 ring-1 ring-shasta-line sm:max-w-xs">
-              <Search className="size-4 text-shasta-muted" aria-hidden />
-              <input aria-label="Search your library" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search your library" className="min-w-0 flex-1 bg-transparent text-sm outline-none" />
+            <label className="flex h-9 min-w-52 flex-1 items-center gap-2 rounded-lg bg-shasta-field px-3 ring-1 ring-shasta-line focus-within:ring-2 focus-within:ring-shasta-accent/60 sm:max-w-xs">
+              <Search className="size-4 text-shasta-faint" aria-hidden />
+              <input aria-label="Search your library" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-shasta-faint" />
             </label>
             <label className="flex items-center gap-2 text-sm text-shasta-muted">
               Sort
-              <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} className="h-8 rounded-lg bg-shasta-field px-2 text-sm text-shasta-fg ring-1 ring-shasta-line">
+              <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} className="h-9 rounded-lg bg-shasta-field px-2 text-sm text-shasta-fg ring-1 ring-shasta-line">
                 <option value="recent">Recently used</option>
                 <option value="name">Name</option>
                 <option value="category">Category</option>
@@ -215,11 +228,11 @@ export default function MyApps() {
                   <Chip active={folder === f.id} onClick={() => setFolder(f.id)}>{f.name}</Chip>
                   {folder === f.id && (
                     <>
-                      <button aria-label={`Rename folder ${f.name}`} onClick={() => setFolderDlg(f)} className="ml-1 rounded-full p-1.5 text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg"><Pencil className="size-3.5" /></button>
+                      <button aria-label={`Rename folder ${f.name}`} onClick={() => setFolderDlg(f)} className="ml-1 rounded-lg p-1.5 text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg"><Pencil className="size-3.5" /></button>
                       <button
                         aria-label={`Delete folder ${f.name}`}
                         onClick={async () => { await useStore.getState().deleteFolder(f.id).catch(() => undefined); setFolder('all'); refresh() }}
-                        className="rounded-full p-1.5 text-shasta-muted hover:bg-shasta-hover hover:text-shasta-danger"
+                        className="rounded-lg p-1.5 text-shasta-muted hover:bg-shasta-hover hover:text-shasta-danger"
                       ><Trash2 className="size-3.5" /></button>
                     </>
                   )}

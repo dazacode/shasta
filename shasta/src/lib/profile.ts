@@ -16,7 +16,7 @@ const MAX_PROFILE_BYTES = 5 * 1024 * 1024
 export const PORTABLE_SETTINGS = [
   'theme', 'accent', 'density', 'motion', 'showBookmarksBar', 'wallpaper', 'newTabBg', 'newTabBgColor', 'newTabBgDim', 'newTabBgBlur', 'newTabClock', 'newTabOrder', 'uiScale', 'highContrast',
   'searchEngine', 'homepage', 'newTabOpensHomepage', 'restoreSession', 'searchSuggestions',
-  'newTabStyle', 'newTabLogo', 'newTabGreeting', 'newTabShortcuts', 'newTabGreetingText', 'newTabHeadlineText',
+  'newTabStyle', 'newTabLogo', 'newTabSearch', 'newTabGreeting', 'newTabShortcuts', 'newTabGreetingText', 'newTabHeadlineText',
   'newTabRecent', 'newTabApps', 'newTabLive', 'seasonalLooks', 'newTabBookmarks', 'shortcuts', 'saveHistory', 'blockAds', 'ads', 'adsBar', 'blockPopups',
   'suspendTabs', 'suspendAfterMinutes', 'resourceGuard', 'autoCleanup',
 ] as const satisfies readonly (keyof Settings)[]

@@ -1,0 +1,94 @@
+/* Save Shasta demo (SaveDemo.tsx). The dialog is the ground: no plate. The window is the hero, pinned top-left and
+   faded out at its foot; the phone comes up from the bottom-right, cropped to its status bar and the notification. */
+.sd .ss-stage {
+  --g: 20px;
+  overflow: hidden;
+  background: transparent;
+  /* the phone and its shadow run off the bottom: fade the whole stage there, as the What's new demos do */
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 56px), transparent);
+}
+
+.sd .sd-window {
+  position: absolute;
+  left: var(--g);
+  top: var(--g);
+  width: 380px;
+  height: 330px;
+  box-shadow: var(--ss-shadow-hero);
+  mask-image: linear-gradient(to bottom, #000 62%, transparent 92%);
+}
+
+.sd .sd-page { position: absolute; inset: 0; background: var(--ss-surface); }
+.sd .sd-blocked,
+.sd .sd-shasta {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  top: 22px;
+  transition: opacity 360ms ease, transform 520ms cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.sd .sd-blocked { display: flex; align-items: flex-start; gap: 12px; }
+.sd .sd-blocked__icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 10px;
+  background: var(--ss-danger-soft, #fde8e8);
+  color: var(--ss-danger, #dc2626);
+}
+.sd .sd-blocked__icon svg { width: 18px; height: 18px; }
+.sd .sd-blocked__text { display: grid; gap: 4px; padding-top: 1px; }
+.sd .sd-blocked__title { font-size: 15px; font-weight: 600; line-height: 1.3; color: var(--ss-text-strong); }
+.sd .sd-blocked__sub { font-size: 12.5px; line-height: 1.35; color: var(--ss-text); }
+.sd .sd-page[data-moved] .sd-blocked { opacity: 0; transform: translateY(-6px); }
+
+.sd .sd-shasta { display: grid; gap: 14px; justify-items: start; opacity: 0; transform: translateY(8px); will-change: transform; }
+.sd .sd-page[data-moved] .sd-shasta { opacity: 1; transform: none; transition-delay: 160ms; }
+.sd .sd-shasta__name { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; color: var(--ss-text-strong); line-height: 1.2; }
+.sd .sd-shasta__logo { width: 24px; height: 24px; color: var(--ss-accent); }
+.sd .sd-shasta__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 300px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--ss-canvas);
+  box-shadow: inset 0 0 0 1px var(--ss-line);
+  font-size: 13px;
+  color: var(--ss-text);
+}
+.sd .sd-shasta__search svg { width: 14px; height: 14px; flex: none; }
+
+/* The phone rises from the bottom-right corner, cropped to its top */
+.sd .sd-phone {
+  position: absolute;
+  right: var(--g);
+  top: 144px;
+  border-radius: 56px;
+  box-shadow: var(--ss-shadow-satellite), 0 30px 50px -20px rgb(0 0 0 / 0.4);
+}
+
+.sd .sd-discord { display: grid; place-items: center; width: 100%; height: 100%; border-radius: inherit; background: #5865f2; }
+.sd .sd-discord svg { width: 62%; height: 62%; }
+
+/* The notification arrives as iOS shows one: drops in from above, whole */
+.sd .sd-note {
+  opacity: 0;
+  transform: translateY(-24px) scale(0.96);
+  transition: opacity 420ms ease, transform 640ms cubic-bezier(0.25, 0.8, 0.25, 1);
+  will-change: transform;
+}
+.sd .sd-note[data-show] { opacity: 1; transform: none; }
+
+/* compact: the phone column (the ?save=phone page is read on a phone) */
+.sd .ss-stage[data-layout='compact'] { --g: 12px; }
+.sd .ss-stage[data-layout='compact'] .sd-window { width: 330px; }
+.sd .ss-stage[data-layout='compact'] .sd-phone { top: 150px; }
+.sd .ss-stage[data-layout='compact'] .sd-blocked__sub { display: none; }
+.sd .ss-stage[data-layout='compact'] .sd-shasta__search { width: 250px; }
+.sd .ss-stage[data-layout='compact'] .sd-blocked { align-items: center; }

@@ -13,7 +13,7 @@ export function PrivateTabDialog() {
     <Dialog open={open} onOpenChange={set}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><VenetianMask className="size-4 text-shasta-accent" /> Private tab</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><VenetianMask className="size-4 text-shasta-muted" /> Private tab</DialogTitle>
           <DialogDescription>What a private tab does, and what it doesn't.</DialogDescription>
         </DialogHeader>
         <ul className="grid list-disc gap-2 pl-5 text-sm">

@@ -1,0 +1,159 @@
+/* What's new, Welcome slide (WelcomeDemo.tsx). Shasta's own window, drawn with Shasta's own tokens (--sh-*, set by
+   the app for light and dark), so the demo is the real look in either theme. The page is the ground: no plate; the
+   window is whole across and fades out at its foot. */
+.wd .ss-stage {
+  --g: 28px;
+  --ss-canvas: var(--sh-chrome);
+  --ss-chrome: var(--sh-surface);
+  --ss-surface: var(--sh-page);
+  --ss-text-strong: var(--sh-fg);
+  --ss-text: var(--sh-fg);
+  --ss-text-faint: var(--sh-muted);
+  --ss-accent: var(--sh-accent);
+  --ss-line: var(--sh-line);
+  overflow: hidden;
+  background: transparent;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 60px), transparent);
+}
+
+.wd .wd-window {
+  position: absolute;
+  left: var(--g);
+  right: var(--g);
+  top: 22px;
+  height: 420px;
+  box-shadow: var(--ss-shadow-hero);
+  color: var(--sh-fg);
+}
+
+/* ── tab strip: the kit's strip, its active look driven by our own tab state ── */
+.wd .ss-window__favicon { display: none; }
+.wd .ss-window__tab[data-active] { background: transparent; color: var(--sh-muted); }
+.wd .ss-window__tab {
+  width: 150px;
+  overflow: hidden;
+  color: var(--sh-muted);
+  font-size: 11.5px;
+  transition: width 360ms cubic-bezier(0.45, 0, 0.1, 1), padding 360ms cubic-bezier(0.45, 0, 0.1, 1), opacity 240ms ease, background-color 160ms ease;
+}
+.wd .ss-window__tab:has(.wd-tab[data-on]) { background: var(--sh-surface); color: var(--sh-fg); }
+.wd .ss-window__tab:has(.wd-tab[data-hidden]) { width: 0; padding: 0; opacity: 0; }
+.wd .ss-window__tab:has(.wd-plus) { width: 28px; padding: 0; justify-content: center; align-self: center; height: 28px; border-radius: 8px; }
+.wd .ss-window__tab:has(.wd-plus) .ss-window__tab-label { overflow: visible; }
+.wd .wd-tab { display: flex; align-items: center; gap: 7px; min-width: 0; white-space: nowrap; }
+.wd .wd-fav { width: 14px; height: 14px; flex: none; display: block; }
+.wd .wd-favbox { flex: none; display: inline-flex; }
+.wd .wd-plus { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; color: var(--sh-muted); }
+.wd .wd-plus svg { width: 15px; height: 15px; }
+.wd .wd-plus[data-hover] { background: var(--sh-hover); color: var(--sh-fg); }
+
+/* ── toolbar ── */
+.wd .ss-window__bar { background: var(--sh-surface); border-bottom: 1px solid var(--sh-line); }
+.wd .ss-window__url { background: var(--sh-field); color: var(--sh-fg); }
+.wd .wd-url { font-size: 12px; color: var(--sh-fg); white-space: nowrap; }
+.wd .wd-url[data-empty] { color: var(--sh-muted); }
+.wd .wd-tools { display: flex; align-items: center; gap: 12px; margin-left: 12px; color: var(--sh-muted); }
+.wd .wd-tools svg { width: 15px; height: 15px; flex: none; }
+.wd .wd-ai-btn { display: grid; place-items: center; width: 26px; height: 26px; margin: -5px -5px -5px -7px; border-radius: 999px; transition: background-color 160ms ease, color 160ms ease; }
+.wd .wd-ai-btn[data-hover] { background: var(--sh-hover); }
+.wd .wd-ai-btn[data-on] { background: color-mix(in oklab, var(--sh-accent) 16%, transparent); color: var(--sh-accent); }
+
+/* ── page area ── */
+.wd .ss-window__body { position: relative; overflow: hidden; background: var(--sh-page); }
+.wd .wd-body { position: absolute; inset: 0; transition: right 520ms cubic-bezier(0.45, 0, 0.1, 1); }
+.wd .wd-body[data-ai] { right: 196px; }
+.wd .wd-page { position: absolute; inset: 0; opacity: 0; transition: opacity 320ms ease; }
+.wd .wd-page[data-show] { opacity: 1; }
+
+/* new tab */
+.wd .wd-newtab { display: flex; flex-direction: column; align-items: center; padding-top: 24px; }
+.wd .wd-brand { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+.wd .wd-logo { width: 22px; height: 22px; }
+.wd .wd-search {
+  width: min(340px, calc(100% - 48px));
+  margin-top: 16px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: var(--sh-card);
+  box-shadow: 0 0 0 1px var(--sh-line), 0 6px 18px -10px rgb(0 0 0 / 0.35);
+  font-size: 12px;
+  color: var(--sh-muted);
+}
+.wd .wd-tiles { display: flex; gap: 14px; margin-top: 22px; }
+.wd .wd-tile { display: grid; justify-items: center; gap: 7px; width: 64px; }
+.wd .wd-tile__icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--sh-card); box-shadow: 0 0 0 1px var(--sh-line); transition: transform 120ms ease; }
+.wd .wd-tile[data-hover] .wd-tile__icon { transform: translateY(-2px); }
+.wd .wd-tile[data-pressed] .wd-tile__icon { transform: scale(0.96); }
+.wd .wd-tile__icon--bird { background: linear-gradient(180deg, #4ec0ca, #7fd3dc); box-shadow: none; }
+.wd .wd-tile__icon--watch { background: var(--sh-accent); box-shadow: none; color: var(--sh-accent-fg); }
+.wd .wd-tile__icon--watch svg { width: 20px; height: 20px; }
+.wd .wd-tile__name { font-size: 11px; line-height: 1.3; color: var(--sh-fg); white-space: nowrap; }
+.wd .wd-minibird { width: 20px; height: 15px; border-radius: 50%; background: #f7d038; box-shadow: inset 0 0 0 1.5px #5b3a12; }
+
+/* game (Clumsy Bird's daytime scene) */
+.wd .wd-game { position: absolute; inset: 0; background: linear-gradient(180deg, #4ec0ca 0%, #7fd3dc 62%, #b8e6c8 100%); }
+.wd .wd-pipe { position: absolute; width: 44px; background: linear-gradient(90deg, #5aa02c, #8fd14f 45%, #5aa02c); box-shadow: inset 0 0 0 2px #3d6e1e; }
+.wd .wd-ground { position: absolute; left: 0; right: 0; top: 230px; bottom: 0; background: repeating-linear-gradient(-45deg, #dcd28f 0 10px, #d2c67c 10px 20px); border-top: 4px solid #73bf2e; }
+.wd .wd-bird { position: absolute; left: 120px; top: 100px; width: 34px; height: 26px; border-radius: 50% 55% 45% 50%; background: #f7d038; box-shadow: inset 0 0 0 2px #5b3a12; transform: rotate(-12deg); }
+.wd .wd-bird__eye { position: absolute; right: 5px; top: 4px; width: 9px; height: 9px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 2px #5b3a12, inset -3px 0 0 3px #fff, inset -5px 0 0 5px #222; }
+.wd .wd-bird__beak { position: absolute; right: -6px; top: 13px; width: 13px; height: 8px; border-radius: 4px; background: #f0702a; box-shadow: inset 0 0 0 2px #5b3a12; }
+
+/* watch */
+.wd .wd-watch { position: absolute; inset: 0; background: var(--sh-page); color: var(--sh-fg); }
+.wd .wd-hero { display: grid; gap: 10px; align-content: end; height: 96px; padding: 0 20px 14px; background: linear-gradient(90deg, rgb(11 13 20 / 0.85) 10%, transparent 70%), linear-gradient(135deg, #3a2a5a, #b0503c 60%, #e09a4a); }
+.wd .wd-hero .ss-bar { background: rgb(255 255 255 / 0.85) !important; }
+.wd .wd-hero .ss-bar + .ss-bar { background: rgb(255 255 255 / 0.4) !important; }
+.wd .wd-row { padding: 14px 20px 0; }
+.wd .wd-row__label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 600; }
+.wd .wd-posters { display: flex; gap: 8px; }
+.wd .wd-posters .wd-poster { flex: none; width: 58px; height: 86px; border-radius: 8px; }
+
+/* Shasta AI side panel */
+.wd .wd-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 196px;
+  display: flex;
+  flex-direction: column;
+  background: var(--sh-page);
+  border-left: 1px solid var(--sh-line);
+  transform: translateX(100%);
+  will-change: transform;
+  transition: transform 520ms cubic-bezier(0.45, 0, 0.1, 1);
+}
+.wd .wd-panel[data-open] { transform: none; }
+.wd .wd-panel__head { display: flex; align-items: center; gap: 7px; height: 40px; padding: 0 14px; font-size: 12px; font-weight: 600; border-bottom: 1px solid var(--sh-line); }
+.wd .wd-panel__head svg { width: 14px; height: 14px; color: var(--sh-accent); }
+.wd .wd-panel__thread { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px 0; }
+.wd .wd-ask {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 7px 10px;
+  border-radius: 12px;
+  background: var(--sh-card);
+  box-shadow: 0 0 0 1px var(--sh-line);
+  font-size: 11.5px;
+  line-height: 1.35;
+  transition: background-color 240ms ease, color 240ms ease, box-shadow 240ms ease, transform 420ms cubic-bezier(0.45, 0, 0.1, 1);
+}
+.wd .wd-ask[data-hover] { background: var(--sh-hover); }
+.wd .wd-ask[data-asked] { align-self: flex-end; background: var(--sh-accent); color: var(--sh-accent-fg); box-shadow: none; border-bottom-right-radius: 4px; }
+.wd .wd-answer { margin: 0; font-size: 11.5px; line-height: 1.45; opacity: 0; transition: opacity 200ms ease; }
+.wd .wd-answer[data-show] { opacity: 1; }
+.wd .wd-panel__foot { margin: 10px 14px 0; font-size: 10.5px; color: var(--sh-muted); opacity: 0; transition: opacity 400ms ease 300ms; }
+.wd .wd-panel__foot[data-show] { opacity: 1; }
+
+.wd .wd-rest { position: absolute; left: 40%; top: 230px; width: 1px; height: 1px; }
+
+/* ── compact: narrower window, smaller tabs, the panel covers more of the page ── */
+.wd .ss-stage[data-layout='compact'] { --g: 14px; }
+.wd .ss-stage[data-layout='compact'] .ss-window__tab { width: 114px; padding: 0 10px; font-size: 11px; }
+.wd .ss-stage[data-layout='compact'] .ss-window__tab:has(.wd-tab[data-hidden]) { width: 0; }
+.wd .ss-stage[data-layout='compact'] .ss-window__tab:has(.wd-plus) { width: 28px; }
+.wd .ss-stage[data-layout='compact'] .wd-tools > svg { display: none; }
+.wd .ss-stage[data-layout='compact'] .wd-body[data-ai] { right: 0; }
+.wd .ss-stage[data-layout='compact'] .wd-panel { width: 178px; box-shadow: -12px 0 24px -16px rgb(0 0 0 / 0.5); }
+.wd .ss-stage[data-layout='compact'] .wd-tiles { gap: 8px; }
+.wd .ss-stage[data-layout='compact'] .wd-tile:nth-child(n + 4) { display: none; }

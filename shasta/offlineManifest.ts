@@ -34,6 +34,9 @@ export function classify(rel: string): OfflineGroup | null {
   if (rel.startsWith('ort/')) return 'ai'
   // the ad blocker's filter engine (5 MB) is fetched when browsing starts; browsing needs the network anyway
   if (rel.startsWith('adblock/')) return null
+  // holiday photos (~1.2 MB, one shown at a time, a few weeks a year): the browser's own cache is enough; offline the
+  // new tab shows its plain dark background behind them
+  if (rel.startsWith('seasonal/')) return null
   // Vite's hashed copy of the ORT wasm is never loaded: the inference worker points ORT at /ort/
   if (/^assets\/ort-wasm[^/]*\.wasm$/.test(rel)) return null
   // only scramjet.js is loaded (index.html, the controller and worker threads); the other builds are unused

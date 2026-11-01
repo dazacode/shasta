@@ -225,7 +225,7 @@ function AdsRow() {
       title="Ads"
       desc={
         sup.perks
-          ? "You're a Supporter, so Shasta shows you no ads anywhere. Thank you for keeping it running!"
+          ? "You're a Supporter, so Shasta shows you no ads anywhere. Thank you for keeping it running."
           : "Shasta shows ads on its own pages (the new tab, the Store, Watch, a strip along the bottom, and pop-unders) to pay for its servers. They never appear inside the sites you open. The ad network (Adsterra) sees your IP address, can set its own cookies and may follow you across the web to choose what to show. Supporters see no ads at all."
       }
     >
@@ -557,17 +557,17 @@ export default function SettingsPage() {
   const Body = BODY[section]
 
   return (
-    <PageShell title="Settings" actions={<SupporterBadge />}>
-      <div className="grid gap-8 md:grid-cols-[13rem_1fr]">
-        <nav aria-label="Settings sections" className="flex gap-1 overflow-x-auto md:flex-col">
+    <PageShell title="Settings" actions={<SupporterBadge />} wide>
+      <div className="grid gap-x-12 gap-y-6 md:grid-cols-[240px_minmax(0,760px)]">
+        <nav aria-label="Settings sections" className="flex gap-1 overflow-x-auto md:sticky md:top-6 md:flex-col md:self-start md:gap-0.5">
           {SECTIONS.map(({ id, label, icon: Icon }) => (
-            <button key={id} aria-current={section === id ? 'page' : undefined} onClick={() => setPicked(id)} className={cn('flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm', section === id ? 'bg-shasta-accent/15 font-medium text-shasta-fg' : 'text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg')}>
-              <Icon className={cn('size-4', section === id && 'text-shasta-accent')} /> {label}
+            <button key={id} aria-current={section === id ? 'page' : undefined} onClick={() => setPicked(id)} className={cn('flex h-9 shrink-0 items-center gap-2.5 rounded-lg px-3 text-left text-sm transition-colors duration-150 ease-shasta', section === id ? 'sh-selected' : 'text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg')}>
+              <Icon className={cn('size-4 shrink-0 stroke-[1.75]', section === id ? 'text-shasta-fg' : 'text-shasta-faint')} /> {label}
             </button>
           ))}
         </nav>
         <section aria-labelledby="settings-heading" className="min-w-0">
-          <h2 id="settings-heading" className="mb-1 text-lg font-semibold">{SECTIONS.find((s) => s.id === section)!.label}</h2>
+          <h2 id="settings-heading" className="sh-heading mb-2">{SECTIONS.find((s) => s.id === section)!.label}</h2>
           <Body />
         </section>
       </div>

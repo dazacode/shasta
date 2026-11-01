@@ -24,11 +24,11 @@ export function ErrorPage({ tab }: { tab: Tab }) {
   return (
     <div role="alert" className="absolute inset-0 z-10 grid place-items-center overflow-auto bg-shasta-bg px-6 py-10">
       <div className="max-w-lg">
-        <div className="mb-5 grid size-14 place-items-center rounded-2xl bg-shasta-field text-shasta-warn">
-          <Icon className="size-7" />
+        <div className="mb-6 grid size-12 place-items-center rounded-xl bg-shasta-field text-shasta-muted ring-1 ring-shasta-line">
+          <Icon className="size-6" strokeWidth={1.5} />
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight">{info.title}</h1>
-        <p className="mt-1 break-all text-sm text-shasta-muted">{displayUrl(tab.error.url) || hostOf(tab.error.url)}</p>
+        <h1 className="text-2xl font-medium tracking-[-0.015em]">{info.title}</h1>
+        <p className="mt-1 break-all font-mono text-xs text-shasta-faint">{displayUrl(tab.error.url) || hostOf(tab.error.url)}</p>
         <p className="mt-4 text-[15px] leading-relaxed">{info.body}</p>
         {signIn.isSignIn && (
           <p className="mt-3 rounded-xl bg-shasta-field px-4 py-3 text-sm">

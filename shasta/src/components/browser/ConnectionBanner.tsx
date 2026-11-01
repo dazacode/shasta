@@ -26,21 +26,21 @@ export function ConnectionBanner() {
           : `The proxy engine failed to start: ${detail}`
 
   return (
-    <div role="alert" className="flex items-center justify-center gap-3 border-t border-shasta-line bg-shasta-field px-4 py-1.5 text-sm text-shasta-fg">
+    <div role="alert" className="flex min-h-9 flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-shasta-line bg-shasta-field px-4 py-1.5 text-sm text-shasta-fg">
       {busy ? <Loader2 className="size-4 sh-spin text-shasta-accent" /> : <WifiOff className="size-4 text-shasta-warn" />}
       <span>{text}</span>
       {!busy && (
         <>
-          <button onClick={() => void reconnect()} className="rounded-full bg-shasta-hover px-3 py-0.5 font-medium hover:bg-shasta-line">
+          <button onClick={() => void reconnect()} className="sh-press h-6 rounded-md bg-shasta-hover px-2.5 font-medium hover:bg-shasta-line">
             Retry now
           </button>
           {/* the installed app browses without the proxy server, so it is the real way out of this banner */}
           {shouldSuggestApp() && (
-            <button onClick={() => useTabs.getState().openInternal('get-app')} className="rounded-full bg-shasta-accent px-3 py-0.5 font-medium text-white hover:opacity-90">
+            <button onClick={() => useTabs.getState().openInternal('get-app')} className="sh-press h-6 rounded-md bg-shasta-accent px-2.5 font-medium text-shasta-accent-fg hover:opacity-90">
               Get the app: browse without a server
             </button>
           )}
-          <button onClick={() => useTabs.getState().openInternal('settings')} className="rounded-full px-3 py-0.5 text-shasta-muted hover:bg-shasta-hover">
+          <button onClick={() => useTabs.getState().openInternal('settings')} className="sh-press h-6 rounded-md px-2.5 text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg">
             Connection settings
           </button>
         </>

@@ -3,7 +3,7 @@
 // picture-in-picture, keyboard, resume and source switching — and moves to the next source on a fatal error.
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import {
-  ChevronLeft, Gauge, Loader2, Maximize, Minimize, Pause, PictureInPicture2, Play, RotateCcw,
+  Check, ChevronLeft, Gauge, Loader2, Maximize, Minimize, Pause, PictureInPicture2, Play, RotateCcw,
   Settings, SkipForward, Subtitles, Volume2, VolumeX, Zap,
 } from 'lucide-react'
 import type Hls from 'hls.js'
@@ -415,8 +415,8 @@ export function Player(props: PlayerProps) {
   }, [toggle, seek, toggleFullscreen, wake, isEmbed])
 
   const menuBtn = (active = false) =>
-    cn('grid size-10 shrink-0 place-items-center rounded-lg text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] transition hover:bg-white/20', active && 'bg-white/20')
-  const item = 'flex w-full items-center justify-between gap-3 rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-white/10'
+    cn('grid size-10 shrink-0 place-items-center rounded-lg text-white transition-colors duration-150 ease-shasta hover:bg-white/15', active && 'bg-white/15')
+  const item = 'flex h-8 w-full items-center justify-between gap-3 rounded-md px-2.5 text-left text-sm transition-colors duration-150 ease-shasta hover:bg-white/10'
 
   const subChoices = [
     { label: 'Off', value: -1 },
@@ -530,11 +530,11 @@ export function Player(props: PlayerProps) {
       {!isEmbed && waiting && !error && <div className="pointer-events-none absolute inset-0 grid place-items-center"><Loader2 className="size-10 animate-spin text-white/80" /></div>}
       {!isEmbed && !playing && !waiting && !error && (
         <button onClick={toggle} aria-label="Play" className="absolute inset-0 grid place-items-center">
-          <span className="grid size-16 place-items-center rounded-full bg-black/50 backdrop-blur transition hover:scale-105"><Play className="size-7 translate-x-0.5 fill-white text-white" /></span>
+          <span className="grid size-16 place-items-center rounded-full bg-black/55 transition-colors duration-150 ease-shasta hover:bg-black/70"><Play className="size-7 translate-x-0.5 fill-white text-white" /></span>
         </button>
       )}
       {!isEmbed && muted && playing && !error && (
-        <button onClick={() => setMuted(false)} className="absolute bottom-24 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/75 px-4 py-2 text-sm font-medium text-white shadow-lg backdrop-blur transition hover:bg-black/85">
+        <button onClick={() => setMuted(false)} className="absolute bottom-24 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/75 px-4 py-2 text-sm font-medium text-white transition-colors duration-150 ease-shasta hover:bg-black/85">
           <VolumeX className="size-4" /> Tap to unmute
         </button>
       )}
@@ -551,11 +551,11 @@ export function Player(props: PlayerProps) {
       )}
 
       {/* top bar */}
-      <div className={cn('absolute inset-x-0 top-0 flex items-start justify-between gap-2 bg-gradient-to-b from-black/70 to-transparent p-3 transition-opacity', shown || !playing ? 'opacity-100' : 'opacity-0')}>
+      <div className={cn('absolute inset-x-0 top-0 flex items-start justify-between gap-2 bg-gradient-to-b from-black/70 to-transparent p-3 transition-opacity duration-200 ease-shasta', shown || !playing ? 'opacity-100' : 'opacity-0')}>
         <div className="flex min-w-0 items-center gap-2">
           {cb.current.onClose && <button className={menuBtn()} onClick={() => cb.current.onClose?.()} aria-label="Back"><ChevronLeft className="size-5" /></button>}
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-white drop-shadow">{title}</p>
+            <p className="truncate text-sm font-medium text-white">{title}</p>
             {sub && <p className="truncate text-xs text-white/70">{sub}</p>}
           </div>
         </div>
@@ -567,24 +567,24 @@ export function Player(props: PlayerProps) {
       </div>
 
       {/* bottom bar */}
-      <div className={cn('absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/65 to-transparent px-3 pb-3 pt-20 transition-opacity duration-200', isEmbed ? 'opacity-100' : shown || !playing || waiting ? 'opacity-100' : 'opacity-0')}>
+      <div className={cn('absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/65 to-transparent px-3 pb-3 pt-20 transition-opacity duration-200 ease-shasta', isEmbed ? 'opacity-100' : shown || !playing || waiting ? 'opacity-100' : 'opacity-0')}>
         <div className="relative mb-1 h-1.5 w-full cursor-pointer" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); seek(((e.clientX - r.left) / r.width) * (curDur || 0)) }}>
           <div className="absolute inset-y-0 left-0 rounded-full bg-white/25" style={{ width: `${curDur ? (curBuffered / curDur) * 100 : 0}%` }} />
           <div className="absolute inset-y-0 left-0 rounded-full bg-shasta-accent" style={{ width: `${curDur ? (curTime / curDur) * 100 : 0}%` }} />
-          <div className="absolute top-1/2 size-3 -translate-y-1/2 rounded-full bg-shasta-accent shadow" style={{ left: `calc(${curDur ? (curTime / curDur) * 100 : 0}% - 6px)` }} />
+          <div className="absolute top-1/2 size-3 -translate-y-1/2 rounded-full bg-shasta-accent" style={{ left: `calc(${curDur ? (curTime / curDur) * 100 : 0}% - 6px)` }} />
         </div>
         <div className="flex items-center gap-1 text-white">
           <button className={menuBtn()} onClick={toggle} aria-label={curPlaying ? 'Pause' : 'Play'}>{curPlaying ? <Pause className="size-5 fill-white" /> : <Play className="size-5 fill-white" />}</button>
           <div className="group/vol flex items-center">
             <button className={menuBtn()} onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Unmute' : 'Mute'}>{muted || volume === 0 ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}</button>
-            <input type="range" min={0} max={1} step={0.05} value={muted ? 0 : volume} onChange={(e) => { setVolume(Number(e.target.value)); setMuted(false) }} className="h-1.5 w-0 cursor-pointer accent-shasta-accent transition-all group-hover/vol:w-24 sm:w-24" aria-label="Volume" />
+            <input type="range" min={0} max={1} step={0.05} value={muted ? 0 : volume} onChange={(e) => { setVolume(Number(e.target.value)); setMuted(false) }} className="h-1.5 w-0 cursor-pointer accent-shasta-accent group-hover/vol:w-24 sm:w-24" aria-label="Volume" />
           </div>
-          <span className="ml-1 text-xs tabular-nums text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">{fmt(curTime)} <span className="text-white/60">/ {fmt(curDur)}</span></span>
+          <span className="ml-1 font-mono text-xs tabular-nums text-white">{fmt(curTime)} <span className="text-white/60">/ {fmt(curDur)}</span></span>
           <div className="ml-auto flex items-center gap-1">
             {!isEmbed && audio.length > 1 && <button className={menuBtn(menu === 'audio')} onClick={() => setMenu(menu === 'audio' ? 'none' : 'audio')} title="Audio" aria-label="Audio track"><Settings className="size-5" /></button>}
             {!isEmbed && subChoices.length > 1 && <button className={menuBtn(menu === 'subs' || subOn >= 0)} onClick={() => setMenu(menu === 'subs' ? 'none' : 'subs')} title="Subtitles" aria-label="Subtitles"><Subtitles className="size-5" /></button>}
             {!isEmbed && <button className={menuBtn(menu === 'speed')} onClick={() => setMenu(menu === 'speed' ? 'none' : 'speed')} title="Speed" aria-label="Speed"><Gauge className="size-5" /></button>}
-            {!isEmbed && <button className={menuBtn(menu === 'quality')} onClick={() => setMenu(menu === 'quality' ? 'none' : 'quality')} title="Quality" aria-label="Quality"><span className="text-xs font-semibold">{level < 0 ? 'Auto' : levels.find((l) => l.index === level)?.label ?? 'Auto'}</span></button>}
+            {!isEmbed && <button className={menuBtn(menu === 'quality')} onClick={() => setMenu(menu === 'quality' ? 'none' : 'quality')} title="Quality" aria-label="Quality"><span className="text-xs font-medium">{level < 0 ? 'Auto' : levels.find((l) => l.index === level)?.label ?? 'Auto'}</span></button>}
             {proxyToggle}
             {candidates.length > 1 && <button className={menuBtn(menu === 'source')} onClick={() => setMenu(menu === 'source' ? 'none' : 'source')} title="Source" aria-label="Source"><Settings className="size-5" /></button>}
             {!isEmbed && <button className={menuBtn()} onClick={pip} title="Picture in picture" aria-label="Picture in picture"><PictureInPicture2 className="size-5" /></button>}
@@ -593,35 +593,35 @@ export function Player(props: PlayerProps) {
         </div>
 
         {menu !== 'none' && (
-          <div className="absolute bottom-12 right-3 max-h-[60%] w-64 overflow-auto rounded-xl border border-white/10 bg-[#16181d]/95 p-1.5 text-white shadow-2xl backdrop-blur">
+          <div className="absolute bottom-12 right-3 max-h-[60%] w-64 overflow-auto rounded-xl border border-white/10 bg-[#11141c]/95 p-1.5 text-white shadow-[0_12px_32px_rgb(0_0_0/0.45)]">
             {menu === 'source' && (
               <>
                 <p className="px-2 py-1 text-xs text-white/50">Source</p>
                 {candidates.map((c) => (
                   <button key={c.id} className={item} onClick={() => { cb.current.onPickSource(c); setMenu('none') }}>
                     <span className="truncate">{c.label}{c.audio ? ` · ${c.audio.join(', ')}` : ''}{c.note ? ` — ${c.note}` : ''}</span>
-                    {c.id === candidate.id && <span className="text-shasta-accent">●</span>}
+                    {c.id === candidate.id && <Check className="size-4 text-white" />}
                   </button>
                 ))}
               </>
             )}
             {menu === 'quality' && (
               <>
-                <button className={item} onClick={() => { if (hls.current) hls.current.currentLevel = -1; setLevel(-1) }}><span>Auto</span>{level < 0 && <span className="text-shasta-accent">●</span>}</button>
+                <button className={item} onClick={() => { if (hls.current) hls.current.currentLevel = -1; setLevel(-1) }}><span>Auto</span>{level < 0 && <Check className="size-4 text-white" />}</button>
                 {levels.map((l) => (
-                  <button key={l.index} className={item} onClick={() => { if (hls.current) hls.current.currentLevel = l.index; setLevel(l.index) }}><span>{l.label}</span>{level === l.index && <span className="text-shasta-accent">●</span>}</button>
+                  <button key={l.index} className={item} onClick={() => { if (hls.current) hls.current.currentLevel = l.index; setLevel(l.index) }}><span>{l.label}</span>{level === l.index && <Check className="size-4 text-white" />}</button>
                 ))}
                 {!levels.length && <p className="px-2 py-1 text-xs text-white/50">Single quality</p>}
               </>
             )}
             {menu === 'audio' && audio.map((t, i) => (
-              <button key={i} className={item} onClick={() => { if (hls.current) hls.current.audioTrack = i; setAudioOn(i) }}><span>{t.label}{t.lang ? ` (${t.lang})` : ''}</span>{audioOn === i && <span className="text-shasta-accent">●</span>}</button>
+              <button key={i} className={item} onClick={() => { if (hls.current) hls.current.audioTrack = i; setAudioOn(i) }}><span>{t.label}{t.lang ? ` (${t.lang})` : ''}</span>{audioOn === i && <Check className="size-4 text-white" />}</button>
             ))}
             {menu === 'subs' && subChoices.map((c) => (
-              <button key={c.value} className={item} onClick={() => setSubOn(c.value)}><span>{c.label}</span>{subOn === c.value && <span className="text-shasta-accent">●</span>}</button>
+              <button key={c.value} className={item} onClick={() => setSubOn(c.value)}><span>{c.label}</span>{subOn === c.value && <Check className="size-4 text-white" />}</button>
             ))}
             {menu === 'speed' && RATES.map((r) => (
-              <button key={r} className={item} onClick={() => { setRate(r); setMenu('none') }}><span>{r === 1 ? 'Normal' : `${r}×`}</span>{rate === r && <span className="text-shasta-accent">●</span>}</button>
+              <button key={r} className={item} onClick={() => { setRate(r); setMenu('none') }}><span>{r === 1 ? 'Normal' : `${r}×`}</span>{rate === r && <Check className="size-4 text-white" />}</button>
             ))}
           </div>
         )}

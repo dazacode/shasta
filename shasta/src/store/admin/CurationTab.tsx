@@ -145,7 +145,7 @@ export function CurationTab() {
       <p className="rounded-2xl bg-shasta-home px-4 py-3 text-sm text-shasta-muted ring-1 ring-shasta-line">Everything on this page appears on the Store home page: featured apps in the banner, collections as shelves, and the newest active announcement above them.</p>
 
       <section aria-label="Featured apps">
-        <h2 className="mb-3 text-lg font-semibold">Featured apps</h2>
+        <h2 className="mb-3 sh-heading">Featured apps</h2>
         {apps.error && !apps.data ? (
           <LoadError message={apps.error} offline={apps.offline} onRetry={apps.reload} />
         ) : !apps.data ? (
@@ -176,7 +176,7 @@ export function CurationTab() {
 
       <section aria-label="Collections">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Collections</h2>
+          <h2 className="sh-heading">Collections</h2>
           <Button onClick={() => setEditing('new')}>
             <Plus /> New collection
           </Button>
@@ -210,7 +210,7 @@ export function CurationTab() {
       </section>
 
       <section aria-label="Announcements">
-        <h2 className="mb-3 text-lg font-semibold">Announcements</h2>
+        <h2 className="mb-3 sh-heading">Announcements</h2>
         <Card className="mb-3">
           <form
             className="grid gap-3"

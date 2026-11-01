@@ -52,7 +52,7 @@ export function AppsTab() {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="truncate font-medium">{app.name}</span>
                   <StatusBadge status={app.status} />
-                  {app.featured && <span className="rounded-full bg-shasta-accent/15 px-2 py-0.5 text-[11px] font-medium text-shasta-accent">Featured</span>}
+                  {app.featured && <span className="text-xs text-shasta-faint">Featured</span>}
                 </div>
                 <p className="truncate text-xs text-shasta-muted">
                   {app.ownerName} · {app.version ? `v${app.version}` : 'no live version'}
@@ -149,7 +149,7 @@ export function AppsTab() {
             {(dialog?.kind === 'history' ? (q.data?.apps.find((a) => a.id === dialog.app.id) ?? dialog.app) : null)?.versions.map((v) => (
               <li key={v.id} className="rounded-xl bg-shasta-field p-3 text-sm">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold">v{v.version}</span>
+                  <span className="font-medium">v{v.version}</span>
                   <StatusBadge status={v.state} />
                   <span className="text-xs text-shasta-muted">{v.publishedAt ? `published ${formatDate(v.publishedAt)}` : `created ${formatDate(v.createdAt)}`}</span>
                   {v.state === 'archived' && dialog?.kind === 'history' && (

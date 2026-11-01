@@ -8,6 +8,7 @@ import { useStore, installedMap } from './storeStore'
 import { appPath, storePath, useStoreNav } from './nav'
 import type { AppCard as AppCardType, AppStatus, StoreCard, StoreRef, VersionState } from './types'
 import { MEDIA_CORS } from '@/lib/appApi'
+import { appAddress } from '@/lib/url'
 
 // ---- icons ------------------------------------------------------------------------------------
 
@@ -23,12 +24,15 @@ export function AppIcon({ app, size = 56, className, eager }: { app: Pick<AppCar
     <span
       aria-hidden
       style={{ width: size, height: size, borderRadius: radius, background: `oklch(0.42 0.1 ${hue(app.name)})`, fontSize: size * 0.42 }}
-      className={cn('grid shrink-0 place-items-center font-semibold text-white', className)}
+      className={cn('grid shrink-0 place-items-center font-medium text-white', className)}
     >
       {app.name.trim().charAt(0).toUpperCase() || '?'}
     </span>
   )
 }
+
+/** The app's own Shasta address (game://hextris, app://discord): typing it in the address bar launches it. */
+export const addressOf = (app: Pick<AppCardType, 'slug' | 'category'>) => appAddress(app.category?.isGame ? 'game' : 'app', app.slug)
 
 // ---- action button ---------------------------------------------------------------------------
 
@@ -39,7 +43,10 @@ export function AppAction({ app, size = 'sm', className }: { app: AppCardType; s
   const { install, launch, update } = useStore.getState()
   const mine = installedMap(library).get(app.id)
   const big = size === 'lg'
-  const base = cn(big ? 'h-10 min-w-28 px-5 text-sm' : 'h-8 min-w-[4.5rem] px-3.5 text-xs', 'rounded-full font-semibold', className)
+  const base = cn(big ? 'h-10 min-w-28 px-4 text-sm' : 'h-8 min-w-[4.5rem] px-3 text-xs', 'rounded-lg font-medium', className)
+
+  // the accent belongs to the page's one big action (hero, listing); tiles in a grid stay quiet
+  const key = big ? 'bg-shasta-accent text-shasta-accent-fg hover:bg-shasta-accent/85' : 'bg-shasta-field text-shasta-fg ring-1 ring-shasta-line hover:bg-shasta-hover'
 
   if (app.status !== 'published' && !mine) return <span className={cn('text-xs text-shasta-muted', className)}>Not available</span>
   if (busy)
@@ -50,7 +57,7 @@ export function AppAction({ app, size = 'sm', className }: { app: AppCardType; s
     )
   if (!mine)
     return (
-      <Button className={cn(base, 'bg-shasta-accent text-shasta-accent-fg hover:bg-shasta-accent/85')} onClick={(e) => (e.stopPropagation(), void install(app))}>
+      <Button className={cn(base, key)} onClick={(e) => (e.stopPropagation(), void install(app))}>
         <Download aria-hidden /> Install
       </Button>
     )
@@ -62,7 +69,7 @@ export function AppAction({ app, size = 'sm', className }: { app: AppCardType; s
     )
   if (mine.updateAvailable)
     return (
-      <Button className={cn(base, 'bg-shasta-accent text-shasta-accent-fg hover:bg-shasta-accent/85')} onClick={(e) => (e.stopPropagation(), void update(app.id))}>
+      <Button className={cn(base, key)} onClick={(e) => (e.stopPropagation(), void update(app.id))}>
         <RefreshCw aria-hidden /> Update
       </Button>
     )
@@ -88,9 +95,9 @@ export function AppCover({ app, className, eager }: { app: Pick<AppCardType, 'na
   const [failed, setFailed] = useState(false)
   const h = hue(app.name)
   return (
-    <div className={cn('relative aspect-video overflow-hidden', className)} style={{ background: `linear-gradient(135deg, oklch(0.42 0.11 ${h}), oklch(0.26 0.08 ${(h + 50) % 360}))` }} aria-hidden>
+    <div className={cn('relative aspect-video overflow-hidden', className)} style={{ background: `linear-gradient(135deg, oklch(0.36 0.06 ${h}), oklch(0.25 0.04 ${h}))` }} aria-hidden>
       {app.bannerUrl && !failed && (
-        <img crossOrigin={MEDIA_CORS} src={app.bannerUrl} alt="" loading={eager ? 'eager' : 'lazy'} decoding="async" draggable={false} onError={() => setFailed(true)} className="absolute inset-0 size-full object-cover transition-transform duration-300 group-hover:scale-[1.04]" />
+        <img crossOrigin={MEDIA_CORS} src={app.bannerUrl} alt="" loading={eager ? 'eager' : 'lazy'} decoding="async" draggable={false} onError={() => setFailed(true)} className="absolute inset-0 size-full object-cover" />
       )}
     </div>
   )
@@ -124,7 +131,7 @@ export function TileLink({ app, label, className, children }: { app: AppCardType
 
 /** shared tile frame: lifts on hover, shows a clear ring when its link has keyboard focus */
 export const TILE_FRAME =
-  'group relative rounded-2xl bg-shasta-home ring-1 ring-shasta-line transition hover:-translate-y-0.5 hover:ring-shasta-accent/50 hover:shadow-lg hover:shadow-black/20 has-[[role=link]:focus-visible]:ring-2 has-[[role=link]:focus-visible]:ring-shasta-accent motion-reduce:transition-none motion-reduce:hover:translate-y-0'
+  'group relative rounded-2xl bg-shasta-home ring-1 ring-shasta-line transition-[box-shadow,background-color] duration-150 ease-shasta hover:bg-shasta-field hover:ring-shasta-fg/15 has-[[role=link]:focus-visible]:ring-2 has-[[role=link]:focus-visible]:ring-shasta-accent'
 
 /**
  * A tile: icon, title, developer, category and the action. Clicking anywhere else opens the listing.
@@ -139,14 +146,14 @@ export function AppTile({ app, className, variant = 'card' }: { app: AppCardType
           <div className="flex min-w-0 items-center gap-3">
             <AppIcon app={app} size={40} />
             <div className="min-w-0 flex-1">
-              <h3 className="truncate text-[15px] font-semibold leading-snug">
+              <h3 className="truncate text-[15px] leading-5 font-medium">
                 <TileLink app={app}>{app.name}</TileLink>
               </h3>
               <p className="truncate text-xs text-shasta-muted">{app.developer || app.store?.name}</p>
             </div>
           </div>
           <div className="mt-auto flex items-center justify-between gap-2">
-            <span className="min-w-0 truncate text-xs text-shasta-muted">{app.genres?.length ? app.genres.slice(0, 2).map((g) => g.name).join(' · ') : app.category?.name}</span>
+            <span className="min-w-0 truncate text-xs text-shasta-faint">{app.genres?.length ? app.genres.slice(0, 2).map((g) => g.name).join(' · ') : app.category?.name}</span>
             <AppAction app={app} className="relative z-10 shrink-0" />
           </div>
         </div>
@@ -157,16 +164,16 @@ export function AppTile({ app, className, variant = 'card' }: { app: AppCardType
       <div className="flex items-start gap-3">
         <AppIcon app={app} size={60} />
         <div className="min-w-0 flex-1">
-          <h3 className="truncate font-semibold leading-tight">
+          <h3 className="truncate leading-5 font-medium">
             <TileLink app={app}>{app.name}</TileLink>
           </h3>
           <p className="mt-0.5 truncate text-xs text-shasta-muted">{meta(app)}</p>
-          {app.kind === 'linked' && <p className="mt-0.5 text-xs text-shasta-muted">Linked web app</p>}
+          {app.kind === 'linked' && <p className="mt-0.5 text-xs text-shasta-faint">Linked web app</p>}
         </div>
       </div>
       {app.summary && <p className="line-clamp-2 text-xs text-shasta-muted">{app.summary}</p>}
       <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-        <span className="text-xs text-shasta-muted">{app.version ? `v${app.version}` : ''}</span>
+        <span className="sh-meta">{app.version ? `v${app.version}` : ''}</span>
         <AppAction app={app} className="relative z-10" />
       </div>
     </article>
@@ -182,14 +189,14 @@ export function AppRow({ app, index }: { app: AppCardType; index?: number }) {
       tabIndex={0}
       onClick={() => go(appPath(app.slug))}
       onKeyDown={(e) => e.key === 'Enter' && go(appPath(app.slug))}
-      className="flex cursor-pointer items-center gap-3 rounded-xl px-2 py-2.5 hover:bg-shasta-hover"
+      className="flex cursor-pointer items-center gap-3 rounded-xl px-2 py-2 transition-colors duration-150 ease-shasta hover:bg-shasta-hover"
     >
-      {index !== undefined && <span className="w-5 text-center text-sm text-shasta-muted">{index + 1}</span>}
+      {index !== undefined && <span className="w-6 text-center font-mono text-sm text-shasta-faint tabular-nums">{index + 1}</span>}
       <AppIcon app={app} size={52} />
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{app.name}</p>
         <p className="truncate text-xs text-shasta-muted">{meta(app)}</p>
-        {app.summary && <p className="mt-0.5 truncate text-xs text-shasta-muted">{app.summary}</p>}
+        {app.summary && <p className="mt-0.5 truncate text-xs text-shasta-faint">{app.summary}</p>}
       </div>
       <AppAction app={app} />
     </div>
@@ -203,7 +210,7 @@ export function Section({ title, subtitle, action, children, className }: { titl
     <section className={cn('mb-12', className)} aria-label={title}>
       <header className="mb-4 flex items-end justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
+          <h2 className="sh-heading">{title}</h2>
           {subtitle && <p className="mt-0.5 text-sm text-shasta-muted">{subtitle}</p>}
         </div>
         {action}
@@ -231,12 +238,12 @@ export function Shelf({ children, className }: { children: ReactNode; className?
         {children}
       </div>
       {!edge.start && (
-        <button aria-label="Scroll back" onClick={() => scroll(-1)} className="absolute top-1/2 -left-4 z-20 hidden size-10 -translate-y-1/2 place-items-center rounded-full bg-popover shadow-lg ring-1 ring-shasta-line group-focus-within/shelf:grid group-hover/shelf:grid hover:bg-shasta-hover focus-visible:grid focus-visible:ring-2 focus-visible:ring-shasta-accent">
+        <button aria-label="Scroll back" onClick={() => scroll(-1)} className="absolute top-1/2 -left-4 z-20 hidden size-9 -translate-y-1/2 place-items-center rounded-full bg-popover shadow-md ring-1 ring-shasta-line group-focus-within/shelf:grid group-hover/shelf:grid hover:bg-shasta-hover focus-visible:grid focus-visible:ring-2 focus-visible:ring-shasta-accent">
           <ChevronLeft className="size-5" />
         </button>
       )}
       {!edge.end && (
-        <button aria-label="Scroll forward" onClick={() => scroll(1)} className="absolute top-1/2 -right-4 z-20 hidden size-10 -translate-y-1/2 place-items-center rounded-full bg-popover shadow-lg ring-1 ring-shasta-line group-focus-within/shelf:grid group-hover/shelf:grid hover:bg-shasta-hover focus-visible:grid focus-visible:ring-2 focus-visible:ring-shasta-accent">
+        <button aria-label="Scroll forward" onClick={() => scroll(1)} className="absolute top-1/2 -right-4 z-20 hidden size-9 -translate-y-1/2 place-items-center rounded-full bg-popover shadow-md ring-1 ring-shasta-line group-focus-within/shelf:grid group-hover/shelf:grid hover:bg-shasta-hover focus-visible:grid focus-visible:ring-2 focus-visible:ring-shasta-accent">
           <ChevronRight className="size-5" />
         </button>
       )}
@@ -259,8 +266,8 @@ export function TileSkeleton({ variant = 'card', className }: { variant?: 'card'
         <div className="aspect-video animate-pulse bg-shasta-field" />
         <div className="flex flex-col gap-3 p-4">
           <div className="flex items-center gap-3">
-            <div className="size-10 animate-pulse rounded-[9px] bg-shasta-field" />
-            <div className="flex-1 space-y-1.5"><div className="h-3.5 w-3/4 animate-pulse rounded bg-shasta-field" /><div className="h-3 w-1/2 animate-pulse rounded bg-shasta-field" /></div>
+            <div className="size-10 animate-pulse rounded-lg bg-shasta-field" />
+            <div className="flex-1 space-y-2"><div className="h-3.5 w-3/4 animate-pulse rounded bg-shasta-field" /><div className="h-3 w-1/2 animate-pulse rounded bg-shasta-field" /></div>
           </div>
           <div className="h-8" />
         </div>
@@ -307,7 +314,7 @@ export function LoadMore({ shown, total, loading, hasMore, error, onMore, onRetr
         ) : hasMore ? (
           <Button variant="secondary" disabled={loading} onClick={onMore}>{loading ? <><Loader2 className="sh-spin" aria-hidden /> Loading…</> : `Show more (${(total ?? 0) - shown} left)`}</Button>
         ) : total !== null && total > 0 ? (
-          <p className="text-xs text-shasta-muted">That's all {total} {noun}.</p>
+          <p className="text-xs text-shasta-faint">That's all {total} {noun}</p>
         ) : null}
         <p className="sr-only" aria-live="polite">{total !== null ? `Showing ${shown} of ${total} ${noun}` : ''}</p>
       </div>
@@ -332,7 +339,7 @@ export function LazyMount({ children, minHeight = 260, className }: { children: 
 export function Message({ icon, title, body, action }: { icon?: ReactNode; title: string; body?: string; action?: ReactNode }) {
   return (
     <div className="grid place-items-center rounded-2xl border border-dashed border-shasta-line px-6 py-14 text-center" role="status">
-      <div className="mb-3 grid size-12 place-items-center rounded-2xl bg-shasta-field text-shasta-muted">{icon ?? <SearchIcon className="size-5" />}</div>
+      <div className="mb-4 grid size-12 place-items-center rounded-xl bg-shasta-field text-shasta-faint">{icon ?? <SearchIcon className="size-5" />}</div>
       <p className="font-medium">{title}</p>
       {body && <p className="mt-1 max-w-md text-sm text-shasta-muted">{body}</p>}
       {action && <div className="mt-4 flex gap-2">{action}</div>}
@@ -366,7 +373,7 @@ const STATUS_STYLE: Record<AppStatus | VersionState, string> = {
 const STATUS_LABEL: Record<string, string> = { pending: 'Pending review', live: 'Live', archived: 'Previous', published: 'Published' }
 
 export function StatusBadge({ status }: { status: AppStatus | VersionState }) {
-  return <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium capitalize', STATUS_STYLE[status])}>{STATUS_LABEL[status] ?? status}</span>
+  return <span className={cn('inline-flex h-5 items-center rounded-md px-2 text-xs capitalize', STATUS_STYLE[status])}>{STATUS_LABEL[status] ?? status}</span>
 }
 
 export function Chip({ active, children, ...props }: React.ComponentProps<'button'> & { active?: boolean }) {
@@ -375,7 +382,7 @@ export function Chip({ active, children, ...props }: React.ComponentProps<'butto
       type="button"
       aria-pressed={active}
       {...props}
-      className={cn('inline-flex h-8 items-center rounded-full px-3.5 text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-shasta-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background', active ? 'bg-shasta-accent text-shasta-accent-fg' : 'bg-shasta-field text-shasta-fg ring-1 ring-shasta-line hover:bg-shasta-hover', props.className)}
+      className={cn('inline-flex h-8 items-center gap-1.5 rounded-full px-3.5 text-sm whitespace-nowrap transition-[color,background-color,box-shadow] duration-150 ease-shasta outline-none focus-visible:ring-2 focus-visible:ring-shasta-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background', active ? 'sh-selected' : 'text-shasta-muted ring-1 ring-shasta-line hover:bg-shasta-hover hover:text-shasta-fg', props.className)}
     >
       {children}
     </button>
@@ -387,8 +394,8 @@ export function Stat({ label, value, hint }: { label: string; value: ReactNode; 
   return (
     <div className="rounded-xl bg-shasta-home px-4 py-3 ring-1 ring-shasta-line">
       <p className="text-xs text-shasta-muted">{label}</p>
-      <p className="mt-0.5 text-xl font-semibold tabular-nums">{value}</p>
-      {hint && <p className="text-[11px] text-shasta-muted">{hint}</p>}
+      <p className="mt-1 text-xl font-medium tabular-nums">{value}</p>
+      {hint && <p className="text-xs text-shasta-faint">{hint}</p>}
     </div>
   )
 }
@@ -409,14 +416,14 @@ export function StoreAvatar({ store, size = 40, className }: { store: Pick<Store
   if (store.logoUrl && !failed)
     return <img crossOrigin={MEDIA_CORS} src={store.logoUrl} alt="" width={size} height={size} loading="lazy" decoding="async" draggable={false} onError={() => setFailed(true)} style={{ width: size, height: size, borderRadius: radius }} className={cn('shrink-0 bg-shasta-field object-cover', className)} />
   return (
-    <span aria-hidden style={{ width: size, height: size, borderRadius: radius, background: `oklch(0.5 0.14 ${store.accent})`, fontSize: size * 0.44 }} className={cn('grid shrink-0 place-items-center font-semibold text-white', className)}>
+    <span aria-hidden style={{ width: size, height: size, borderRadius: radius, background: `oklch(0.5 0.1 ${store.accent})`, fontSize: size * 0.44 }} className={cn('grid shrink-0 place-items-center font-medium text-white', className)}>
       {store.name.trim().charAt(0).toUpperCase() || '?'}
     </span>
   )
 }
 
 export function OfficialBadge() {
-  return <span className="inline-flex items-center gap-0.5 rounded-full bg-shasta-accent/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-shasta-accent uppercase"><BadgeCheck className="size-3" aria-hidden /> Official</span>
+  return <span className="inline-flex items-center gap-1 text-xs font-normal text-shasta-muted"><BadgeCheck className="size-3.5" aria-hidden /> Official</span>
 }
 
 /** The coloured cover of a storefront: its banner image, or a gradient made from its colour. */
@@ -430,7 +437,7 @@ export function StoreCover({ store, className }: { store: Pick<StoreRef, 'accent
       ) : (
         <div
           className="size-full"
-          style={{ background: `radial-gradient(60% 90% at 12% 15%, oklch(0.74 0.16 ${h} / .55), transparent 70%), radial-gradient(55% 80% at 88% 85%, oklch(0.58 0.2 ${(h + 60) % 360} / .6), transparent 70%), linear-gradient(120deg, oklch(0.42 0.14 ${h}), oklch(0.26 0.09 ${(h + 40) % 360}))` }}
+          style={{ background: `linear-gradient(120deg, oklch(0.42 0.09 ${h}), oklch(0.27 0.06 ${h}))` }}
         />
       )}
       {store.official && !(store.bannerUrl && !failed) && <Logo className="absolute -right-6 -bottom-8 size-40 text-white opacity-[0.09]" />}
@@ -445,15 +452,15 @@ export function StoreTile({ store, className }: { store: StoreCard; className?: 
     <button
       onClick={() => go(storePath(store.slug))}
       aria-label={`${store.name} storefront, ${store.apps} app${store.apps === 1 ? '' : 's'}`}
-      className={cn('sh-theme group overflow-hidden rounded-2xl bg-shasta-home text-left ring-1 ring-shasta-line transition hover:-translate-y-0.5 hover:ring-shasta-accent/60', store.official && 'ring-shasta-accent/40', className)}
+      className={cn('sh-theme group overflow-hidden rounded-2xl bg-shasta-home text-left ring-1 ring-shasta-line transition-[box-shadow,background-color] duration-150 ease-shasta hover:bg-shasta-field hover:ring-shasta-fg/15', className)}
       style={{ ['--sh-hue' as string]: store.accent }}
     >
       <StoreCover store={store} className="h-16" />
       <div className="px-4 pb-4">
-        <StoreAvatar store={store} size={48} className="relative z-10 -mt-6 shadow-md ring-4 ring-shasta-home" />
-        <p className="mt-2 flex flex-wrap items-center gap-1.5 font-semibold">{store.name}{store.official && <OfficialBadge />}</p>
+        <StoreAvatar store={store} size={48} className="relative z-10 -mt-6 ring-4 ring-shasta-home" />
+        <p className="mt-2 flex flex-wrap items-center gap-2 font-medium">{store.name}{store.official && <OfficialBadge />}</p>
         <p className="mt-0.5 line-clamp-2 min-h-8 text-xs text-shasta-muted">{store.tagline || `Apps and games from ${store.name}`}</p>
-        <p className="mt-2 text-xs text-shasta-muted">{store.apps} app{store.apps === 1 ? '' : 's'}{store.followers > 0 && ` · ${store.followers} follower${store.followers === 1 ? '' : 's'}`}</p>
+        <p className="mt-2 text-xs text-shasta-faint tabular-nums">{store.apps} app{store.apps === 1 ? '' : 's'}{store.followers > 0 && ` · ${store.followers} follower${store.followers === 1 ? '' : 's'}`}</p>
       </div>
     </button>
   )
@@ -461,15 +468,15 @@ export function StoreTile({ store, className }: { store: StoreCard; className?: 
 
 /** Follow / Following for a storefront. Creates the anonymous account on first use, like installing does. */
 /** Following is kept on this device, so the button reads it from there (no account involved). */
-export function FollowButton({ store, onChange }: { store: Pick<StoreRef, 'id' | 'name'>; following?: boolean; onChange?: () => void }) {
+export function FollowButton({ store, onChange, quiet }: { store: Pick<StoreRef, 'id' | 'name'>; following?: boolean; onChange?: () => void; /** not the page's main action: no accent fill */ quiet?: boolean }) {
   const [busy, setBusy] = useState(false)
   const following = useStore((s) => !!s.local?.following.includes(store.id))
   return (
     <Button
-      variant={following ? 'secondary' : 'default'}
       disabled={busy}
       aria-pressed={following}
-      className={cn('rounded-full', !following && 'bg-shasta-accent text-shasta-accent-fg hover:bg-shasta-accent/85')}
+      variant={following || quiet ? 'secondary' : 'default'}
+      className={cn('h-9 rounded-lg px-3', !following && !quiet && 'bg-shasta-accent text-shasta-accent-fg hover:bg-shasta-accent/85')}
       onClick={async () => {
         setBusy(true)
         await useStore.getState().follow(store, !following)

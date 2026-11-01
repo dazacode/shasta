@@ -23,7 +23,7 @@ const Heading = defineComponent({
   name: 'Heading',
   description: 'A title',
   props: z.object({ text: str }),
-  component: ({ props }) => <h3 className="text-base font-semibold leading-snug">{ok(props.text)}</h3>,
+  component: ({ props }) => <h3 className="text-base font-medium leading-snug">{ok(props.text)}</h3>,
 })
 
 const Text = defineComponent({
@@ -112,7 +112,7 @@ const Steps = defineComponent({
     <ol className="space-y-2">
       {(props.items ?? []).map((t, i) => (
         <li key={i} className="flex gap-3 text-sm leading-relaxed">
-          <span className="grid size-6 shrink-0 place-items-center rounded-full bg-shasta-accent text-xs font-semibold text-shasta-accent-fg">{i + 1}</span>
+          <span className="grid size-6 shrink-0 place-items-center rounded-full border border-shasta-line font-mono text-xs tabular-nums text-shasta-muted">{i + 1}</span>
           <span className="pt-0.5">{ok(t)}</span>
         </li>
       ))}
@@ -126,8 +126,8 @@ const Stat = defineComponent({
   props: z.object({ label: str, value: z.union([z.string(), z.number()]) }),
   component: ({ props }) => (
     <div className="rounded-xl border border-shasta-line p-3">
-      <p className="text-xl font-semibold">{ok(props.value)}</p>
-      <p className="text-xs text-shasta-muted">{ok(props.label)}</p>
+      <p className="text-2xl font-medium tabular-nums">{ok(props.value)}</p>
+      <p className="mt-1 text-xs text-shasta-muted">{ok(props.label)}</p>
     </div>
   ),
 })
@@ -151,8 +151,8 @@ const BarChart = defineComponent({
         {(props.labels ?? []).map((l, i) => (
           <div key={i} className="flex items-center gap-2 text-xs">
             <span className="w-24 shrink-0 truncate text-right text-shasta-muted" title={ok(l)}>{ok(l)}</span>
-            <div className="h-5 flex-1 rounded bg-shasta-field"><div className="h-full rounded bg-shasta-accent" style={{ width: `${Math.max(2, (Math.abs(values[i] ?? 0) / max) * 100)}%` }} /></div>
-            <span className="w-14 shrink-0 tabular-nums">{values[i] ?? 0}{props.unit ? ` ${ok(props.unit)}` : ''}</span>
+            <div className="h-5 flex-1 rounded bg-shasta-field"><div className={cn('h-full rounded', Math.abs(values[i] ?? 0) === max ? 'bg-shasta-accent' : 'bg-shasta-fg/20')} style={{ width: `${Math.max(2, (Math.abs(values[i] ?? 0) / max) * 100)}%` }} /></div>
+            <span className="w-14 shrink-0 font-mono tabular-nums text-shasta-muted">{values[i] ?? 0}{props.unit ? ` ${ok(props.unit)}` : ''}</span>
           </div>
         ))}
       </div>
@@ -170,7 +170,7 @@ const Quiz = defineComponent({
     const right = Math.round(Number(props.answer))
     return (
       <div className="rounded-xl border border-shasta-line p-3">
-        <p className="mb-2 flex gap-2 text-sm font-medium"><CircleHelp className="mt-0.5 size-4 shrink-0 text-shasta-accent" aria-hidden />{ok(props.question)}</p>
+        <p className="mb-2 flex gap-2 text-sm font-medium"><CircleHelp className="mt-0.5 size-4 shrink-0 text-shasta-muted" aria-hidden />{ok(props.question)}</p>
         <div className="space-y-1.5">
           {options.map((o, i) => {
             const done = picked !== null
@@ -184,7 +184,7 @@ const Quiz = defineComponent({
             )
           })}
         </div>
-        {picked !== null && <p className="mt-2 text-sm text-shasta-muted" role="status">{picked === right ? 'Correct! ' : 'Not quite. '}{props.explanation ? ok(props.explanation) : options[right] ? `The answer is “${ok(options[right])}”.` : ''}</p>}
+        {picked !== null && <p className="mt-2 text-sm text-shasta-muted" role="status">{picked === right ? 'Correct. ' : 'Not quite. '}{props.explanation ? ok(props.explanation) : options[right] ? `The answer is “${ok(options[right])}”.` : ''}</p>}
       </div>
     )
   },
@@ -197,8 +197,8 @@ const Flashcard = defineComponent({
   component: ({ props }) => {
     const [flipped, setFlipped] = useState(false)
     return (
-      <button type="button" onClick={() => setFlipped((f) => !f)} aria-pressed={flipped} className={cn('w-full rounded-xl border p-4 text-left text-sm transition-colors', flipped ? 'border-shasta-accent bg-shasta-accent/10' : 'border-shasta-line bg-shasta-field/60 hover:bg-shasta-hover')}>
-        <span className="mb-1 block text-xs uppercase tracking-wide text-shasta-muted">{flipped ? 'Answer' : 'Question · tap to flip'}</span>
+      <button type="button" onClick={() => setFlipped((f) => !f)} aria-pressed={flipped} className={cn('w-full rounded-xl border p-4 text-left text-sm transition-[color,background-color,box-shadow] duration-150 ease-shasta', flipped ? 'sh-selected border-transparent' : 'border-shasta-line bg-shasta-field/60 hover:bg-shasta-hover')}>
+        <span className="mb-1 block text-xs text-shasta-faint">{flipped ? 'Answer' : 'Question · tap to flip'}</span>
         {flipped ? ok(props.back) : ok(props.front)}
       </button>
     )
@@ -210,8 +210,8 @@ const Event = defineComponent({
   description: 'A moment in time (use inside Timeline)',
   props: z.object({ when: str, text: str }),
   component: ({ props }) => (
-    <div className="relative pb-3 pl-5 before:absolute before:left-1 before:top-1.5 before:size-2 before:rounded-full before:bg-shasta-accent after:absolute after:bottom-0 after:left-[7px] after:top-4 after:w-px after:bg-shasta-line">
-      <p className="text-xs font-medium text-shasta-accent">{ok(props.when)}</p>
+    <div className="relative pb-3 pl-5 before:absolute before:left-1 before:top-1.5 before:size-2 before:rounded-full before:bg-shasta-faint after:absolute after:bottom-0 after:left-[7px] after:top-4 after:w-px after:bg-shasta-line">
+      <p className="font-mono text-xs text-shasta-muted">{ok(props.when)}</p>
       <p className="text-sm leading-relaxed">{ok(props.text)}</p>
     </div>
   ),

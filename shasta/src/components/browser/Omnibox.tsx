@@ -53,7 +53,7 @@ function SiteInfo({ tab }: { tab: Tab }) {
         {http && <span className="pr-1 text-xs font-medium">Not secure</span>}
       </PopoverTrigger>
       <PopoverContent>
-        <h2 className="mb-2 text-sm font-semibold">{page ? 'Shasta page' : 'Site information'}</h2>
+        <h2 className="mb-2 text-sm font-medium">{page ? 'Shasta page' : 'Site information'}</h2>
         {body}
       </PopoverContent>
     </Popover>
@@ -230,7 +230,7 @@ export function Omnibox({ tab }: { tab: Tab }) {
               onMouseDown={(e) => e.preventDefault()}
               onMouseEnter={() => setHighlight(i)}
               onClick={() => go(r.url)}
-              className={cn('flex cursor-default items-center gap-3 rounded-xl px-3 py-2 text-sm', i === highlight && 'bg-shasta-hover')}
+              className={cn('flex h-10 cursor-default items-center gap-3 rounded-lg px-3 text-sm', i === highlight && 'bg-shasta-hover')}
             >
               {r.kind === 'app' ? (
                 <AppIcon app={{ name: r.primary, iconUrl: r.iconUrl ?? null }} size={20} />
@@ -250,8 +250,8 @@ export function Omnibox({ tab }: { tab: Tab }) {
                 ) : (
                   r.primary
                 )}
-                {r.kind === 'search' && r.secondary && <span className="text-muted-foreground"> - {r.secondary}</span>}
-                {r.kind !== 'search' && r.secondary && <span className="ml-2 text-xs text-shasta-accent">{r.kind === 'app' || r.id === 'primary' || r.id === 'inline' ? <span className="text-muted-foreground">{r.secondary}</span> : <Match text={r.secondary} q={query.trim()} />}</span>}
+                {r.kind === 'search' && r.secondary && <span className="text-shasta-faint"> · {r.secondary}</span>}
+                {r.kind !== 'search' && r.secondary && <span className="ml-2 text-xs text-shasta-faint">{r.kind === 'app' || r.id === 'primary' || r.id === 'inline' ? <span>{r.secondary}</span> : <span className="font-mono"><Match text={r.secondary} q={query.trim()} /></span>}</span>}
               </span>
             </li>
           ))}
@@ -306,7 +306,7 @@ function BookmarkStar({ tab }: { tab: Tab }) {
         }}
         className="grid size-7 shrink-0 place-items-center rounded-full text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg disabled:pointer-events-none disabled:opacity-40"
       >
-        <Star className={cn('size-[18px]', bookmark && 'fill-shasta-accent text-shasta-accent')} />
+        <Star className={cn('size-[18px]', bookmark && 'fill-shasta-accent text-shasta-accent')} strokeWidth={1.6} />
       </PopoverTrigger>
       <PopoverContent align="end">
         {bookmark && (
@@ -317,7 +317,7 @@ function BookmarkStar({ tab }: { tab: Tab }) {
               setOpen(false)
             }}
           >
-            <h2 className="text-sm font-semibold">Bookmark added</h2>
+            <h2 className="text-sm font-medium">Bookmark added</h2>
             <label className="grid gap-1 text-xs text-muted-foreground">
               Name
               <input
@@ -353,7 +353,7 @@ function BookmarkStar({ tab }: { tab: Tab }) {
               >
                 Remove
               </button>
-              <button type="submit" className="rounded-md bg-shasta-accent px-4 py-1.5 text-sm font-medium text-shasta-accent-fg">
+              <button type="submit" className="sh-press h-8 rounded-lg bg-shasta-accent px-4 text-sm font-medium text-shasta-accent-fg hover:opacity-90">
                 Done
               </button>
             </div>

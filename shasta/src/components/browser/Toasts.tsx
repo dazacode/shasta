@@ -12,10 +12,10 @@ export function Toasts() {
         {toasts.map((t) => (
           <motion.div
             key={t.id}
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            transition={{ duration: 0.16 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             className={cn(
               'pointer-events-auto flex max-w-lg items-center gap-3 rounded-xl bg-popover px-4 py-2.5 text-sm text-popover-foreground shadow-lg ring-1 ring-foreground/10',
               t.tone === 'error' && 'ring-shasta-danger/50',
@@ -24,7 +24,7 @@ export function Toasts() {
             <span className={cn(t.tone === 'error' && 'text-shasta-danger')}>{t.message}</span>
             {t.action && (
               <button
-                className="rounded-md px-2 py-0.5 font-medium text-shasta-accent hover:bg-shasta-hover"
+                className="h-7 rounded-md px-2 font-medium text-shasta-accent transition-colors duration-150 ease-shasta hover:bg-shasta-hover"
                 onClick={() => {
                   t.action!.run()
                   dismiss(t.id)

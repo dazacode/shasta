@@ -7,9 +7,9 @@ import { useTabs } from '@/stores/tabsStore'
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
-    <section aria-labelledby={id} className="grid gap-2 border-b border-shasta-line py-5 last:border-0">
-      <h2 id={id} className="text-base font-semibold">{title}</h2>
-      <div className="grid gap-2 text-sm text-shasta-muted">{children}</div>
+    <section aria-labelledby={id} className="grid gap-3 border-b border-shasta-line py-6 last:border-0">
+      <h2 id={id} className="sh-heading">{title}</h2>
+      <div className="grid gap-3 text-sm leading-relaxed text-shasta-muted">{children}</div>
     </section>
   )
 }

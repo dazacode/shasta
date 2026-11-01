@@ -72,7 +72,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="mx-auto w-full max-w-5xl py-2">
-      <h1 className="text-2xl font-semibold tracking-tight">Manage the Store</h1>
+      <h1 className="sh-title">Manage the Store</h1>
       <p className="mb-4 text-sm text-shasta-muted">Review submissions, answer applications, manage contributors and keep the catalog tidy.</p>
       <div role="tablist" aria-label="Management sections" className="mb-6 flex gap-1 overflow-x-auto border-b border-shasta-line">
         {TABS.map((t) => (
@@ -83,11 +83,11 @@ export default function AdminDashboard() {
             onClick={() => go(`/admin/${t.id}`)}
             className={cn(
               '-mb-px flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors',
-              active === t.id ? 'border-shasta-accent text-shasta-fg' : 'border-transparent text-shasta-muted hover:text-shasta-fg',
+              active === t.id ? 'border-shasta-fg text-shasta-fg' : 'border-transparent text-shasta-muted hover:text-shasta-fg',
             )}
           >
             {t.label}
-            {!!counts[t.id] && <span className="grid min-w-5 place-items-center rounded-full bg-shasta-accent px-1.5 text-[11px] font-semibold text-shasta-accent-fg">{counts[t.id]}</span>}
+            {!!counts[t.id] && <span className="sh-meta text-shasta-muted">{counts[t.id]}</span>}
           </button>
         ))}
       </div>

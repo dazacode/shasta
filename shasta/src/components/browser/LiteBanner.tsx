@@ -25,19 +25,19 @@ export function LiteBanner() {
     setHidden(true)
   }
   return (
-    <div role="note" className="flex items-center justify-center gap-3 border-t border-shasta-line bg-shasta-field px-4 py-1.5 text-sm text-shasta-fg">
+    <div role="note" className="flex min-h-9 flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-shasta-line bg-shasta-field px-4 py-1.5 text-sm text-shasta-fg">
       <span>
-        This is <strong>Shasta Lite</strong>. Shasta AI, offline use and heavier games need the full site.
+        This is <strong className="font-medium">Shasta Lite</strong>. Shasta AI, offline use and heavier games need the full site.
       </span>
       <a
         href={FULL_SITE}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 rounded-full bg-shasta-accent px-3 py-0.5 font-medium text-white hover:opacity-90"
+        className="sh-press inline-flex h-6 items-center gap-1 rounded-md bg-shasta-accent px-2.5 font-medium text-shasta-accent-fg hover:opacity-90"
       >
         Open full Shasta <ExternalLink className="size-3.5" />
       </a>
-      <button onClick={dismiss} className="rounded-full p-1 text-shasta-muted hover:bg-shasta-hover" aria-label="Dismiss" title="Dismiss">
+      <button onClick={dismiss} className="grid size-6 place-items-center rounded-md text-shasta-muted transition-colors duration-150 ease-shasta hover:bg-shasta-hover hover:text-shasta-fg" aria-label="Dismiss" title="Dismiss">
         <X className="size-3.5" />
       </button>
     </div>

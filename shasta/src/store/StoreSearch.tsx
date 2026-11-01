@@ -59,8 +59,8 @@ export default function StoreSearch() {
     <div className="pt-2">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
-          <p className="min-h-5 text-sm text-shasta-muted" aria-live="polite">{list.total !== null && `${list.total} ${list.total === 1 ? 'result' : 'results'}`}</p>
+          <h1 className="sh-title">{title}</h1>
+          <p className="mt-1 min-h-5 text-sm text-shasta-muted tabular-nums" aria-live="polite">{list.total !== null && `${list.total} ${list.total === 1 ? 'result' : 'results'}`}</p>
         </div>
         <label className="flex items-center gap-2 text-sm text-shasta-muted">
           Sort by
@@ -71,20 +71,20 @@ export default function StoreSearch() {
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
-        <div className="inline-flex rounded-full bg-shasta-field p-1 ring-1 ring-shasta-line" role="group" aria-label="Show games, apps or both">
+        <div className="inline-flex rounded-[10px] bg-shasta-field p-0.5" role="group" aria-label="Show games, apps or both">
           {([['', 'All'], ['games', 'Games'], ['apps', 'Apps']] as const).map(([v, l]) => (
             <button
               key={v}
               type="button"
               aria-pressed={group === v}
               onClick={() => to({ group: v, category: '', genre: '' })}
-              className={cn('h-8 rounded-full px-4 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-shasta-accent', group === v ? 'bg-shasta-accent text-shasta-accent-fg' : 'text-shasta-muted hover:text-shasta-fg')}
+              className={cn('h-8 rounded-lg px-3 text-sm transition-[color,background-color,box-shadow] duration-150 ease-shasta outline-none focus-visible:ring-2 focus-visible:ring-shasta-accent', group === v ? 'sh-selected' : 'text-shasta-muted hover:text-shasta-fg')}
             >
               {l}
             </button>
           ))}
         </div>
-        <div className="inline-flex rounded-full bg-shasta-field p-1 ring-1 ring-shasta-line" role="group" aria-label="Show links, downloads or both">
+        <div className="inline-flex rounded-[10px] bg-shasta-field p-0.5" role="group" aria-label="Show links, downloads or both">
           {KINDS.map(([v, l, hint]) => (
             <button
               key={v}
@@ -92,7 +92,7 @@ export default function StoreSearch() {
               title={hint}
               aria-pressed={kind === v}
               onClick={() => to({ kind: v })}
-              className={cn('h-8 rounded-full px-4 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-shasta-accent', kind === v ? 'bg-shasta-accent text-shasta-accent-fg' : 'text-shasta-muted hover:text-shasta-fg')}
+              className={cn('h-8 rounded-lg px-3 text-sm transition-[color,background-color,box-shadow] duration-150 ease-shasta outline-none focus-visible:ring-2 focus-visible:ring-shasta-accent', kind === v ? 'sh-selected' : 'text-shasta-muted hover:text-shasta-fg')}
             >
               {l}
             </button>
@@ -105,7 +105,7 @@ export default function StoreSearch() {
           <Chip active={!category && !genre} onClick={() => to({ category: '', genre: '' })}>All</Chip>
           {facets.map((f) => (
             <Chip key={`${f.param}-${f.id}`} active={active(f)} onClick={() => to({ category: f.param === 'category' ? f.id : '', genre: f.param === 'genre' ? f.id : '' })}>
-              {f.name} {f.count !== null && <span className="ml-1 text-xs opacity-60">{f.count}</span>}
+              {f.name}{f.count !== null && <span className="font-mono text-xs text-shasta-faint tabular-nums">{f.count}</span>}
             </Chip>
           ))}
         </div>

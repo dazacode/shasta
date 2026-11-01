@@ -78,7 +78,7 @@ export function AdSlot({
     return (
       <div ref={wrap} className={cn('relative w-full', className)} data-ad-slot-wrap>
         {banner && label && (
-          <span className="pointer-events-none absolute -top-1 right-0 z-10 select-none text-[10px] font-medium uppercase tracking-wide text-shasta-muted/70">
+          <span className="pointer-events-none absolute -top-1 right-0 z-10 select-none font-mono text-[11px] leading-4 text-shasta-faint">
             Ad
           </span>
         )}
@@ -90,7 +90,7 @@ export function AdSlot({
   return (
     <div className={cn('relative w-full', className)} data-ad-slot-wrap>
       {label && (
-        <span className="pointer-events-none absolute -top-1 right-0 z-10 select-none text-[10px] font-medium uppercase tracking-wide text-shasta-muted/70">
+        <span className="pointer-events-none absolute -top-1 right-0 z-10 select-none font-mono text-[11px] leading-4 text-shasta-faint">
           Ad
         </span>
       )}

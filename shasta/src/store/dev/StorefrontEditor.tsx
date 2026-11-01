@@ -94,14 +94,14 @@ export function StorefrontEditor() {
       <Button variant="ghost" size="sm" onClick={() => go('/develop')} className="mb-3 -ml-2"><ArrowLeft /> All apps</Button>
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{data.official ? 'Official storefront' : 'Your storefront'}</h1>
+          <h1 className="sh-title">{data.official ? 'Official storefront' : 'Your storefront'}</h1>
           <p className="text-sm text-shasta-muted">{data.official ? 'The face of the Store. Everything the owner publishes appears here, marked Official.' : 'Your own page in the Store. Everything you publish appears on it, and people can follow it.'}</p>
         </div>
         <Button variant="secondary" onClick={() => go(storePath(data.slug))}><Eye /> View storefront</Button>
       </header>
 
       <section aria-label="Live preview" className="mb-6">
-        <p className="mb-2 text-xs font-medium tracking-wide text-shasta-muted uppercase">Live preview</p>
+        <p className="mb-2 text-xs text-shasta-muted">Live preview</p>
         <StorefrontHeader store={preview} />
       </section>
 
@@ -148,7 +148,7 @@ export function StorefrontEditor() {
                   {palette.map((h) => (
                     <label key={h} className="cursor-pointer">
                       <input type="radio" name="accent" value={h} checked={form.accent === h} onChange={() => setForm({ ...form, accent: h })} className="peer sr-only" aria-label={`Colour ${h}`} />
-                      <span style={{ background: `oklch(0.6 0.16 ${h})` }} className="block size-9 rounded-full ring-2 ring-transparent ring-offset-2 ring-offset-shasta-home transition peer-checked:ring-shasta-fg peer-focus-visible:ring-shasta-accent" />
+                      <span style={{ background: `oklch(0.6 0.16 ${h})` }} className="block size-9 rounded-full ring-2 ring-transparent ring-offset-2 ring-offset-shasta-home transition-shadow duration-150 ease-shasta peer-checked:ring-shasta-fg peer-focus-visible:ring-shasta-accent" />
                     </label>
                   ))}
                 </div>
@@ -165,7 +165,7 @@ export function StorefrontEditor() {
         <aside className="grid content-start gap-4">
           <Card title="Set-up" subtitle={`${done} of ${checklist.length} done`}>
             <div className="mb-3 h-1.5 overflow-hidden rounded-full bg-shasta-field" role="progressbar" aria-valuenow={done} aria-valuemin={0} aria-valuemax={checklist.length} aria-label="Storefront set-up progress">
-              <div className="h-full rounded-full bg-shasta-accent transition-all" style={{ width: `${(done / checklist.length) * 100}%` }} />
+              <div className="h-full origin-left rounded-full bg-shasta-accent transition-transform duration-300 ease-shasta" style={{ transform: `scaleX(${done / checklist.length})` }} />
             </div>
             <ul className="grid gap-2 text-sm">
               {checklist.map(([label, v]) => (

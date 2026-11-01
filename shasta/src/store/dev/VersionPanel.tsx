@@ -64,7 +64,7 @@ function Dropzone({ vid, onDone }: { vid: string; onDone: (app: DevApp, report: 
       {progress !== null && (
         <div className="mt-3 flex items-center gap-3" role="status">
           <div className="h-2 flex-1 overflow-hidden rounded-full bg-shasta-field" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Upload progress">
-            <div className="h-full bg-shasta-accent transition-[width]" style={{ width: `${Math.round(progress * 100)}%` }} />
+            <div className="h-full origin-left bg-shasta-accent transition-transform duration-150 ease-shasta" style={{ transform: `scaleX(${progress})` }} />
           </div>
           <span className="w-24 text-xs text-shasta-muted tabular-nums">{progress >= 1 ? 'Validating…' : `${Math.round(progress * 100)}%`}</span>
           <Button size="sm" variant="ghost" aria-label="Cancel upload" onClick={() => abort.current?.()}><X /> Cancel</Button>

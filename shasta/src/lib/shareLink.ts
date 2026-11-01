@@ -8,7 +8,7 @@ import { inInstalledApp } from './shastaApp'
 const SLUG = /^[a-z0-9][a-z0-9-]{0,79}$/
 
 /** The public web address of this Shasta: this page's origin, or VITE_SHARE_ORIGIN inside the installed app. */
-function siteOrigin(): string | null {
+export function siteOrigin(): string | null {
   const configured = import.meta.env.VITE_SHARE_ORIGIN as string | undefined
   if (configured?.startsWith('https://')) return configured.replace(/\/+$/, '')
   if (inInstalledApp() || !/^https?:$/.test(location.protocol)) return null

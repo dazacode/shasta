@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { CheckCircle2, Clock, Send, Wrench, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { PublishDemo } from '@/components/demos/PublishDemo'
 import { useUi } from '@/stores/uiStore'
 import { api, errorMessage } from './api'
 import { Message } from './components'
@@ -222,12 +223,14 @@ export default function ApplyPage() {
   return (
     <div className="mx-auto grid max-w-2xl gap-4 pt-2">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Publish in the Store</h1>
+        <h1 className="sh-title">Publish in the Store</h1>
         <p className="text-sm text-shasta-muted">Anyone can apply to publish games and apps in the Shasta Store; the Store owner reads every application and answers it. Once approved you get your own storefront, and your first submissions are reviewed before they go live.</p>
         <p className="mt-2 text-sm text-shasta-muted">
           Publishing mostly happens in the terminal: the <code className="rounded bg-shasta-field px-1">shasta</code> command (the publishing tool, which is open source) checks a game the way the Store will, previews it in the Store's sandbox and publishes it in one step. You can apply there too with <code className="rounded bg-shasta-field px-1">shasta apply</code>.
         </p>
       </div>
+      {/* what publishing looks like, start to listing (components/demos/PublishDemo.tsx) */}
+      <PublishDemo />
       {staff ? (
         <Message icon={<Wrench className="size-5" />} title="You are already a contributor" action={<Button onClick={() => go('/develop')}>Open Develop</Button>} />
       ) : error ? (

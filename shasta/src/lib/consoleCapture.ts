@@ -119,6 +119,31 @@ export function captureConsole(win: Window, source: string | (() => string)) {
   }
 }
 
+let listening = false
+let workerChannel: BroadcastChannel | null = null
+/**
+ * Lines from proxied WORKERS (proxy/inject/consoleForward.js, put in front of every worker script): games run in
+ * workers, whose console never reaches a window. Same-origin BroadcastChannel; shown as text only.
+ */
+export function listenToWorkers(channel = 'shasta-devtools') {
+  if (listening || typeof BroadcastChannel === 'undefined') return
+  listening = true
+  try {
+    // kept in a module variable so it is never collected
+    workerChannel = new BroadcastChannel(channel)
+    workerChannel.onmessage = (e: MessageEvent) => {
+      // a message posted through Scramjet's patched postMessage arrives wrapped: { $scramjet$data: … }
+      const raw = e.data as Record<string, unknown> | null
+      const d = (raw && typeof raw === 'object' && '$scramjet$data' in raw ? raw.$scramjet$data : raw) as { kind?: unknown; level?: unknown; source?: unknown; text?: unknown } | null
+      if (!d || d.kind !== 'shasta-console' || typeof d.text !== 'string' || typeof d.source !== 'string') return
+      const level = LEVELS.includes(d.level as ConsoleLevel) ? (d.level as ConsoleLevel) : 'log'
+      push(level, d.source.slice(0, 120), d.text)
+    }
+  } catch {
+    listening = false
+  }
+}
+
 export function consoleText(entries: ConsoleEntry[]): string {
   return entries.map((e) => `${new Date(e.at).toISOString()} [${e.source}] ${e.level.toUpperCase()} ${e.text}`).join('\n')
 }

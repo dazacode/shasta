@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, Flame, Gamepad2, History, LayoutGrid, Megaphone, PackageOpen, Sparkles } from 'lucide-react'
+import { ArrowRight, Gamepad2, Layers, LayoutGrid, Megaphone, PackageOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { api } from './api'
@@ -14,8 +14,9 @@ import { useSettings } from '@/stores/settingsStore'
 import { useTabs } from '@/stores/tabsStore'
 import { AppAction, AppGrid, AppIcon, AppTile, Chip, LazyMount, LoadError, LoadMore, Message, Section, Shelf, StoreTile, TILE_FRAME, TileLink, TileSkeleton, TileSkeletons } from './components'
 import type { AppCard, Home, SearchResult } from './types'
-import { useHalloweenLook } from '@/lib/seasonal'
-import { HalloweenSection } from '@/components/seasonal/Halloween'
+import { useSeasonLook } from '@/lib/seasonal'
+import { SeasonSection, THEMES } from '@/components/seasonal/Season'
+import type { ActiveEvent } from '@/lib/events'
 
 const DAY = 86_400_000
 /** a rail with fewer apps than this (after leaving out what is already on the page) is not worth a row */
@@ -26,7 +27,7 @@ const GENRE_RAILS = 8
 function SeeAll({ path, label = 'See all' }: { path: string; label?: string }) {
   const { go } = useStoreNav()
   return (
-    <button onClick={() => go(path)} className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-shasta-accent hover:underline">
+    <button onClick={() => go(path)} className="inline-flex shrink-0 items-center gap-1 text-sm text-shasta-muted transition-colors duration-150 ease-shasta hover:text-shasta-fg">
       {label} <ArrowRight className="size-3.5" aria-hidden />
     </button>
   )
@@ -50,11 +51,11 @@ const RowSkeleton = () => (
 function RankTile({ app, rank }: { app: AppCard; rank: number }) {
   return (
     <article className={cn(TILE_FRAME, 'flex w-72 items-center gap-2 py-4 pr-4 pl-2')}>
-      <span aria-hidden className="w-12 shrink-0 text-center text-5xl font-black tracking-tighter text-shasta-accent/35 tabular-nums transition-colors group-hover:text-shasta-accent/70">{rank}</span>
+      <span aria-hidden className="w-12 shrink-0 text-center font-mono text-4xl font-normal text-shasta-faint/60 tabular-nums transition-colors duration-150 ease-shasta group-hover:text-shasta-muted">{rank}</span>
       <AppIcon app={app} size={64} eager={rank <= 4} />
       <div className="ml-1 flex min-w-0 flex-1 flex-col gap-2">
         <div className="min-w-0">
-          <p className="truncate font-semibold leading-snug">
+          <p className="truncate leading-5 font-medium">
             <TileLink app={app} label={`Number ${rank}: ${app.name}`}>{app.name}</TileLink>
           </p>
           <p className="truncate text-xs text-shasta-muted">{app.genres?.[0]?.name ?? app.category?.name ?? app.developer}</p>
@@ -71,7 +72,7 @@ function RecentTile({ app }: { app: AppCard }) {
     <article className={cn(TILE_FRAME, 'flex w-60 items-center gap-3 p-3')}>
       <AppIcon app={app} size={48} />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <p className="truncate text-sm font-semibold"><TileLink app={app} label={app.name}>{app.name}</TileLink></p>
+        <p className="truncate text-sm font-medium"><TileLink app={app} label={app.name}>{app.name}</TileLink></p>
         <AppAction app={app} className="relative z-10 w-fit" />
       </div>
     </article>
@@ -79,7 +80,7 @@ function RecentTile({ app }: { app: AppCard }) {
 }
 
 const KINDS = [
-  ['all', 'All', Sparkles],
+  ['all', 'All', Layers],
   ['games', 'Games', Gamepad2],
   ['apps', 'Apps', LayoutGrid],
 ] as const
@@ -107,17 +108,14 @@ function FacetRail({ facet, index, exclude, claims }: { facet: Facet; index: num
   )
 }
 
-/** Halloween 2026 (lib/seasonal.ts): three spooky shelves under one banner, nothing repeated between them or from
- *  what the page already shows higher up. Plain catalogue queries, the same any search makes. */
-const SPOOKY: { title: string; subtitle: string; query: string; see: string }[] = [
-  { title: 'Fright night favourites', subtitle: 'The most installed horror games', query: 'genre=horror&sort=popular', see: '/search?genre=horror&sort=popular' },
-  { title: 'Halloween treats', subtitle: 'Pumpkins, costumes and trick-or-treating', query: 'q=halloween', see: '/search?q=halloween' },
-  { title: 'Spooky but cozy', subtitle: 'For the ones who scare easily', query: 'q=spooky', see: '/search?q=spooky' },
-]
-function HalloweenShelves({ exclude }: { exclude: Set<string> }) {
-  const a = useApi<SearchResult>(`/api/catalog/apps?${SPOOKY[0].query}&limit=30`)
-  const b = useApi<SearchResult>(`/api/catalog/apps?${SPOOKY[1].query}&limit=30`)
-  const c = useApi<SearchResult>(`/api/catalog/apps?${SPOOKY[2].query}&limit=30`)
+/** The holiday on now (lib/events.ts): its theme's three shelves under one banner, nothing repeated between them or
+ *  from what the page already shows higher up. Plain catalogue queries, the same any search makes. */
+function SeasonShelves({ season, exclude }: { season: ActiveEvent; exclude: Set<string> }) {
+  const theme = THEMES[season.event.theme]
+  const shelves = theme.store.shelves
+  const a = useApi<SearchResult>(`/api/catalog/apps?${shelves[0].query}&limit=30`)
+  const b = useApi<SearchResult>(`/api/catalog/apps?${shelves[1].query}&limit=30`)
+  const c = useApi<SearchResult>(`/api/catalog/apps?${shelves[2].query}&limit=30`)
   const lists = useMemo(() => {
     const seen = new Set(exclude)
     return [a.data, b.data, c.data].map((d) => {
@@ -129,8 +127,8 @@ function HalloweenShelves({ exclude }: { exclude: Set<string> }) {
   }, [a.data, b.data, c.data, exclude])
   if ([a, b, c].every((r) => r.error) || lists.every((l) => l && l.length < 3)) return null
   return (
-    <HalloweenSection id="store" title="Halloween in the Store" subtitle="Horror games, Halloween treats and cozy spooks. Here until November 1." className="mb-12">
-      {SPOOKY.map((shelf, i) => {
+    <SeasonSection place="store" season={season} title={theme.store.title} subtitle={theme.store.subtitle} className="mb-12">
+      {shelves.map((shelf, i) => {
         const list = lists[i]
         if (list && list.length < 3) return null
         return (
@@ -139,7 +137,7 @@ function HalloweenShelves({ exclude }: { exclude: Set<string> }) {
           </Section>
         )
       })}
-    </HalloweenSection>
+    </SeasonSection>
   )
 }
 
@@ -191,7 +189,7 @@ function ForYouRail({ exclude, facets, onPicked }: { exclude: Set<string>; facet
           {picks.map((p) => (
             <div key={p.app.id} className="flex w-64 flex-col gap-2">
               <AppTile app={p.app} variant="cover" />
-              <p className="flex items-center gap-1.5 truncate px-1 text-xs text-shasta-muted"><Sparkles className="size-3 shrink-0" aria-hidden /> {p.reason}</p>
+              <p className="truncate px-1 text-xs text-shasta-faint">{p.reason}</p>
             </div>
           ))}
         </Shelf>
@@ -226,8 +224,8 @@ function BrowseAll({ kind, facets, kindTotal }: { kind: Kind; facets: Facet[]; k
     <section aria-label="Browse everything" className="mt-4 border-t border-shasta-line pt-10">
       <header className="mb-5 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight">{pick ? `${pick.name}: ${count ?? ''}` : `Browse ${count !== undefined ? `all ${count} ` : 'all '}${noun}`}</h2>
-          <p className="text-sm text-shasta-muted">Keep scrolling: more load as you go</p>
+          <h2 className="sh-heading">{pick ? `${pick.name}: ${count ?? ''}` : `Browse ${count !== undefined ? `all ${count} ` : 'all '}${noun}`}</h2>
+          <p className="mt-1 text-sm text-shasta-muted">Keep scrolling: more load as you go</p>
         </div>
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-2 text-sm text-shasta-muted">
@@ -244,7 +242,7 @@ function BrowseAll({ kind, facets, kindTotal }: { kind: Kind; facets: Facet[]; k
           <Chip active={!pick} onClick={() => setPick(null)}>All</Chip>
           {facets.map((f) => (
             <Chip key={`${f.param}-${f.id}`} active={pick?.param === f.param && pick.id === f.id} onClick={() => setPick(f)}>
-              {f.name} {f.count !== null && <span className="ml-1 text-xs opacity-60">{f.count}</span>}
+              {f.name}{f.count !== null && <span className="font-mono text-xs text-shasta-faint tabular-nums">{f.count}</span>}
             </Chip>
           ))}
         </div>
@@ -271,7 +269,7 @@ function BrowseAll({ kind, facets, kindTotal }: { kind: Kind; facets: Facet[]; k
 export default function StoreHome() {
   const [kind, setKind] = useState<Kind>('all')
   const { go } = useStoreNav()
-  const halloween = useHalloweenLook()
+  const season = useSeasonLook()
   const user = useStore((s) => s.user)
   const library = useStore((s) => s.library)
   const { data, loading, error, offline, reload } = useApi<Home>('/api/catalog/home')
@@ -338,7 +336,7 @@ export default function StoreHome() {
   if (error && !data) return <LoadError message={error} offline={offline} onRetry={reload} />
   if (!data || !page) return (
     <div className="pt-2">
-      <div className="mb-9 h-72 animate-pulse rounded-3xl bg-shasta-home ring-1 ring-shasta-line" />
+      <div className="mb-10 h-72 animate-pulse rounded-2xl bg-shasta-home ring-1 ring-shasta-line" />
       <RowSkeleton />
     </div>
   )
@@ -362,10 +360,10 @@ export default function StoreHome() {
   return (
     <div className="pt-2" aria-busy={loading}>
       {announcement && (
-        <div className="mb-5 flex items-start gap-3 rounded-2xl bg-shasta-accent/12 px-4 py-3 ring-1 ring-shasta-accent/30">
-          <Megaphone className="mt-0.5 size-4 shrink-0 text-shasta-accent" aria-hidden />
+        <div className="mb-6 flex items-start gap-3 rounded-xl bg-shasta-home px-4 py-3 ring-1 ring-shasta-line">
+          <Megaphone className="mt-0.5 size-4 shrink-0 text-shasta-muted" aria-hidden />
           <div className="min-w-0 flex-1 text-sm">
-            <p className="font-semibold">{announcement.title}</p>
+            <p className="font-medium">{announcement.title}</p>
             {announcement.body && <p className="text-shasta-muted">{announcement.body}</p>}
           </div>
           {announcement.appSlug && <Button size="sm" variant="secondary" onClick={() => go(appPath(announcement.appSlug!))}>View</Button>}
@@ -375,14 +373,14 @@ export default function StoreHome() {
       <Hero apps={data.featured} />
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-        <div className="inline-flex rounded-full bg-shasta-field p-1 ring-1 ring-shasta-line" role="group" aria-label="Show">
+        <div className="inline-flex rounded-[10px] bg-shasta-field p-0.5" role="group" aria-label="Show">
           {KINDS.map(([v, l, Icon]) => (
             <button
               key={v}
               type="button"
               aria-pressed={kind === v}
               onClick={() => setKind(v)}
-              className={cn('flex h-8 items-center gap-1.5 rounded-full px-4 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-shasta-accent', kind === v ? 'bg-shasta-accent text-shasta-accent-fg' : 'text-shasta-muted hover:text-shasta-fg')}
+              className={cn('flex h-8 items-center gap-2 rounded-lg px-3 text-sm transition-[color,background-color,box-shadow] duration-150 ease-shasta outline-none focus-visible:ring-2 focus-visible:ring-shasta-accent', kind === v ? 'sh-selected' : 'text-shasta-muted hover:text-shasta-fg')}
             >
               <Icon className="size-4" aria-hidden /> {l}
             </button>
@@ -395,16 +393,16 @@ export default function StoreHome() {
         <nav aria-label="Genres" className="-mx-1 mb-10 flex gap-2 overflow-x-auto px-1 py-1 [scrollbar-width:none]">
           {page.facets.map((f) => (
             <Chip key={`${f.param}-${f.id}`} className="shrink-0" onClick={() => go(`/search?${facetQuery(f)}`)}>
-              {f.name} {f.count !== null && <span className="ml-1 text-xs opacity-60">{f.count}</span>}
+              {f.name}{f.count !== null && <span className="font-mono text-xs text-shasta-faint tabular-nums">{f.count}</span>}
             </Chip>
           ))}
         </nav>
       )}
 
-      {halloween && kind !== 'apps' && <HalloweenShelves exclude={page.exclude} />}
+      {season && kind !== 'apps' && <SeasonShelves key={season.event.id} season={season} exclude={page.exclude} />}
 
       {page.recent.length > 0 && (
-        <Section title="Jump back in" subtitle="What you opened last on this device" action={<History className="size-4 text-shasta-muted" aria-hidden />}>
+        <Section title="Jump back in" subtitle="What you opened last on this device">
           <Shelf>{page.recent.map((a) => <RecentTile key={a.id} app={a} />)}</Shelf>
         </Section>
       )}
@@ -422,7 +420,7 @@ export default function StoreHome() {
       {kind === 'all' && <ForYouRail exclude={page.exclude} facets={page.facets} onPicked={onPicked} />}
 
       {page.collections.map((c) => (
-        <Section key={c.id} title={c.title} subtitle={c.description || undefined} action={<Sparkles className="size-4 text-shasta-muted" aria-hidden />}>
+        <Section key={c.id} title={c.title} subtitle={c.description || undefined}>
           <Row apps={c.apps} />
         </Section>
       ))}
@@ -438,7 +436,7 @@ export default function StoreHome() {
       )}
 
       {page.favourites.length > 0 && (
-        <Section title="All-time favourites" subtitle="Most installed of all time" action={<Flame className="size-4 text-shasta-accent" aria-hidden />}>
+        <Section title="All-time favourites" subtitle="Most installed of all time">
           <Row apps={page.favourites} />
         </Section>
       )}

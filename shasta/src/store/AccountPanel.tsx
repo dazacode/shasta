@@ -14,7 +14,7 @@ const ROLE_TEXT = { owner: 'Store owner', contributor: 'Approved contributor', u
 function Card({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
   return (
     <section className="rounded-2xl bg-shasta-home p-5 ring-1 ring-shasta-line">
-      <h2 className="mb-1 flex items-center gap-2 font-semibold [&>svg]:size-4 [&>svg]:text-shasta-accent">{icon} {title}</h2>
+      <h2 className="mb-1 flex items-center gap-2 font-medium [&>svg]:size-4 [&>svg]:text-shasta-faint">{icon} {title}</h2>
       {children}
     </section>
   )
@@ -95,7 +95,7 @@ export default function AccountPanel() {
   return (
     <div className="mx-auto grid max-w-2xl gap-4 pt-2">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
+        <h1 className="sh-title">Account</h1>
         <p className="text-sm text-shasta-muted">Shasta has no user accounts. You never need to register, give an email address or choose a password to browse, install apps or customise Shasta.</p>
       </div>
 

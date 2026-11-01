@@ -125,14 +125,14 @@ function Avatar({ author, size = 40 }: { author: Pick<ChatMessage['author'], 'na
   if (author.avatarUrl && !failed)
     return <img src={media(author.avatarUrl)} crossOrigin={MEDIA_CORS} alt="" style={style} className="shrink-0 rounded-full object-cover" onError={() => setFailed(true)} />
   return (
-    <div aria-hidden className="grid shrink-0 place-items-center rounded-full font-semibold text-white" style={{ ...style, fontSize: size * 0.38, background: author.color ?? `hsl(${nameHue(author.name)} 55% 50%)` }}>
+    <div aria-hidden className="grid shrink-0 place-items-center rounded-full font-medium text-white" style={{ ...style, fontSize: size * 0.38, background: author.color ?? `hsl(${nameHue(author.name)} 55% 50%)` }}>
       {initials(author.name)}
     </div>
   )
 }
 
 function Tag({ children, title }: { children: ReactNode; title: string }) {
-  return <span title={title} className="translate-y-[-1px] rounded-[3px] bg-[var(--c-accent)] px-1 py-px text-[10px] font-semibold leading-[15px] text-white uppercase">{children}</span>
+  return <span title={title} className="rounded-[4px] bg-[var(--c-accent)] px-1 text-[11px] font-medium leading-4 text-white">{children}</span>
 }
 
 function Attachments({ items }: { items: ChatMessage['attachments'] }) {
@@ -178,7 +178,7 @@ function Attachments({ items }: { items: ChatMessage['attachments'] }) {
 function MessageItem({ m, head, onReply, canReply }: { m: ChatMessage; head: boolean; onReply: (m: ChatMessage) => void; canReply: boolean }) {
   const mine = sentIds.has(m.id)
   return (
-    <div className={cn('group relative pr-12 pl-[72px] hover:bg-[var(--c-hover)]', head ? 'mt-[17px] min-h-11 py-0.5' : 'py-0.5')}>
+    <div className={cn('group relative pr-12 pl-[72px] hover:bg-[var(--c-hover)]', head ? 'mt-4 min-h-11 py-0.5' : 'py-0.5')}>
       {m.replyTo && (
         <div className="relative mb-1 flex min-w-0 items-center gap-1 text-[13px] text-[var(--c-muted)]">
           <span aria-hidden className="absolute top-1/2 -left-[38px] h-2.5 w-8 rounded-tl-md border-t-2 border-l-2 border-[#4e5058]" />
@@ -206,7 +206,7 @@ function MessageItem({ m, head, onReply, canReply }: { m: ChatMessage; head: boo
       )}
       <div className={cn('text-[15px] leading-[22px] text-[var(--c-text)]', mine && 'text-[var(--c-head)]')}>
         <MessageBody content={m.content} />
-        {m.editedAt && <span className="ml-1 text-[10px] text-[var(--c-muted)]">(edited)</span>}
+        {m.editedAt && <span className="ml-1 text-[11px] text-[var(--c-muted)]">(edited)</span>}
       </div>
       <Attachments items={m.attachments} />
       {canReply && (
@@ -268,7 +268,7 @@ function NameDialog({ info, initial, onDone, onClose, rename }: { info: ChatInfo
         }}
       >
         <div className="p-4 pb-0 text-center">
-          <h2 id="chat-name-title" className="text-xl font-bold text-[var(--c-head)]">{rename ? 'Change your chat name' : `Join ${info.server.name}`}</h2>
+          <h2 id="chat-name-title" className="text-xl font-medium text-[var(--c-head)]">{rename ? 'Change your chat name' : `Join ${info.server.name}`}</h2>
           {!rename && <p className="mt-1 text-sm text-[var(--c-muted)]">Talk in this Discord server right from Shasta. No Discord account needed.</p>}
         </div>
         <div className="grid gap-3 p-4">
@@ -282,13 +282,13 @@ function NameDialog({ info, initial, onDone, onClose, rename }: { info: ChatInfo
           )}
           {!rename && info.rules.trim() && (
             <details className="rounded-md bg-[var(--c-side)] px-3 py-2 text-[13px]">
-              <summary className="cursor-pointer font-semibold text-[var(--c-head)]">Server rules</summary>
+              <summary className="cursor-pointer font-medium text-[var(--c-head)]">Server rules</summary>
               <p className="mt-2 whitespace-pre-wrap text-[var(--c-muted)]">{info.rules}</p>
             </details>
           )}
           <label className="grid gap-2">
-            <span className={cn('text-xs font-bold uppercase', error ? 'text-[#fa777c]' : 'text-[#b5bac1]')}>
-              Chat name{error && <span className="font-medium normal-case italic"> - {error}</span>}
+            <span className={cn('text-[13px] font-medium', error ? 'text-[#fa777c]' : 'text-[#b5bac1]')}>
+              Chat name{error && <span className="font-normal"> · {error}</span>}
             </span>
             <input
               value={name}
@@ -635,7 +635,7 @@ export default function ChatPage() {
         ) : (
           <div className="grid max-w-sm justify-items-center gap-3 text-center">
             <div className="grid size-14 place-items-center rounded-full bg-[var(--c-side)]"><MessagesSquare className="size-7" aria-hidden /></div>
-            <p className="text-lg font-semibold text-[var(--c-head)]">{infoError ? 'Chat could not load' : "Chat isn't set up on this Shasta server"}</p>
+            <p className="text-lg font-medium text-[var(--c-head)]">{infoError ? 'Chat could not load' : "Chat isn't set up on this Shasta server"}</p>
             <p className="text-sm">{infoError || "Community chat needs the server's Discord bot to be connected. It may be reconnecting right now."}</p>
             <button onClick={() => void loadInfo()} className="rounded-[3px] bg-[var(--c-accent)] px-4 py-2 text-sm font-medium text-white hover:bg-[#4752c4]">Check again</button>
             <p className="text-xs">Shasta checks again on its own every few seconds.</p>
@@ -649,7 +649,7 @@ export default function ChatPage() {
     info.server.iconUrl ? (
       <img src={media(info.server.iconUrl)} crossOrigin={MEDIA_CORS} alt="" style={{ width: size, height: size }} className="rounded-[16px] object-cover" />
     ) : (
-      <div aria-hidden style={{ width: size, height: size }} className="grid place-items-center rounded-[16px] bg-[var(--c-accent)] text-sm font-semibold text-white">{initials(info.server.name)}</div>
+      <div aria-hidden style={{ width: size, height: size }} className="grid place-items-center rounded-[16px] bg-[var(--c-accent)] text-sm font-medium text-white">{initials(info.server.name)}</div>
     )
 
   const sidebar = (
@@ -669,12 +669,12 @@ export default function ChatPage() {
       {/* channels */}
       <div className="flex w-60 min-w-0 flex-col bg-[var(--c-side)]">
         <div className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--c-rail)] px-4 shadow-sm">
-          <h1 className="truncate font-semibold text-[var(--c-head)]">{info.server.name}</h1>
+          <h1 className="truncate font-medium text-[var(--c-head)]">{info.server.name}</h1>
           <ChevronDown className="size-4 shrink-0 text-[var(--c-head)]" aria-hidden />
         </div>
         <nav aria-label="Channels" className="min-h-0 flex-1 overflow-y-auto px-2 pt-4">
-          <p className="mb-1 flex items-center gap-0.5 px-0.5 text-xs font-semibold tracking-wide text-[var(--c-muted)] uppercase">
-            <ChevronDown className="size-3" aria-hidden /> Text channels
+          <p className="mb-2 flex items-center gap-1 px-0.5 text-[13px] text-[var(--c-muted)]">
+            <ChevronDown className="size-3.5" aria-hidden /> Text channels
           </p>
           <div className="grid gap-0.5">
             {info.channels.map((c) => (
@@ -705,7 +705,7 @@ export default function ChatPage() {
                 <span aria-hidden className={cn('absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full border-[3px] border-[var(--c-panel)]', banned ? 'bg-[#f23f43]' : timedOut ? 'bg-[#f0b232]' : 'bg-[#23a55a]')} />
               </div>
               <div className="min-w-0 flex-1 leading-tight">
-                <p className="truncate text-sm font-semibold text-[var(--c-head)]">{chatter.name}</p>
+                <p className="truncate text-sm font-medium text-[var(--c-head)]">{chatter.name}</p>
                 <p className="truncate text-xs text-[var(--c-muted)]">{banned ? 'Blocked' : timedOut ? 'Timed out' : 'Web chat'}</p>
               </div>
               <PanelButton label="Change chat name" onClick={() => setDialog('rename')}><Pencil className="size-[18px]" /></PanelButton>
@@ -737,7 +737,7 @@ export default function ChatPage() {
             <Menu className="size-6" aria-hidden />
           </button>
           <Hash className="size-6 shrink-0 text-[var(--c-muted)]" aria-hidden />
-          <h2 className="truncate font-semibold text-[var(--c-head)]">{channel?.name ?? info.server.name}</h2>
+          <h2 className="truncate font-medium text-[var(--c-head)]">{channel?.name ?? info.server.name}</h2>
           {channel?.topic && (
             <>
               <span aria-hidden className="mx-1 hidden h-6 w-px bg-[#3f4147] sm:block" />
@@ -751,7 +751,7 @@ export default function ChatPage() {
             <div className="grid h-full place-items-center p-6 text-center">
               <div className="grid max-w-sm justify-items-center gap-3">
                 <div className="grid size-16 place-items-center rounded-full bg-[var(--c-side)]"><Hash className="size-8 text-[var(--c-muted)]" aria-hidden /></div>
-                <p className="text-lg font-semibold text-[var(--c-head)]">Nothing to read yet</p>
+                <p className="text-lg font-medium text-[var(--c-head)]">Nothing to read yet</p>
                 <p className="text-sm text-[var(--c-muted)]">The moderators of {info.server.name} haven't opened any channels to Shasta yet. Check back soon.</p>
               </div>
             </div>
@@ -760,7 +760,7 @@ export default function ChatPage() {
               {state.loaded && !state.hasMore && (
                 <div className="mx-4 mt-4 mb-2">
                   <div className="mb-2 grid size-[68px] place-items-center rounded-full bg-[#41434a]"><Hash className="size-10 text-white" aria-hidden /></div>
-                  <p className="text-[32px] leading-10 font-bold text-[var(--c-head)]">Welcome to #{channel.name}!</p>
+                  <p className="text-[32px] leading-10 font-medium tracking-[-0.02em] text-[var(--c-head)]">Welcome to #{channel.name}</p>
                   <p className="text-[var(--c-muted)]">This is the start of the #{channel.name} channel.</p>
                 </div>
               )}
@@ -777,7 +777,7 @@ export default function ChatPage() {
               {rows.map(({ message, head, newDay }) => (
                 <Fragment key={message.id}>
                   {newDay && (
-                    <div className="mx-4 mt-6 mb-2 flex items-center text-xs font-semibold text-[var(--c-muted)]" role="separator">
+                    <div className="mx-4 mt-6 mb-2 flex items-center text-xs font-medium text-[var(--c-muted)]" role="separator">
                       <span className="h-px flex-1 bg-[#3f4147]" /><span className="px-1">{dayLabel(message.createdAt)}</span><span className="h-px flex-1 bg-[#3f4147]" />
                     </div>
                   )}
@@ -826,7 +826,7 @@ export default function ChatPage() {
                 <div className="overflow-hidden rounded-lg bg-[var(--c-input)]">
                   {replyTo && (
                     <div className="flex h-9 items-center gap-2 bg-[var(--c-side)] px-4 text-sm text-[var(--c-muted)]">
-                      <span className="min-w-0 truncate">Replying to <span className="font-semibold text-[var(--c-text)]">{replyTo.author.name}</span></span>
+                      <span className="min-w-0 truncate">Replying to <span className="font-medium text-[var(--c-text)]">{replyTo.author.name}</span></span>
                       <button className="ml-auto grid size-5 place-items-center rounded-full bg-[var(--c-muted)] text-[var(--c-side)] hover:bg-[var(--c-text)]" aria-label="Cancel reply" onClick={() => setReplyTo(null)}>
                         <X className="size-3.5" strokeWidth={3} aria-hidden />
                       </button>
@@ -865,7 +865,7 @@ export default function ChatPage() {
                 </div>
                 <div className="flex h-5 items-center justify-between pt-1 text-xs text-[var(--c-muted)]">
                   <span>{typingNow.length ? <Typing names={typingNow} /> : waitLeft > 0 ? `Slow mode: ${formatWait(waitLeft)}` : channel.slowmode ? `Slow mode is on (${formatWait(channel.slowmode)})` : ''}</span>
-                  <span className={cn(tooLong && 'font-semibold text-[#fa777c]')}>{draft.length > maxLength * 0.8 ? maxLength - draft.length : ''}</span>
+                  <span className={cn('font-mono tabular-nums', tooLong && 'text-[#fa777c]')}>{draft.length > maxLength * 0.8 ? maxLength - draft.length : ''}</span>
                 </div>
               </>
             )}
@@ -890,7 +890,7 @@ function Typing({ names }: { names: string[] }) {
     <span className="inline-flex items-center gap-1.5" role="status" aria-live="polite">
       <span aria-hidden className="inline-flex gap-0.5">
         {[0, 1, 2].map((i) => (
-          <span key={i} className="size-1.5 animate-bounce rounded-full bg-[var(--c-text)]" style={{ animationDelay: `${i * 0.15}s`, animationDuration: '1s' }} />
+          <span key={i} className="size-1.5 animate-pulse rounded-full bg-[var(--c-text)] motion-reduce:animate-none" style={{ animationDelay: `${i * 0.2}s`, animationDuration: '1.4s' }} />
         ))}
       </span>
       <span className="truncate">{who}…</span>

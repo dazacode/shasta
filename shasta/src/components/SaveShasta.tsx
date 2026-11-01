@@ -3,7 +3,7 @@
 // the Discord (where new addresses are posted when one gets blocked: the one thing that really keeps people with us),
 // then shows how to add Shasta to the home screen. Bookmarking and installing on the computer come after.
 // One instance, mounted in App; opened from the main menu and What's new.
-import { useState, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { AppWindow, Check, Copy, Download, ExternalLink, MessagesSquare, MoreVertical, Share, Star } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { DISCORD_INVITE } from '@/lib/supporter'
@@ -13,12 +13,41 @@ import { QrImage } from './DiscordQr'
 import { installShasta, phoneAddress, platform, runningInstalled, siteAddress, useSaveShasta } from '@/lib/saveShasta'
 import { useUi } from '@/stores/uiStore'
 
+// The "why the Discord" demo (components/demos/SaveDemo.tsx): its own chunk, loaded only when this dialog opens
+const SaveDemo = lazy(() => import('./demos/SaveDemo'))
+
+/** Shasta's light/dark switch is the `dark` class on <html> (hooks/useAppearance.ts). */
+function useDark() {
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'))
+  useEffect(() => {
+    const root = document.documentElement
+    const obs = new MutationObserver(() => setDark(root.classList.contains('dark')))
+    obs.observe(root, { attributes: true, attributeFilter: ['class'] })
+    return () => {
+      obs.disconnect()
+    }
+  }, [])
+  return dark
+}
+
+/** Same-size box while the demo's chunk loads, so the dialog never jumps. */
+function Demo() {
+  const dark = useDark()
+  return (
+    <div className="w-full min-w-0">
+      <Suspense fallback={<div className="aspect-[464/300] w-full" aria-hidden />}>
+        <SaveDemo dark={dark} />
+      </Suspense>
+    </div>
+  )
+}
+
 const isMac = typeof navigator !== 'undefined' && /Mac/.test(navigator.platform)
 
 function Way({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
   return (
     <div className="flex gap-3 rounded-xl bg-shasta-home p-3 ring-1 ring-shasta-line">
-      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-shasta-accent/15 text-shasta-accent [&_svg]:size-5">{icon}</span>
+      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-shasta-field text-shasta-muted [&_svg]:size-[18px] [&_svg]:stroke-[1.6]">{icon}</span>
       <div className="min-w-0 flex-1 text-sm">
         <p className="font-medium">{title}</p>
         <div className="mt-0.5 text-shasta-muted">{children}</div>
@@ -82,13 +111,14 @@ export function SaveShastaHost() {
   const chromeos = platform() === 'chromeos'
   return (
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[90vh] overflow-y-auto [scrollbar-gutter:stable] sm:max-w-lg">
         {phone ? (
           <>
             <DialogHeader>
               <DialogTitle>Keep Shasta on your phone</DialogTitle>
               <DialogDescription>Two quick steps, and you'll always find your way back, even if a school network blocks the address.</DialogDescription>
             </DialogHeader>
+            {DISCORD_INVITE && <Demo />}
             {DISCORD_INVITE && (
               <div className="rounded-xl bg-[#5865f2]/12 p-4 ring-1 ring-[#5865f2]/40">
                 <p className="font-medium">1. Join our Discord</p>
@@ -107,9 +137,10 @@ export function SaveShastaHost() {
               <DialogTitle>Save Shasta so you never lose it</DialogTitle>
               <DialogDescription>School computers get reset and addresses get blocked. Your phone keeps Shasta safe.</DialogDescription>
             </DialogHeader>
+            {DISCORD_INVITE && <Demo />}
             <div className="grid gap-2">
               {phoneLink && (
-                <div className="flex items-center gap-4 rounded-xl bg-shasta-accent/10 p-4 ring-1 ring-shasta-accent/30">
+                <div className="flex items-center gap-4 rounded-xl bg-shasta-home p-4 ring-1 ring-shasta-line">
                   <QrImage value={phoneLink} label="QR code to open Shasta on your phone" className="size-32 shrink-0 p-1 ring-1 ring-shasta-line" />
                   <div className="min-w-0 text-sm">
                     <p className="font-medium">Scan with your phone</p>
@@ -120,8 +151,8 @@ export function SaveShastaHost() {
                 </div>
               )}
               <Way icon={<Star />} title="Bookmark it on this computer">
-                Click the <strong className="text-shasta-fg">☆ star</strong> at the right end of your browser's own address bar (the one at the very top of the window). Or
-                click that bar and press {isMac ? '⌘D' : 'Ctrl+D'}.
+                Click the <strong className="font-medium text-shasta-fg"><Star className="inline size-3.5 -translate-y-px" aria-hidden /> star</strong> at the right end of your browser's own address bar (the one at the very top of the window). Or
+                click that bar and press <kbd className="rounded-[4px] border border-shasta-line bg-shasta-field px-1 font-mono text-[11px] text-shasta-fg">{isMac ? '⌘D' : 'Ctrl+D'}</kbd>.
                 {address && <CopyAddress address={address} />}
               </Way>
               {already ? (

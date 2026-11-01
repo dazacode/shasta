@@ -33,7 +33,7 @@ export class PageBoundary extends Component<Props, { error: Error | null; key?: 
       <div className="grid h-full place-items-center p-8 text-shasta-fg" role="alert">
         <div className="max-w-md text-center">
           <div className="mx-auto mb-4 grid size-14 place-items-center rounded-2xl bg-shasta-field"><AlertTriangle className="size-6 text-shasta-warn" /></div>
-          <h1 className="text-lg font-semibold">This page ran into a problem</h1>
+          <h1 className="text-lg font-medium">This page ran into a problem</h1>
           <p className="mt-1 text-sm text-shasta-muted">Your other tabs are fine. If you just updated Shasta, the server may need restarting so the page and the server agree.</p>
           <p className="mt-3 rounded-lg bg-shasta-field px-3 py-2 text-left font-mono text-xs break-words text-shasta-muted">{this.state.error.message}</p>
           <div className="mt-5 flex justify-center gap-2">

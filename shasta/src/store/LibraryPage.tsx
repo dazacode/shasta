@@ -11,12 +11,15 @@ export function LibraryPage({ tabId }: { tabId: string }) {
   useStoreBoot()
   return (
     <NavProvider tabId={tabId} url="shasta://library" external>
-      <div className="mx-auto w-full max-w-6xl px-6 pb-16 text-shasta-fg">
-        <div className="flex items-center justify-end gap-3 pt-5">
-          <SupporterBadge />
-          <Button variant="secondary" onClick={() => useTabs.getState().openInternal('store')}><Store /> Open the Store</Button>
-        </div>
-        <MyApps />
+      <div className="mx-auto w-full max-w-6xl px-6 pt-8 pb-16 text-shasta-fg md:px-8">
+        <MyApps
+          actions={
+            <>
+              <Button variant="secondary" className="h-9 px-3" onClick={() => useTabs.getState().openInternal('store')}><Store /> Open the Store</Button>
+              <SupporterBadge />
+            </>
+          }
+        />
       </div>
     </NavProvider>
   )

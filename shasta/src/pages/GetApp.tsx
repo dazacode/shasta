@@ -8,6 +8,7 @@ import { useLibrary } from '@/stores/libraryStore'
 import { useStore } from '@/store/storeStore'
 import { emptyLocal } from '@/store/localLibrary'
 import { useUi } from '@/stores/uiStore'
+import { InstallDemo } from '@/components/demos/InstallDemo'
 
 // shasta://get-app: how to install Shasta as an app. Since ChromeOS 150 a personal device can install
 // the downloaded file itself (no developer flags, no admin) — see docs/on-device-wisp.md §3. A managed
@@ -48,7 +49,7 @@ function saveProgress(p: Progress) {
 function CopyRow({ text, copied, onCopy }: { text: string; copied: boolean; onCopy: () => void }) {
   return (
     <div className="flex items-center gap-2 rounded-xl bg-shasta-field p-2 pl-3">
-      <code className="min-w-0 flex-1 truncate font-mono text-[13px]">{text}</code>
+      <code className="min-w-0 flex-1 truncate font-mono text-[13px] text-shasta-fg">{text}</code>
       <Button
         size="sm"
         variant={copied ? 'secondary' : 'default'}
@@ -64,7 +65,7 @@ function StepDots({ count, current }: { count: number; current: number }) {
   return (
     <div className="flex items-center gap-1.5" aria-label={`Step ${current + 1} of ${count}`}>
       {Array.from({ length: count }, (_, i) => (
-        <span key={i} className={`h-1.5 rounded-full transition-all ${i === current ? 'w-6 bg-shasta-accent' : i < current ? 'w-1.5 bg-shasta-accent/60' : 'w-1.5 bg-shasta-line'}`} />
+        <span key={i} className={`h-1.5 rounded-full transition-colors duration-150 ease-shasta ${i === current ? 'w-6 bg-shasta-fg' : i < current ? 'w-1.5 bg-shasta-faint' : 'w-1.5 bg-shasta-line'}`} />
       ))}
     </div>
   )
@@ -73,9 +74,9 @@ function StepDots({ count, current }: { count: number; current: number }) {
 /** One screen of the guide: icon, title, body, and the footer buttons. */
 function Card({ icon, title, children, footer }: { icon: ReactNode; title: string; children: ReactNode; footer?: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-shasta-line bg-shasta-chrome p-6" aria-live="polite">
-      <div className="mb-4 grid size-11 place-items-center rounded-2xl bg-shasta-accent/15 text-shasta-accent">{icon}</div>
-      <h2 className="text-lg font-semibold">{title}</h2>
+    <section className="rounded-2xl border border-shasta-line bg-shasta-home p-6" aria-live="polite">
+      <div className="mb-4 grid size-10 place-items-center rounded-xl bg-shasta-field text-shasta-muted">{icon}</div>
+      <h2 className="sh-heading">{title}</h2>
       <div className="mt-2 grid gap-3 text-sm text-shasta-muted">{children}</div>
       {footer && <div className="mt-6 flex flex-wrap items-center justify-between gap-3">{footer}</div>}
     </section>
@@ -86,9 +87,9 @@ export default function GetAppPage() {
   if (inInstalledApp()) return <InApp />
 
   return (
-    <div className="mx-auto w-full max-w-xl px-6 py-10 text-shasta-fg">
-      <header className="mb-6 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Get the Shasta app</h1>
+    <div className="mx-auto w-full max-w-xl px-8 pt-10 pb-16 text-shasta-fg">
+      <header className="mb-8">
+        <h1 className="sh-title">Get the Shasta app</h1>
         <p className="mt-1 text-sm text-shasta-muted">Shasta installed in Chrome: every site works, even when the proxy server is down.</p>
       </header>
       {isChromium() ? <Guide /> : (
@@ -110,6 +111,13 @@ function Guide() {
   const markCopied = (text: string) => setP((cur) => (cur.copied.includes(text) ? cur : { ...cur, copied: [...cur.copied, text] }))
   const restart = () => setP(START)
 
+  // the stageshow demo of the one-file install, on "Install it" of the personal-device path only (a managed
+  // Chromebook's admin decides, so the managed path never shows it)
+  const demo = (
+    <div className="mb-6" aria-label="Animation: download the file, open it, confirm, and Shasta opens in its own window" role="img">
+      <InstallDemo />
+    </div>
+  )
   if (!p.path) return <Choose onPick={(path) => set({ path, step: 0 })} />
   if (p.path === 'managed') return <Managed onBack={restart} />
 
@@ -141,6 +149,8 @@ function Guide() {
       )
     case 1:
       return (
+        <>
+        {demo}
         <Card icon={<PackageCheck className="size-5" />} title="Install it" footer={<>{back}{next("It's installed")}</>}>
           <p>Open the file you just downloaded — it ends in <code className="font-mono">.swbn</code>. {isChromeOS() ? 'In the Files app, open Downloads and double-click it.' : 'Open it from your Downloads folder.'} Chrome asks you to confirm, then Shasta opens in its own window and joins your apps.</p>
           <p className="text-xs">Chrome 150 and newer installs the downloaded file directly, with nothing to switch on.</p>
@@ -154,6 +164,7 @@ function Guide() {
             </div>
           </details>
         </Card>
+        </>
       )
     case 2:
       return (
@@ -197,11 +208,11 @@ function Choose({ onPick }: { onPick: (path: Path) => void }) {
   const option = (path: Path, icon: ReactNode, title: string, body: string) => (
     <button
       onClick={() => onPick(path)}
-      className="flex items-start gap-4 rounded-2xl border border-shasta-line bg-shasta-chrome p-5 text-left transition-colors hover:border-shasta-accent/60 hover:bg-shasta-hover focus-visible:outline-2 focus-visible:outline-shasta-accent"
+      className="flex items-start gap-4 rounded-2xl border border-shasta-line bg-shasta-home p-5 text-left transition-colors duration-150 ease-shasta hover:bg-shasta-hover focus-visible:outline-2 focus-visible:outline-shasta-accent"
     >
-      <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-shasta-accent/15 text-shasta-accent">{icon}</span>
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-shasta-field text-shasta-muted">{icon}</span>
       <span>
-        <span className="block font-semibold">{title}</span>
+        <span className="block font-medium">{title}</span>
         <span className="mt-0.5 block text-sm text-shasta-muted">{body}</span>
       </span>
       <ArrowRight className="ml-auto mt-3 size-4 shrink-0 text-shasta-muted" aria-hidden />
@@ -209,7 +220,7 @@ function Choose({ onPick }: { onPick: (path: Path) => void }) {
   )
   return (
     <div className="grid gap-3">
-      <p className="text-center text-sm text-shasta-muted">Where are you installing it?</p>
+      <p className="text-sm text-shasta-muted">Where are you installing it?</p>
       {option('own', <Laptop className="size-5" />, 'My own computer or Chromebook', 'About two minutes: download one file and open it. No settings to change.')}
       {option('managed', <School className="size-5" />, 'A school or work Chromebook', 'A managed device installs apps the way its administrator decides.')}
     </div>
@@ -233,7 +244,7 @@ function Managed({ onBack }: { onBack: () => void }) {
         className="w-fit"
         onClick={() => void navigator.clipboard.writeText(note).then(() => setCopiedNote(true))}
       >
-        {copiedNote ? <><Check /> Copied. Paste it in a message</> : <><Copy /> Copy a note for your admin</>}
+        {copiedNote ? <><Check /> Copied, paste it in a message</> : <><Copy /> Copy a note for your admin</>}
       </Button>
       {!APP_UPDATE_MANIFEST_URL && <p className="text-xs">This copy of Shasta hasn't published the app's update address yet, so your admin will need it from whoever runs Shasta.</p>}
     </Card>
@@ -242,7 +253,7 @@ function Managed({ onBack }: { onBack: () => void }) {
 
 function InApp() {
   return (
-    <div className="mx-auto w-full max-w-xl px-6 py-10 text-shasta-fg">
+    <div className="mx-auto w-full max-w-xl px-8 pt-10 pb-16 text-shasta-fg">
       <Card icon={<CheckCircle2 className="size-5" />} title="You're using the Shasta app">
         <p>Websites load straight from this device, with no proxy server, and every site runs as itself. Settings → Advanced → Page engine switches between that and Shasta's proxy.</p>
         <p>Coming from Shasta in a browser tab? Settings → Profile & data → Import brings your saved bookmarks and settings in.</p>

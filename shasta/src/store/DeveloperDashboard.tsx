@@ -45,9 +45,9 @@ function NewAppDialog({ open, onClose }: { open: boolean; onClose: () => void })
   }
 
   const option = (k: 'package' | 'linked', icon: React.ReactNode, title: string, body: string) => (
-    <label className={cn('flex cursor-pointer gap-3 rounded-xl p-3 ring-1 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-shasta-accent', kind === k ? 'bg-shasta-accent/10 ring-shasta-accent' : 'ring-shasta-line hover:bg-shasta-hover')}>
+    <label className={cn('flex cursor-pointer gap-3 rounded-xl p-3 ring-1 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-shasta-accent', kind === k ? 'bg-shasta-raised ring-shasta-fg/25' : 'ring-shasta-line hover:bg-shasta-hover')}>
       <input type="radio" name="kind" value={k} checked={kind === k} onChange={() => setKind(k)} className="sr-only" />
-      <span className="mt-0.5 text-shasta-accent">{icon}</span>
+      <span className="mt-0.5 text-shasta-muted">{icon}</span>
       <span>
         <span className="block text-sm font-medium">{title}</span>
         <span className="block text-xs text-shasta-muted">{body}</span>
@@ -94,7 +94,7 @@ function AppListItem({ app, showOwner }: { app: DevApp; showOwner: boolean }) {
         <AppIcon app={app} size={56} />
         <div className="min-w-0 flex-1 basis-48">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="truncate font-semibold">{app.name}</p>
+            <p className="truncate font-medium">{app.name}</p>
             <StatusBadge status={app.status} />
             {pending && <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-shasta-warn">v{pending.version} in review</span>}
           </div>
@@ -108,7 +108,7 @@ function AppListItem({ app, showOwner }: { app: DevApp; showOwner: boolean }) {
           {[['Installed', s.installed], ['Installs', s.totalInstalls], ['Launches', s.launches], ['Launches 7d', s.launchesLast7Days]].map(([k, v]) => (
             <div key={k}>
               <dt>{k}</dt>
-              <dd className="text-base font-semibold text-shasta-fg tabular-nums">{v}</dd>
+              <dd className="text-base font-medium text-shasta-fg tabular-nums">{v}</dd>
             </div>
           ))}
         </dl>
@@ -129,7 +129,7 @@ function AppList() {
     <div className="mx-auto max-w-4xl py-2">
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Develop</h1>
+          <h1 className="sh-title">Develop</h1>
           <p className="text-sm text-shasta-muted">{data.data?.canPublishDirectly ? 'You can publish directly.' : 'New versions are reviewed by the Store owner before they go live.'}</p>
         </div>
         <div className="flex items-center gap-4">
@@ -274,7 +274,7 @@ function Editor({ id }: { id: string }) {
         <div className="flex flex-wrap items-center gap-4">
           <AppIcon app={current} size={64} />
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-2xl font-semibold tracking-tight">{current.name}</h1>
+            <h1 className="truncate sh-title">{current.name}</h1>
             <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-shasta-muted">
               <StatusBadge status={current.status} />
               {current.kind === 'linked' ? 'Linked web app' : 'Uploaded package'}

@@ -27,7 +27,7 @@ type Capture = { kind: 'from' } | { kind: 'to'; from: string } | { kind: 'pad'; 
 
 function Kbd({ code, active, onClick, label }: { code: string | null; active?: boolean; onClick?: () => void; label?: string }) {
   const cls = cn(
-    'inline-flex h-7 min-w-9 items-center justify-center rounded-md border px-2 font-mono text-xs',
+    'inline-flex h-7 min-w-9 items-center justify-center rounded-md border px-2 font-mono text-xs transition-colors duration-150 ease-shasta',
     active ? 'animate-pulse border-shasta-accent bg-shasta-accent/15 text-shasta-accent' : 'border-shasta-line bg-shasta-field',
     !code && !active && 'text-shasta-muted',
   )
@@ -122,7 +122,7 @@ function ControlsDialog({ tab, onClose }: { tab: Tab; onClose: () => void }) {
         {!sandboxed && key && (
           <>
             <section aria-labelledby="ctl-keys">
-              <h3 id="ctl-keys" className="mb-2 flex items-center gap-2 text-sm font-semibold"><Keyboard className="size-4" /> Keyboard</h3>
+              <h3 id="ctl-keys" className="mb-2 flex items-center gap-2 text-sm font-medium"><Keyboard className="size-4 text-shasta-muted" /> Keyboard</h3>
               {remaps.length === 0 && capture?.kind !== 'from' && capture?.kind !== 'to' && <p className="text-xs text-shasta-muted">Every key goes to the game as it is.</p>}
               <ul className="space-y-1.5">
                 {remaps.map(([from, to]) => (
@@ -153,8 +153,8 @@ function ControlsDialog({ tab, onClose }: { tab: Tab; onClose: () => void }) {
               </div>
             </section>
 
-            <section aria-labelledby="ctl-pad" className="border-t border-shasta-line pt-3">
-              <h3 id="ctl-pad" className="mb-1 flex items-center gap-2 text-sm font-semibold"><Gamepad2 className="size-4" /> Controllers and players</h3>
+            <section aria-labelledby="ctl-pad" className="border-t border-shasta-line pt-4">
+              <h3 id="ctl-pad" className="mb-1 flex items-center gap-2 text-sm font-medium"><Gamepad2 className="size-4 text-shasta-muted" /> Controllers and players</h3>
               <p className="mb-2 text-xs text-shasta-muted" role="status">{pad ? `${pad} is connected. Press its buttons to see them light up here.` : 'Plug in a controller (or press one of its buttons to wake it up).'}</p>
               <label className="flex items-center justify-between gap-3 py-1 text-sm">
                 <span>
@@ -179,7 +179,7 @@ function ControlsDialog({ tab, onClose }: { tab: Tab; onClose: () => void }) {
                 {Array.from({ length: MAX_PLAYERS }, (_, i) => i + 1).map((n) => {
                   const online = phones.some((p) => p.on && p.slot === n)
                   return (
-                    <button key={n} role="tab" aria-selected={player === n} onClick={() => { setPlayer(n); setCapture(null) }} className={cn('flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium', player === n ? 'bg-shasta-field ring-1 ring-shasta-line' : 'text-shasta-muted hover:bg-shasta-hover')}>
+                    <button key={n} role="tab" aria-selected={player === n} onClick={() => { setPlayer(n); setCapture(null) }} className={cn('flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs transition-[color,background-color,box-shadow] duration-150 ease-shasta', player === n ? 'sh-selected' : 'text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg')}>
                       <span className="size-2 rounded-full" style={{ background: PLAYER_COLORS[n - 1], opacity: online ? 1 : 0.35 }} aria-hidden />
                       Player {n}{online ? ' · phone' : ''}
                     </button>
@@ -187,14 +187,14 @@ function ControlsDialog({ tab, onClose }: { tab: Tab; onClose: () => void }) {
                 })}
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
-                <span className="text-shasta-muted">Layout:</span>
+                <span className="text-shasta-muted">Layout</span>
                 {(Object.keys(LAYOUTS) as LayoutName[]).map((name) => (
                   <Button key={name} size="xs" variant="ghost" onClick={() => save(withPlayer(c, player, { ...LAYOUTS[name].pad }))}>{LAYOUTS[name].label}</Button>
                 ))}
                 {player > 1 && <Button size="xs" variant="ghost" onClick={() => save(withPlayer(c, player, null))}>No keys</Button>}
                 {layout && (
                   <>
-                    <span className="text-shasta-muted">· D-pad:</span>
+                    <span className="text-shasta-muted">· D-pad</span>
                     <Button size="xs" variant="ghost" onClick={() => save(withPlayer(c, player, { ...layout, ...DPAD_PRESETS.arrows }))}>Arrows</Button>
                     <Button size="xs" variant="ghost" onClick={() => save(withPlayer(c, player, { ...layout, ...DPAD_PRESETS.wasd }))}>WASD</Button>
                   </>
@@ -220,7 +220,7 @@ function ControlsDialog({ tab, onClose }: { tab: Tab; onClose: () => void }) {
                 <p className="mt-2 text-xs text-shasta-muted">Player {player} has no keys in this game: their phone joins as a real gamepad. Pick a layout above if the game has a player {player} on the keyboard.</p>
               )}
             </section>
-            <section aria-label="Phone controller" className="border-t border-shasta-line pt-3">
+            <section aria-label="Phone controller" className="border-t border-shasta-line pt-4">
               <PhonePadCard />
               <p className="mt-1.5 text-xs text-shasta-muted">Each phone plays as the player it joined as, with that player's layout above.</p>
             </section>

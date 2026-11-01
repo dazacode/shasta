@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ExternalLink, Heart, Server, Sparkles } from 'lucide-react'
+import { ExternalLink, Heart } from 'lucide-react'
 import { PageShell } from './PageShell'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,12 +8,13 @@ import { useTabs } from '@/stores/tabsStore'
 import { useSupporter, useSupporterStore } from '@/stores/supporterStore'
 import { DISCORD_INVITE, MEMBERSHIP_URL, SUPPORT_URL, purgeLegacyPaymentKeys } from '@/lib/supporter'
 import { DiscordQrButton } from '@/components/DiscordQr'
+import { SupportDemo } from '@/components/demos/SupportDemo'
 
 const linkProps = { target: '_blank', rel: 'noreferrer noopener' } as const
 
 function Done({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="grid gap-2 rounded-xl border border-shasta-line p-4" role="status">
+    <div className="grid gap-2 rounded-xl border border-shasta-line bg-shasta-home p-5" role="status">
       <p className="font-medium">{title}</p>
       <p className="text-shasta-muted">{children}</p>
       <div className="flex flex-wrap gap-2 pt-1">
@@ -47,9 +48,9 @@ export default function SupportPage() {
 
   return (
     <PageShell title="Support Shasta" subtitle="Shasta is free, and everything that does something stays free." actions={<SupporterBadge />}>
-      <div className="grid max-w-2xl gap-6 text-sm">
+      <div className="grid max-w-2xl gap-10 text-sm leading-relaxed">
         <section aria-labelledby="support-heading" className="grid gap-2">
-          <h2 id="support-heading" className="flex items-center gap-2 text-base font-semibold"><Server className="size-4 text-shasta-accent" aria-hidden /> What support pays for</h2>
+          <h2 id="support-heading" className="sh-heading">What support pays for</h2>
           <p className="text-shasta-muted">
             Every page you open in Shasta travels through Shasta's servers, and the Store, the app hosting and the AI model downloads run there too. That costs money every month, and donations go toward that hosting and bandwidth. Shasta has no accounts and no trackers of its own, but it does show adverts on its own pages (the new tab, the Store and Watch) to help pay for them. They are the one third-party thing here; the privacy policy says exactly what they see.
           </p>
@@ -59,24 +60,28 @@ export default function SupportPage() {
         </section>
 
         <section aria-labelledby="support-tier" className="grid gap-3">
-          <h2 id="support-tier" className="flex items-center gap-2 text-base font-semibold"><Sparkles className="size-4 text-shasta-accent" aria-hidden /> Supporter</h2>
+          <h2 id="support-tier" className="sh-heading">Supporter</h2>
 
           {sup.perks ? (
             justAdded ? (
-              <Done title="Code accepted. Thank you!">Ads are gone and the extras are on for this device ({days} left on this pass). It renews on its own while your membership continues.</Done>
+              <Done title="Code accepted, thank you">Ads are gone and the extras are on for this device ({days} left on this pass). It renews on its own while your membership continues.</Done>
             ) : sup.kind === 'trial' ? (
-              <Done title="You're on a free trial.">{days} left. No ads until then. To keep it that way, become a Supporter on Ko-fi and get your code with /supporter in the Discord.</Done>
+              <Done title="You're on a free trial">{days} left. No ads until then. To keep it that way, become a Supporter on Ko-fi and get your code with /supporter in the Discord.</Done>
             ) : (
-              <Done title="You're a Supporter. Thank you!">{days} left on this device's pass. It renews on its own while your membership continues.</Done>
+              <Done title="You're a Supporter, thank you">{days} left on this device's pass. It renews on its own while your membership continues.</Done>
             )
           ) : (
             <>
               <p className="text-shasta-muted">
                 Supporters see <strong className="text-shasta-fg">no ads anywhere in Shasta</strong>, plus a few thank-you extras: extra new tab wallpapers, a small badge and early previews of new features. There are no accounts and Shasta never sees your payment. Three steps:
               </p>
+              {/* the three steps as one animated picture (components/demos/SupportDemo.tsx) */}
+              <div className="w-full max-w-[640px]" aria-hidden>
+                <SupportDemo />
+              </div>
               <ol className="grid gap-3">
-                <li className="grid gap-2 rounded-xl border border-shasta-line p-4">
-                  <h3 className="font-medium">1. Support on Ko-fi</h3>
+                <li className="grid gap-2 rounded-xl border border-shasta-line bg-shasta-home p-5">
+                  <h3 className="flex items-baseline gap-2 font-medium"><span className="sh-meta">1</span>Support on Ko-fi</h3>
                   <p className="text-shasta-muted">
                     <strong className="text-shasta-fg">$5 a month</strong> as a Ko-fi membership: no ads, plus the extras. A one-off tip is a thank you and does not unlock anything. Ko-fi opens in a new tab, outside Shasta.
                   </p>
@@ -88,8 +93,8 @@ export default function SupportPage() {
                     )}
                   </div>
                 </li>
-                <li className="grid gap-2 rounded-xl border border-shasta-line p-4">
-                  <h3 className="font-medium">2. Join the Discord</h3>
+                <li className="grid gap-2 rounded-xl border border-shasta-line bg-shasta-home p-5">
+                  <h3 className="flex items-baseline gap-2 font-medium"><span className="sh-meta">2</span>Join the Discord</h3>
                   <p className="text-shasta-muted">
                     Connect your Discord account to Ko-fi (in Ko-fi's settings) and Ko-fi gives you the Supporter role there. Want to try it first? A free trial (no ads for 7 days) is available in the Discord with <code className="rounded bg-shasta-field px-1">/trial</code>.
                   </p>
@@ -100,8 +105,8 @@ export default function SupportPage() {
                     </div>
                   )}
                 </li>
-                <li className="grid gap-2 rounded-xl border border-shasta-line p-4">
-                  <h3 className="font-medium"><label htmlFor="support-code">3. Get your code</label></h3>
+                <li className="grid gap-2 rounded-xl border border-shasta-line bg-shasta-home p-5">
+                  <h3 className="flex items-baseline gap-2 font-medium"><span className="sh-meta">3</span><label htmlFor="support-code">Get your code</label></h3>
                   <p className="text-shasta-muted">
                     In the Discord, run <code className="rounded bg-shasta-field px-1">/supporter</code>. The bot replies with a code that only you can see. If the bot isn't answering, message the owner there and they will send you one. Then paste it here.
                   </p>
@@ -129,7 +134,7 @@ export default function SupportPage() {
 
         {SUPPORT_URL && (
           <section aria-labelledby="support-tip" className="grid gap-2">
-            <h2 id="support-tip" className="flex items-center gap-2 text-base font-semibold"><Heart className="size-4 text-shasta-accent" aria-hidden /> Leave a tip</h2>
+            <h2 id="support-tip" className="sh-heading">Leave a tip</h2>
             <p className="text-shasta-muted">A one-off tip is a thank you and helps just as much, but it does <strong className="text-shasta-fg">not</strong> unlock the Supporter extras (only the membership does). It opens in your own browser, outside Shasta.</p>
             <div>
               <a className={buttonVariants({ variant: 'outline' })} href={SUPPORT_URL} {...linkProps}><ExternalLink /> Tip jar</a>

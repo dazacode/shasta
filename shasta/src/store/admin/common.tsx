@@ -114,7 +114,7 @@ export function CopyBox({ value }: { value: string }) {
   const [copied, setCopied] = useState(false)
   return (
     <div className="flex items-center gap-2 rounded-xl bg-shasta-field px-3 py-3 ring-1 ring-shasta-accent/40">
-      <code className="min-w-0 flex-1 break-all text-lg font-semibold tracking-wider select-all">{value}</code>
+      <code className="min-w-0 flex-1 break-all font-mono text-lg select-all">{value}</code>
       <Button
         type="button"
         variant="secondary"

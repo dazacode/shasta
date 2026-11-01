@@ -165,7 +165,7 @@ function ReportDialog({ target, onClose }: { target: ReportTarget | null; onClos
         {sent ? (
           <>
             <DialogHeader>
-              <div className="mb-1 grid size-11 place-items-center rounded-full bg-shasta-accent/15 text-shasta-accent"><Check className="size-5" /></div>
+              <div className="mb-1 grid size-11 place-items-center rounded-full bg-shasta-field text-shasta-fg"><Check className="size-5" /></div>
               <DialogTitle>Thanks, it's sent</DialogTitle>
               <DialogDescription>
                 {official
@@ -205,7 +205,7 @@ function ReportDialog({ target, onClose }: { target: ReportTarget | null; onClos
                     type="button"
                     aria-pressed={choice === `p:${v}`}
                     onClick={() => setChoice(`p:${v}`)}
-                    className={cn('rounded-full px-3 py-1.5 text-sm ring-1 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-shasta-accent', choice === `p:${v}` ? 'bg-shasta-accent text-shasta-accent-fg ring-shasta-accent' : 'bg-shasta-field ring-shasta-line hover:bg-shasta-hover')}
+                    className={cn('h-8 rounded-full px-3 text-sm ring-1 transition-[color,background-color,box-shadow] duration-150 ease-shasta outline-none focus-visible:ring-2 focus-visible:ring-shasta-accent', choice === `p:${v}` ? 'bg-shasta-raised text-shasta-fg ring-shasta-fg/30' : 'text-shasta-muted ring-shasta-line hover:bg-shasta-hover hover:text-shasta-fg')}
                   >
                     {l}
                   </button>

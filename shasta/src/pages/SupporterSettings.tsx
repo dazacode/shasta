@@ -11,7 +11,7 @@ import { DISCORD_INVITE } from '@/lib/supporter'
 import { DiscordQrButton } from '@/components/DiscordQr'
 
 function statusText(s: ReturnType<typeof useSupporter>): string {
-  if (s.perks) return `${s.kind === 'trial' ? 'Free trial' : 'Supporter'} · ${s.daysLeft} day${s.daysLeft === 1 ? '' : 's'} left. Thank you!`
+  if (s.perks) return `${s.kind === 'trial' ? 'Free trial' : 'Supporter'} · ${s.daysLeft} day${s.daysLeft === 1 ? '' : 's'} left`
   if (!s.code) return 'Not a Supporter on this device. Everything in Shasta still works.'
   if (s.note === 'ended') return 'This code has ended (it expired or the membership stopped). Ads are back and the perks are off; everything else still works.'
   if (s.note === 'unsupported') return "This browser can't check Supporter passes (it lacks Ed25519 in WebCrypto), so ads stay on and the perks stay off here. Everything else works. A recent Chrome, Edge, Firefox or Safari can check them."
@@ -32,13 +32,13 @@ export function SupporterSection() {
     const err = await useSupporterStore.getState().redeem(code)
     if (err) return setError(err)
     setCode('')
-    useUi.getState().toast('Code added. Thank you for supporting Shasta!', { tone: 'success' })
+    useUi.getState().toast('Code added, thank you for supporting Shasta', { tone: 'success' })
   }
 
   return (
     <>
       <Row title="Status" desc={statusText(s)}>
-        {s.perks && <span className="inline-flex items-center gap-1 rounded-full bg-shasta-accent/15 px-2.5 py-1 text-xs font-medium text-shasta-accent"><Heart className="size-3 fill-current" aria-hidden /> {s.kind === 'trial' ? 'Trial' : 'Supporter'}</span>}
+        {s.perks && <span className="inline-flex items-center gap-1.5 text-sm text-shasta-muted"><Heart className="size-3.5 fill-current text-shasta-faint" aria-hidden /> {s.kind === 'trial' ? 'Trial' : 'Supporter'}</span>}
         {s.code && !s.perks && (
           <Button variant="outline" disabled={s.busy} onClick={() => void useSupporterStore.getState().refresh({ force: true })}>
             <RefreshCw /> {s.busy ? 'Checking…' : 'Check again'}

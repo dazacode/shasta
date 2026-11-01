@@ -119,7 +119,7 @@ export function ApplicationsTab() {
             <Card key={a.id}>
               <div className="flex flex-wrap items-start gap-3">
                 <div className="min-w-0 flex-1 basis-60">
-                  <p className="font-semibold">
+                  <p className="font-medium">
                     {a.name}
                     {a.contact && <span className="ml-2 text-sm font-normal text-shasta-muted">{a.contact}</span>}
                   </p>

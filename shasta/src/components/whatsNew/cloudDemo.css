@@ -1,0 +1,48 @@
+/* What's new "Cloud gaming is here" (CloudDemo.tsx). Scoped under .cd; Shasta's night look on the kit's dark theme. */
+.cd .ss-stage {
+  --ss-font: 'Geist Variable', system-ui, sans-serif;
+  overflow: hidden;
+  border-radius: 18px;
+  background: radial-gradient(60% 50% at 30% 0%, rgb(68 74 140 / 0.45), transparent 70%), #090b10;
+  box-shadow: inset 0 0 0 1px rgb(238 240 245 / 0.09);
+}
+@keyframes cd-spin { to { transform: rotate(360deg); } }
+.cd {
+  .cd-win { position: absolute; left: 24px; top: 24px; width: 560px; height: 400px; box-shadow: var(--ss-shadow-hero); }
+  .cd-win .ss-window__body { position: relative; }
+  .cd-win .ss-window__tab { width: 196px; }
+
+  .cd-store { position: absolute; inset: 0; padding: 20px; transition: opacity 300ms cubic-bezier(0.45, 0, 0.1, 1), transform 400ms cubic-bezier(0.45, 0, 0.1, 1); }
+  .cd-store[data-hide] { opacity: 0; transform: scale(0.98); }
+  .cd-head { display: flex; align-items: center; justify-content: space-between; padding-right: 20px; margin-bottom: 12px; }
+  .cd-h { color: #eef0f5; font: 500 14px / 18px var(--ss-font); }
+  .cd-shelf { display: flex; gap: 12px; }
+  .cd-tile { width: 124px; height: 186px; flex: none; overflow: hidden; border-radius: 10px; background: rgb(255 255 255 / 0.06); box-shadow: inset 0 0 0 1px rgb(238 240 245 / 0.08); transition: transform 200ms cubic-bezier(0.45, 0, 0.1, 1); }
+  .cd-tile img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .cd-tile[data-hover] { transform: translateY(-3px); }
+
+  /* the launcher, as components/game/GameSplash.tsx draws it */
+  /* centred in the part of the window the stage shows (340 - 24 top - 74 chrome), as the real launcher centres */
+  .cd-splash { position: absolute; inset: 0 0 auto; height: 242px; display: flex; align-items: center; gap: 20px; padding: 0 20px; background: #07080d; color: #fff; opacity: 0; transition: opacity 450ms cubic-bezier(0.25, 0.8, 0.25, 1); font: 400 12px / 16px var(--ss-font); }
+  .cd-splash[data-show] { opacity: 1; }
+  .cd-cover { width: 112px; height: 168px; flex: none; border-radius: 10px; object-fit: cover; box-shadow: 0 16px 40px rgb(0 0 0 / 0.5), inset 0 0 0 1px rgb(255 255 255 / 0.1); }
+  .cd-info { width: 300px; }
+  .cd-name { font-size: 18px; line-height: 24px; font-weight: 500; letter-spacing: -0.01em; }
+  .cd-slug { margin-top: 2px; color: rgb(255 255 255 / 0.45); font: 400 11px / 14px 'Geist Mono Variable', ui-monospace, monospace; }
+  .cd-steps { display: flex; gap: 14px; margin: 20px 0 0; padding: 0; list-style: none; color: rgb(255 255 255 / 0.5); }
+  .cd-steps li { display: flex; align-items: center; gap: 6px; transition: color 200ms ease; }
+  .cd-steps li[data-done], .cd-steps li[data-now] { color: #fff; }
+  .cd-dot { display: grid; place-items: center; width: 18px; height: 18px; flex: none; border-radius: 9px; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.25); transition: background-color 200ms ease, box-shadow 200ms ease, color 200ms ease; }
+  .cd-dot { position: relative; }
+  .cd-dot svg { position: absolute; width: 11px; height: 11px; stroke-width: 2.5; opacity: 0; transition: opacity 200ms ease, transform 250ms cubic-bezier(0.25, 0.8, 0.25, 1); }
+  /* the tick grows in; the spinner only fades (its own rotation owns its transform) */
+  .cd-dot .cd-ok { transform: scale(0.6); }
+  .cd-dot .cd-spin { animation: cd-spin 0.9s linear infinite; }
+  [data-done] > .cd-dot .cd-ok { opacity: 1; transform: none; }
+  [data-now] > .cd-dot .cd-spin { opacity: 1; }
+  [data-now] > .cd-dot { box-shadow: inset 0 0 0 1px #fff; }
+  [data-done] > .cd-dot { background: #fff; color: #000; box-shadow: none; }
+  .cd-progress { display: block; margin-top: 12px; height: 4px; overflow: hidden; border-radius: 2px; background: rgb(255 255 255 / 0.1); }
+  .cd-progress b { display: block; height: 100%; border-radius: 2px; background: #fff; transform-origin: left; transition: transform 700ms cubic-bezier(0.45, 0, 0.1, 1); }
+  .cd-status { margin-top: 12px; color: rgb(255 255 255 / 0.7); }
+}

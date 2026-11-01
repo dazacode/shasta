@@ -12,10 +12,15 @@ import { applyAdCosmetics } from './adCosmetics'
 import { applyArchivePlayer } from './archivePlayer'
 import { applyInputMapper } from './inputMapper'
 import { applyVirtualGamepads } from './virtualGamepads'
+import { applyMediaWatch } from './mediaWatch'
 import { servePlainAsHtml } from './plainHtml'
 import { watchCrashes } from './crashWatch'
 import { captureConsole } from '@/lib/consoleCapture'
 import { diagnoseCrash } from '@/lib/browserSupport'
+import { netNote, netRecords, netStart, netUpdate } from '@/lib/netLog'
+import { hasMemory64, installMemory64Shim } from './memory64Shim'
+import { prependBody, workerPrelude } from './workerPrelude'
+import { lowerWasmIfNeeded } from './wasmLower'
 import { ERROR_META, TENTATIVE_NAV_MS, armNavTimer, byTab, clearNavTimer, emit, log, scheduleProbe, type Entry } from './scramjetAdapter'
 
 const SLOW_REQUEST_MS = 10_000
@@ -86,6 +91,8 @@ class ShastaPlugin extends ManagedPlugin {
     })
 
     this.tap(frame.hooks.init.post, (ctx: { isTopLevel: boolean; client: any; window: Window }) => {
+      // first, before the page's scripts: Memory64 games on a Chrome without Memory64 (memory64Shim.ts; no-op otherwise)
+      installMemory64Shim(ctx.window)
       const entry = this.entry
       // only a real click or key press lets the page open a new tab shortly after
       const gesture = (e: Event) => {
@@ -167,6 +174,19 @@ class ShastaPlugin extends ManagedPlugin {
       applyInputMapper(ctx.window, this.tabId)
       // phones playing as real gamepads for games that read controllers (lib/virtualPads.ts)
       applyVirtualGamepads(ctx.window, this.tabId)
+      // what is playing, for the toolbar's media hub (proxy/mediaWatch.ts). The frame resolves artwork against its
+      // proxied address, so map it back to the site's real one (the frame's own fetch proxies it again).
+      applyMediaWatch(ctx.window, this.tabId, (src) => {
+        try {
+          const u = new URL(src, ctx.client.url.href)
+          if (u.origin !== location.origin) return u.href
+          const prefix = new URL(frame.prefix, location.href).pathname
+          if (u.pathname.startsWith(prefix)) return decodeTarget(frame, u.href) || null
+          return new URL(u.pathname + u.search, ctx.client.url.href).href
+        } catch {
+          return null
+        }
+      })
       // the game may start listening after its window already had focus: replay the event once it has loaded
       ctx.window.addEventListener('load', () => {
         if (gameControl() && ctx.window.document.hasFocus()) forceFocus(ctx.window)
@@ -217,6 +237,7 @@ class ShastaPlugin extends ManagedPlugin {
       const message = ctx.error instanceof Error ? ctx.error.message : String(ctx.error)
       const target = decodeTarget(frame, req.rawUrl)
       log('warn', `Request failed (${req.destination ?? 'unknown'}) ${redactUrl(target)}: ${message}`)
+      if (netRecords(this.tabId)) netNote({ method: (req as { method?: string }).method?.toUpperCase() || 'GET', url: target, type: req.destination ?? '', error: message })
       if (isNav) {
         props.suppressError = true
         props.setResponse = {
@@ -246,6 +267,7 @@ class ShastaPlugin extends ManagedPlugin {
       if (dest === 'document') return
       const hit = matchAd(ctx.parsed.url, dest, ctx.parsed.clientUrl?.href)
       if (!hit) return
+      if (netRecords(this.tabId)) netNote({ method: 'GET', url: ctx.parsed.url.href, type: dest, status: 200, ms: 0, note: 'blocked by Shasta (ad/tracker)', page: ctx.parsed.clientUrl?.hostname })
       props.response = {
         body: hit.redirect?.body ?? '',
         status: 200,
@@ -284,13 +306,17 @@ class ShastaPlugin extends ManagedPlugin {
     // Diagnostics: name requests that hang or crawl (the usual cause of "stuck at 6%" in big web apps and games).
     // Only host + path are logged, never query strings.
     const pending = new WeakMap<object, { timer: number; started: number; label: string }>()
-    this.tap(frame.hooks.fetch.request, (ctx: { request: object; parsed: { url: URL } }) => {
+    this.tap(frame.hooks.fetch.request, (ctx: { request: object; parsed: { url: URL; destination?: string; clientUrl?: URL } }, props: { init?: { method?: string } }) => {
+      // Settings -> Advanced -> Developer tools -> Network (lib/netLog.ts; memory only, never private tabs)
+      if (netRecords(this.tabId)) netStart(ctx.request, { method: (props?.init?.method || 'GET').toUpperCase(), url: ctx.parsed.url.href, type: ctx.parsed.destination ?? '', page: ctx.parsed.clientUrl?.hostname })
       const label = `${ctx.parsed.url.host}${ctx.parsed.url.pathname}`.slice(0, 160)
       const started = performance.now()
       const timer = window.setTimeout(() => log('warn', `Still waiting after ${SLOW_REQUEST_MS / 1000}s: ${label}`), SLOW_REQUEST_MS)
       pending.set(ctx.request, { timer, started, label })
     })
     this.tap(frame.hooks.fetch.response, (ctx: { request: object }, props: { response: { status: number; headers: { get(k: string): string | null } } }) => {
+      const length = props.response.headers.get('content-length')
+      netUpdate(ctx.request, { status: props.response.status, size: length ? Number(length) : undefined, mime: (props.response.headers.get('content-type') ?? '').split(';')[0] || undefined })
       const p = pending.get(ctx.request)
       if (!p) return
       clearTimeout(p.timer)
@@ -311,6 +337,24 @@ class ShastaPlugin extends ManagedPlugin {
       res.headers.set('content-type', html)
       res.rawHeaders = res.rawHeaders.filter(([k]) => k.toLowerCase() !== 'content-type' && k.toLowerCase() !== 'x-content-type-options')
       res.rawHeaders.push(['content-type', html])
+    })
+
+    // Every worker script gets the prelude (workerPrelude.ts): its console reaches Settings -> Advanced -> Developer tools,
+    // and on a Chrome without Memory64 the Memory64 shim runs there before the game's code. A game's .wasm that turns out
+    // to be 64-bit is swapped for the server's 32-bit conversion (wasmLower.ts).
+    this.tap(frame.hooks.fetch.response, async (ctx: { request: object; parsed: { url: URL; destination: string } }, props: { response: { body: unknown; status: number; headers: { get(k: string): string | null; set(k: string, v: string): void; delete(k: string): void } } }) => {
+      const res = props.response
+      const dest = ctx.parsed.destination
+      if (dest === 'worker' || dest === 'sharedworker') {
+        if (res.status >= 400 || res.body == null) return
+        res.body = prependBody(res.body, workerPrelude(ctx.parsed.url))
+        res.headers.delete('content-length')
+        return
+      }
+      if (hasMemory64() || res.status !== 200 || !(res.body instanceof ReadableStream)) return
+      const type = res.headers.get('content-type') ?? ''
+      if (!/application\/wasm/i.test(type) && !/\.wasm$/i.test(ctx.parsed.url.pathname)) return
+      res.body = await lowerWasmIfNeeded(res.body, ctx.parsed.url, res.headers, (note) => netUpdate(ctx.request, { note }))
     })
 
     // observe attachment downloads that Shasta's proxy is serving

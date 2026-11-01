@@ -39,11 +39,11 @@ interface SplashApp {
 /** Cover art and maker of an installed app, when the library knows it. */
 function useArt(app: SplashApp) {
   const item = useStore((s) => s.library?.installed.find((i) => i.app.id === app.id || i.app.slug === app.id))
-  return { banner: item?.app.bannerUrl ?? null, developer: item?.app.developer ?? '', icon: app.iconUrl ?? item?.app.iconUrl ?? null }
+  return { banner: item?.app.bannerUrl ?? null, developer: item?.app.developer ?? '', icon: app.iconUrl ?? item?.app.iconUrl ?? null, slug: item?.app.slug ?? null }
 }
 
 export function GameSplash({ app, stage, tabId, onDone, onReload }: { app: SplashApp; stage: SplashStage; tabId: string; onDone: () => void; onReload: () => void }) {
-  const { banner, developer, icon } = useArt(app)
+  const { banner, developer, icon, slug } = useArt(app)
   const reducedMotion = document.documentElement.dataset.motion === 'reduced'
   const pad = usePads((s) => s.name)
   const shownAt = useRef(Date.now())
@@ -85,35 +85,31 @@ export function GameSplash({ app, stage, tabId, onDone, onReload }: { app: Splas
       aria-live="polite"
       aria-label={`${app.name}: ${stage === 'ready' ? 'ready' : STEPS[at]?.[1] ?? ''}`}
       className={cn(
-        'absolute inset-0 z-[7] overflow-hidden bg-black text-white transition-[opacity,transform] ease-out',
+        'absolute inset-0 z-[7] overflow-hidden bg-[#07080d] text-white transition-[opacity,transform] ease-shasta',
         reducedMotion ? 'duration-0' : 'duration-[450ms]',
-        leaving && 'pointer-events-none scale-[1.04] opacity-0',
+        leaving && 'pointer-events-none scale-[1.02] opacity-0',
       )}
     >
-      {/* the cover, blurred into a backdrop */}
-      {banner ? (
-        <img src={banner} alt="" aria-hidden crossOrigin={MEDIA_CORS} className="absolute inset-0 size-full scale-110 object-cover opacity-50 blur-2xl" />
-      ) : icon ? (
-        <img src={icon} alt="" aria-hidden crossOrigin={MEDIA_CORS} className="absolute inset-0 size-full scale-150 object-cover opacity-30 blur-3xl" />
-      ) : null}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/60 to-black/90" />
 
       <div className="relative flex h-full flex-col items-center gap-6 overflow-auto px-4 pb-8 pt-12 [&>*:first-child]:mt-auto [&>*:last-child]:mb-auto">
         <div className="w-full max-w-xl">
-          <div className={cn('relative w-full overflow-hidden rounded-2xl bg-white/5 shadow-2xl ring-1 ring-white/10 transition-[aspect-ratio]', phoneStatus === 'off' ? 'aspect-[16/7]' : 'aspect-[16/4]')}>
+          <div className={cn('relative w-full overflow-hidden rounded-2xl bg-white/5 shadow-[0_24px_64px_rgb(0_0_0/0.5)] ring-1 ring-white/10', phoneStatus === 'off' ? 'aspect-[16/7]' : 'aspect-[16/4]')}>
             {banner ? (
               <img src={banner} alt="" crossOrigin={MEDIA_CORS} className={cn('size-full object-cover', !reducedMotion && 'animate-[sh-splash-pan_14s_ease-in-out_infinite_alternate]')} />
             ) : (
               <div className="grid size-full place-items-center">
-                <AppIcon app={{ name: app.name, iconUrl: icon }} size={96} className="shadow-xl" />
+                <AppIcon app={{ name: app.name, iconUrl: icon }} size={96} />
               </div>
             )}
           </div>
-          <div className="mt-4 flex items-center gap-3">
-            {banner && <AppIcon app={{ name: app.name, iconUrl: icon }} size={48} className="shrink-0 shadow-lg ring-1 ring-white/20" />}
+          <div className="mt-5 flex items-center gap-3">
+            {banner && <AppIcon app={{ name: app.name, iconUrl: icon }} size={48} className="shrink-0 ring-1 ring-white/15" />}
             <div className="min-w-0">
-              <h1 className="truncate text-2xl font-semibold tracking-tight">{app.name}</h1>
-              {developer && <p className="truncate text-sm text-white/60">{developer}</p>}
+              <h1 className="truncate text-2xl font-medium tracking-[-0.01em]">{app.name}</h1>
+              <p className="mt-0.5 flex min-w-0 items-baseline gap-2 text-sm text-white/60">
+                {developer && <span className="truncate">{developer}</span>}
+                {slug && <span className="sh-meta truncate !text-white/45">game://{slug}</span>}
+              </p>
             </div>
           </div>
 
@@ -122,7 +118,7 @@ export function GameSplash({ app, stage, tabId, onDone, onReload }: { app: Splas
             {STEPS.map(([key, label], i) => (
               <li key={key} className="flex flex-1 items-center gap-2">
                 <span className={cn('grid size-5 shrink-0 place-items-center rounded-full border', i < at ? 'border-white bg-white text-black' : i === at ? 'border-white text-white' : 'border-white/25')}>
-                  {i < at ? <Check className="size-3" strokeWidth={3} /> : i === at ? <Loader2 className="sh-spin size-3" /> : null}
+                  {i < at ? <Check className="size-3" strokeWidth={2.5} /> : i === at ? <Loader2 className="sh-spin size-3" /> : null}
                 </span>
                 <span className={cn(i <= at && 'text-white')}>{label}</span>
                 {i < STEPS.length - 1 && <span className={cn('h-px flex-1', i < at ? 'bg-white/70' : 'bg-white/15')} />}
@@ -130,11 +126,11 @@ export function GameSplash({ app, stage, tabId, onDone, onReload }: { app: Splas
             ))}
           </ol>
           <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/10">
-            <div className={cn('h-full rounded-full bg-white transition-[width] duration-700', stage !== 'ready' && !reducedMotion && 'animate-pulse')} style={{ width: `${Math.max(8, (at / STEPS.length) * 100)}%` }} />
+            <div className="h-full w-full origin-left rounded-full bg-white transition-transform duration-700 ease-shasta" style={{ transform: `scaleX(${Math.max(0.08, at / STEPS.length)})` }} />
           </div>
 
           {slow && stage !== 'ready' ? (
-            <div className="mt-5 rounded-xl bg-white/10 p-3 text-sm ring-1 ring-white/10">
+            <div className="mt-6 rounded-xl bg-white/[0.06] p-4 text-sm ring-1 ring-white/10">
               <p>This is taking longer than usual. Big games can take a minute on a slow connection.</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <SplashButton primary onClick={() => setLeaving(true)}><Play className="size-4" /> Show the game anyway</SplashButton>
@@ -147,17 +143,17 @@ export function GameSplash({ app, stage, tabId, onDone, onReload }: { app: Splas
               </div>
             </div>
           ) : (
-            <div className="mt-5 flex flex-wrap items-center gap-2 text-xs text-white/70">
-              <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1">
+            <div className="mt-6 flex flex-wrap items-center gap-2 text-xs text-white/65">
+              <span className="flex items-center gap-1.5 rounded-md bg-white/[0.08] px-2.5 py-1">
                 <Gamepad2 className="size-3.5" aria-hidden />
                 {pad ? `${pad} ready` : 'Plug in a controller to play with it'}
               </span>
               {remappable && (
-                <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1">
+                <span className="flex items-center gap-1.5 rounded-md bg-white/[0.08] px-2.5 py-1">
                   <Keyboard className="size-3.5" aria-hidden /> Keys can be remapped
                 </span>
               )}
-              <span className="rounded-full bg-white/10 px-2.5 py-1">{keysFor('toggleGameMode')} leaves game mode</span>
+              <span className="rounded-md bg-white/[0.08] px-2.5 py-1">{keysFor('toggleGameMode')} leaves game mode</span>
             </div>
           )}
         </div>
@@ -187,8 +183,8 @@ function SplashButton({ primary, className, ...props }: ButtonHTMLAttributes<HTM
     <button
       {...props}
       className={cn(
-        'inline-flex h-8 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-white/70',
-        primary ? 'bg-white text-black hover:bg-white/90' : 'bg-white/10 text-white ring-1 ring-white/15 hover:bg-white/20',
+        'sh-press inline-flex h-9 items-center gap-1.5 rounded-[10px] px-4 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-white/70',
+        primary ? 'bg-[#eef0f5] text-[#0b0d14] hover:bg-white' : 'bg-white/10 text-white ring-1 ring-white/15 hover:bg-white/15',
         className,
       )}
     />

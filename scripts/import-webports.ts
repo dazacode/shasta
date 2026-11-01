@@ -8,9 +8,15 @@
  * including the gn-math.github.io mirror rows (served from the genizy repo via statically.io) and the wasm.rip rows
  * (deduped against the wasm.rip import by name) is imported. A row whose host does not answer is still listed.
  *
+ * lib/webportsMeta.ts decides what each row becomes: other ports of the same game are folded into one listing and
+ * catalogue directories are left out (both skipped here), and a listing's name, makers and text come from the
+ * game's encyclopedia entry. A real run therefore ends by running scripts/clean-webports.ts, which re-applies that
+ * to every listing (the play-page blurbs scraped below are only the first draft for a row that has no entry yet).
+ *
  *   bun scripts/import-webports.ts [--dry] [--pending] [--limit 50] [--jobs 8]
  */
 import { runImport, summarize, type ImportItem } from "./lib/storeImport";
+import { DROP, ELSEWHERE, MERGED, PORTS } from "./lib/webportsMeta";
 
 const README = "https://raw.githubusercontent.com/Carter54git/Ultimate-Catalog-Of-Web-Game-Ports/main/README.md";
 // gn-math.dev (whole site dead 2026-10-31) is covered wholesale by the gn-math importer and its rows would each wait
@@ -99,6 +105,8 @@ for (const c of rows) {
 	const name = c[1].replace(/^[⭐▶\s]+/, "").replace(/\s*\(\d+\)$/, "").replace(/\s+/g, " ").trim();
 	if (!name || name.length < 2 || seen.has(name.toLowerCase())) continue;
 	seen.add(name.toLowerCase());
+	// folded into another listing of the same game, already listed by another import, or not a game
+	if (MERGED.has(name) || ELSEWHERE[name] || DROP.includes(name)) continue;
 	found.push({ name, url: OVERRIDES[name.toLowerCase()]?.url ?? resolvePlay(play) });
 	if (found.length >= limit) break;
 }
@@ -126,7 +134,7 @@ const scrape = async (r: Row): Promise<ImportItem | null> => {
 		void title;
 		const description = override?.description ?? (blurb.length >= 20 ? blurb.slice(0, 1000) : `${r.name}, a browser port playable at ${host}.`);
 		return {
-			name: r.name.slice(0, 60),
+			name: (PORTS[r.name]?.name ?? r.name).slice(0, 60),
 			url: r.url,
 			summary: override?.summary ?? summarize(blurb || description, r.name),
 			description,
@@ -145,7 +153,7 @@ const scrape = async (r: Row): Promise<ImportItem | null> => {
 		// is complete, with metadata built from the row alone. A later re-run upgrades it once the host answers.
 		const description = override?.description ?? `${r.name}, a browser port listed in the Ultimate Catalog of Web Game Ports and playable at ${host}.`;
 		return {
-			name: r.name.slice(0, 60),
+			name: (PORTS[r.name]?.name ?? r.name).slice(0, 60),
 			url: r.url,
 			summary: override?.summary ?? summarize(description, r.name),
 			description,
@@ -173,3 +181,8 @@ await Promise.all(
 const items = out.filter((x): x is ImportItem => !!x);
 console.log(`${items.length} entries with metadata`);
 await runImport(items, { dry: argv.includes("--dry"), only: opt("only"), jobs: Number(opt("jobs")) || 6, pending: argv.includes("--pending") });
+// put the real names, makers and descriptions back over the scraped first draft
+if (!argv.includes("--dry")) {
+	const clean = Bun.spawnSync(["bun", `${import.meta.dir}/clean-webports.ts`], { stdout: "inherit", stderr: "inherit" });
+	if (clean.exitCode !== 0) process.exitCode = 1;
+}

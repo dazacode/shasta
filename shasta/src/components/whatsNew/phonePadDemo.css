@@ -1,0 +1,258 @@
+/* What's new: the phone-controller demo (PhonePadDemo.tsx). Scoped under .ppd; the page is the ground, so the
+   stage has no plate: the window fades out at its foot instead of being cut by a hard line mid-page. */
+.ppd .ss-stage {
+  --g: 28px;
+  overflow: hidden;
+  background: transparent;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 72px), transparent);
+}
+
+.ppd .ppd-window {
+  position: absolute;
+  left: var(--g);
+  top: var(--g);
+  width: 472px;
+  height: 400px;
+  box-shadow: var(--ss-shadow-hero);
+}
+
+/* ── the game (Clumsy Bird's daytime scene) ── */
+.ppd .ppd-game {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: linear-gradient(180deg, #4ec0ca 0%, #7fd3dc 62%, #b8e6c8 100%);
+  --t-world: 0ms;
+  --t-bird: 0ms;
+  --e-bird: linear;
+}
+.ppd .ppd-game[data-tween='up'] { --t-world: 420ms; --t-bird: 380ms; --e-bird: cubic-bezier(0.2, 0.8, 0.3, 1); }
+.ppd .ppd-game[data-tween='down'] { --t-world: 520ms; --t-bird: 520ms; --e-bird: cubic-bezier(0.5, 0, 0.9, 0.6); }
+
+.ppd .ppd-world { position: absolute; inset: 0; transition: transform var(--t-world) linear; }
+.ppd .ppd-pipes { position: absolute; top: 0; bottom: 0; width: 44px; }
+.ppd .ppd-pipe {
+  position: absolute;
+  left: 0;
+  width: 44px;
+  background: linear-gradient(90deg, #5aa02c, #8fd14f 45%, #5aa02c);
+  box-shadow: inset 0 0 0 2px #3d6e1e;
+}
+.ppd .ppd-pipe--top { top: 0; border-radius: 0 0 4px 4px; }
+.ppd .ppd-pipe--bottom { bottom: 0; border-radius: 4px 4px 0 0; }
+.ppd .ppd-pipe::after {
+  content: '';
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  height: 16px;
+  background: inherit;
+  box-shadow: inherit;
+  border-radius: 4px;
+}
+.ppd .ppd-pipe--top::after { bottom: 0; }
+.ppd .ppd-pipe--bottom::after { top: 0; }
+
+.ppd .ppd-ground {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 252px;
+  bottom: 0;
+  background: repeating-linear-gradient(-45deg, #dcd28f 0 10px, #d2c67c 10px 20px);
+  border-top: 4px solid #73bf2e;
+}
+
+.ppd .ppd-bird {
+  position: absolute;
+  left: 96px;
+  top: 116px;
+  width: 34px;
+  height: 26px;
+  border-radius: 50% 55% 45% 50%;
+  background: #f7d038;
+  box-shadow: inset 0 0 0 2px #5b3a12;
+  transition: transform var(--t-bird) var(--e-bird);
+}
+.ppd .ppd-bird__eye { position: absolute; right: 5px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 2px #5b3a12, inset -3px 0 0 3px #fff, inset -5px 0 0 5px #222; }
+.ppd .ppd-bird__beak { position: absolute; right: -6px; top: 13px; width: 14px; height: 8px; border-radius: 4px; background: #f0702a; box-shadow: inset 0 0 0 2px #5b3a12; }
+.ppd .ppd-bird__wing { position: absolute; left: 3px; top: 11px; width: 14px; height: 9px; border-radius: 50%; background: #fff6c8; box-shadow: inset 0 0 0 2px #5b3a12; }
+
+.ppd .ppd-score {
+  position: absolute;
+  left: 196px;
+  top: 10px;
+  transform: translateX(-50%);
+  color: #fff;
+  font: 800 34px/1.1 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-text-stroke: 1.5px #5b3a12;
+  paint-order: stroke fill;
+  text-shadow: 0 2px 0 #5b3a12;
+}
+
+/* The splash's "Use your phone as a controller" card; folds into the player chip */
+.ppd .ppd-card {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  width: 268px;
+  height: 84px;
+  overflow: hidden;
+  border-radius: 14px;
+  background: rgb(11 12 18 / 0.86);
+  color: #f4f5f8;
+  box-shadow: 0 8px 24px -8px rgb(0 0 0 / 0.45);
+  transition: width 520ms cubic-bezier(0.45, 0, 0.1, 1), height 520ms cubic-bezier(0.45, 0, 0.1, 1), border-radius 520ms cubic-bezier(0.45, 0, 0.1, 1);
+}
+.ppd .ppd-card[data-joined] { width: 136px; height: 30px; border-radius: 15px; }
+.ppd .ppd-card__scan {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  width: 248px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: opacity 260ms ease;
+}
+.ppd .ppd-card[data-joined] .ppd-card__scan { opacity: 0; }
+.ppd .ppd-qr { width: 64px; height: 64px; flex: none; padding: 3px; border-radius: 8px; }
+.ppd .ppd-card__text { display: grid; gap: 4px; min-width: 0; text-align: left; }
+.ppd .ppd-card__title { font-size: 12.5px; font-weight: 600; line-height: 1.3; }
+.ppd .ppd-card__sub { font-size: 11px; line-height: 1.35; color: #9298ab; }
+.ppd .ppd-card__chip {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 260ms ease 260ms;
+}
+.ppd .ppd-card[data-joined] .ppd-card__chip { opacity: 1; }
+.ppd .ppd-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: #22c55e; }
+
+/* ── the phone: Shasta's controller page (src/pad/pad.css), in iOS points ── */
+.ppd .ppd-phone {
+  position: absolute;
+  right: var(--g);
+  top: 64px;
+  box-shadow: var(--ss-shadow-satellite), 0 30px 50px -20px rgb(0 0 0 / 0.45);
+  border-radius: 48px;
+}
+.ppd .ppd-pad {
+  position: absolute;
+  inset: 0;
+  padding-top: 58px;
+  color: #f4f5f8;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+.ppd .ppd-bar { display: flex; align-items: center; gap: 12px; padding: 10px 20px; }
+.ppd .ppd-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 52px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #2a2d3d;
+  font-size: 17px;
+  font-weight: 700;
+  transition: background-color 300ms ease;
+}
+.ppd .ppd-pad[data-joined] .ppd-badge { background: #22c55e; }
+.ppd .ppd-title { flex: 1; display: grid; gap: 2px; font-size: 20px; font-weight: 600; line-height: 1.25; }
+.ppd .ppd-title small { font-size: 15px; font-weight: 400; color: #9298ab; }
+.ppd .ppd-live { width: 12px; height: 12px; border-radius: 50%; background: #eab308; transition: background-color 300ms ease; }
+.ppd .ppd-pad[data-joined] .ppd-live { background: #22c55e; }
+
+.ppd .ppd-mid { display: flex; justify-content: center; gap: 16px; margin-top: 28px; }
+.ppd .ppd-small {
+  display: grid;
+  place-items: center;
+  width: 92px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid #2a2d3d;
+  background: #161823;
+  color: #9298ab;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ppd .ppd-controls { display: flex; justify-content: space-between; align-items: center; padding: 40px 22px 0; }
+.ppd .ppd-dpad { position: relative; width: 160px; height: 160px; border-radius: 50%; background: radial-gradient(circle, #161823 0 60%, transparent 61%); }
+.ppd .ppd-arm { position: absolute; background: #161823; border: 1px solid #2a2d3d; }
+.ppd .ppd-arm--up, .ppd .ppd-arm--down { left: 34%; width: 32%; height: 36%; }
+.ppd .ppd-arm--left, .ppd .ppd-arm--right { top: 34%; height: 32%; width: 36%; }
+.ppd .ppd-arm--up { top: 0; border-radius: 12px 12px 0 0; }
+.ppd .ppd-arm--down { bottom: 0; border-radius: 0 0 12px 12px; }
+.ppd .ppd-arm--left { left: 0; border-radius: 12px 0 0 12px; }
+.ppd .ppd-arm--right { right: 0; border-radius: 0 12px 12px 0; }
+
+.ppd .ppd-face { position: relative; width: 168px; height: 168px; }
+.ppd .ppd-btn {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 36%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 1px solid #2a2d3d;
+  background: #161823;
+  font-size: 24px;
+  font-weight: 700;
+  transition: transform 60ms ease, background-color 60ms ease, color 60ms ease;
+}
+.ppd .ppd-btn--y { left: 32%; top: 0; color: #eab308; }
+.ppd .ppd-btn--x { left: 0; top: 32%; color: #3b82f6; }
+.ppd .ppd-btn--b { right: 0; top: 32%; color: #ef4444; }
+.ppd .ppd-btn--a { left: 32%; bottom: 0; color: #22c55e; will-change: transform; }
+/* the pad's own pressed look (.btn.down) */
+.ppd .ppd-btn[data-pressed] { background: #fff; color: #000; transform: scale(0.94); }
+
+/* ── compact: the phone stands lower, over the window's right half; the card keeps its title only ── */
+.ppd .ss-stage[data-layout='compact'] { --g: 16px; }
+.ppd .ss-stage[data-layout='compact'] .ppd-window { width: 420px; }
+.ppd .ss-stage[data-layout='compact'] .ppd-phone { top: 150px; }
+.ppd .ss-stage[data-layout='compact'] .ppd-card:not([data-joined]) { width: 200px; }
+.ppd .ss-stage[data-layout='compact'] .ppd-card__scan { width: 180px; }
+.ppd .ss-stage[data-layout='compact'] .ppd-card__sub { display: none; }
+.ppd .ss-stage[data-layout='compact'] .ppd-score { left: 232px; top: 10px; }
+.ppd .ss-stage[data-layout='compact'] .ppd-card:not([data-joined]) { height: 84px; }
+
+/* ── variant 'card': a short strip over the real "Use your phone as a controller" button (PhonePadCard) ── */
+.ppd .ppd-tile {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.1);
+}
+.ppd .ppd-tile svg { width: 20px; height: 20px; }
+.ppd--card .ss-stage { --g: 20px; mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent); }
+.ppd--card .ppd-window { width: 400px; height: 300px; }
+.ppd--card .ppd-phone { top: var(--g); }
+/* the score belongs to the game once a player is in; before that the card sits over it */
+.ppd--card .ppd-score { opacity: 0; transition: opacity 300ms ease 300ms; }
+.ppd--card .ppd-score[data-joined] { opacity: 1; }
+.ppd--card .ppd-card { width: 210px; height: 60px; }
+.ppd--card .ppd-card__scan { width: 190px; }
+.ppd--card .ppd-score { left: 176px; }
+.ppd--card .ppd-controls { padding-top: 24px; }
+.ppd--card .ss-stage[data-layout='compact'] { --g: 14px; }
+.ppd--card .ss-stage[data-layout='compact'] .ppd-window { width: 380px; height: 300px; }
+.ppd--card .ss-stage[data-layout='compact'] .ppd-phone { top: var(--g); right: var(--g); }
+.ppd--card .ss-stage[data-layout='compact'] .ppd-card__title { font-size: 11.5px; }
+.ppd--card .ss-stage[data-layout='compact'] .ppd-card:not([data-joined]) { width: 164px; height: 56px; }
+.ppd--card .ss-stage[data-layout='compact'] .ppd-card__scan { width: 148px; gap: 10px; left: 8px; top: 8px; }
+.ppd--card .ss-stage[data-layout='compact'] .ppd-tile { width: 36px; height: 36px; }
+.ppd--card .ss-stage[data-layout='compact'] .ppd-score { left: 166px; }

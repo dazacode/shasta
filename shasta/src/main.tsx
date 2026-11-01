@@ -1,6 +1,6 @@
 // first: in the installed app, sends /api and /ai-models to the backend before anything fetches
 import './lib/appApi'
-import { captureConsole } from './lib/consoleCapture'
+import { captureConsole, listenToWorkers } from './lib/consoleCapture'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
@@ -9,6 +9,8 @@ import { isControllerUrl, onLaunch } from './lib/launchQueue'
 
 // Settings -> Advanced -> Console: Shasta's own console output, for people whose DevTools are blocked
 captureConsole(window, 'Shasta')
+// ...and the proxied pages' workers (games run there), forwarded by proxy/inject/consoleForward.js
+listenToWorkers()
 
 // A lazy chunk that is gone means this page is an older build than the host now serves (a CDN or browser cache kept
 // the old page): reload once to pick up the current one. At most once a minute, so a real outage cannot loop.

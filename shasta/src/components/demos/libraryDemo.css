@@ -1,0 +1,118 @@
+/* The empty-Library demo (LibraryDemo.tsx). Scoped under .ld; Shasta's own tokens colour the page so it follows the
+   theme. The page is the ground: no plate, the window fades out at its foot. */
+.ld .ss-stage {
+  --g: 28px;
+  --bg: var(--color-shasta-bg, var(--ss-surface));
+  --field: var(--color-shasta-field, var(--ss-canvas));
+  --line: var(--color-shasta-line, var(--ss-line));
+  --fg: var(--color-shasta-fg, var(--ss-text-strong));
+  --muted: var(--color-shasta-muted, var(--ss-text));
+  --accent: var(--color-shasta-accent, var(--ss-accent));
+  --accent-fg: var(--color-shasta-accent-fg, #fff);
+  overflow: hidden;
+  background: transparent;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent);
+}
+
+.ld .ld-window {
+  position: absolute;
+  left: var(--g);
+  top: var(--g);
+  width: 476px;
+  height: 380px;
+  box-shadow: var(--ss-shadow-hero);
+}
+.ld .ld-page { position: absolute; inset: 0; background: var(--bg); color: var(--fg); overflow: hidden; }
+
+.ld .ld-head { display: flex; gap: 16px; padding: 22px 24px 0; }
+.ld .ld-head > [data-target='src-icon'] { display: block; width: 76px; height: 76px; flex: none; }
+.ld .ld-icon { display: grid; place-items: center; background: #ecf0f1; box-shadow: 0 4px 10px -4px rgb(0 0 0 / 0.35); }
+.ld .ld-meta { display: grid; gap: 4px; min-width: 0; align-content: start; }
+.ld .ld-name { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
+.ld .ld-dev { font-size: 13px; font-weight: 500; color: var(--accent); line-height: 1.3; }
+.ld .ld-lines { display: grid; gap: 7px; margin-top: 8px; }
+.ld .ld-actions { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+.ld .ld-btn {
+  display: inline-grid;
+  place-items: center;
+  height: 34px;
+  min-width: 96px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--accent);
+  color: var(--accent-fg);
+  transition: background-color 220ms ease, color 220ms ease, transform 90ms ease;
+  will-change: transform;
+}
+.ld .ld-btn[data-kind='busy'], .ld .ld-btn[data-kind='open'] { background: var(--field); color: var(--fg); }
+.ld .ld-btn[data-pressed] { transform: scale(0.97); }
+.ld .ld-ghost { display: inline-grid; place-items: center; height: 34px; padding: 0 16px; border-radius: 999px; }
+
+.ld .ld-shots { display: grid; grid-template-columns: repeat(3, 150px); gap: 10px; padding: 26px 24px 0; }
+.ld .ld-shots span { height: 96px; border-radius: 12px; background: var(--field); box-shadow: inset 0 0 0 1px var(--line); }
+
+/* game://hextris: Hextris's own pale board with the hexagon in the middle */
+.ld .ld-game {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding-bottom: 60px;
+  background: #ecf0f1;
+  opacity: 0;
+  transition: opacity 420ms ease;
+}
+.ld .ld-game[data-on] { opacity: 1; }
+.ld .ld-hex--game { margin-right: 120px; }
+.ld .ld-score { position: absolute; left: 160px; top: 18px; transform: translateX(-50%); font: 700 26px/1.2 system-ui, sans-serif; color: #2c3e50; }
+
+/* The Library, as a card straddling the window's right edge */
+.ld .ld-lib {
+  position: absolute;
+  right: var(--g);
+  top: 128px;
+  width: 196px;
+  padding: 14px 14px 12px;
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--bg), var(--fg) 4%);
+  color: var(--fg);
+  box-shadow: var(--ss-shadow-satellite), 0 24px 40px -18px rgb(0 0 0 / 0.35), inset 0 0 0 1px var(--line);
+}
+.ld .ld-lib__title { font-size: 15px; font-weight: 600; line-height: 1.3; }
+.ld .ld-lib__sub { font-size: 11.5px; color: var(--muted); line-height: 1.35; margin-top: 2px; }
+.ld .ld-lib__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 12px; }
+.ld .ld-tile { position: relative; display: grid; justify-items: center; gap: 6px; padding: 8px 4px; border-radius: 12px; }
+.ld .ld-tile[data-landed][data-hover] { background: var(--field); }
+.ld .ld-slot {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 52px;
+  height: 52px;
+  margin-left: -26px;
+  border-radius: 12px;
+  border: 1.5px dashed var(--line);
+  transition: opacity 200ms ease;
+}
+.ld .ld-tile[data-landed] .ld-slot { opacity: 0; }
+.ld .ld-slot--quiet { opacity: 0.6; }
+.ld .ld-tile__icon { display: block; width: 52px; height: 52px; opacity: 0; }
+.ld .ld-tile[data-landed] .ld-tile__icon { opacity: 1; }
+.ld .ld-tile__name { font-size: 12px; font-weight: 500; line-height: 1.3; opacity: 0; transition: opacity 260ms ease 80ms; }
+.ld .ld-tile[data-landed] .ld-tile__name { opacity: 1; }
+.ld .ld-tile--filler { min-height: 82px; }
+
+.ld .ld-rest { position: absolute; left: 470px; top: 300px; width: 1px; height: 1px; }
+
+/* compact: the card stands lower over the window's right side, the screenshots go */
+.ld .ss-stage[data-layout='compact'] { --g: 16px; }
+.ld .ss-stage[data-layout='compact'] .ld-window { width: 420px; }
+.ld .ss-stage[data-layout='compact'] .ld-shots { display: none; }
+.ld .ss-stage[data-layout='compact'] .ld-lib { top: 212px; }
+.ld .ss-stage[data-layout='compact'] .ld-window { height: 440px; }
+.ld .ss-stage[data-layout='compact'] .ld-game { place-items: start center; padding: 34px 0 0; }
+.ld .ss-stage[data-layout='compact'] .ld-score { left: 48px; }
+.ld .ss-stage[data-layout='compact'] .ld-rest { left: 60px; top: 330px; }
+.ld .ss-stage[data-layout='compact'] .ld-hex--game { margin-right: 0; }

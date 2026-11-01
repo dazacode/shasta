@@ -94,6 +94,17 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
 const page = (title, body, head = '') =>
   `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><link rel="icon" href="/icon.png">${head}</head><body style="font-family:system-ui"><h1 id="h">${title}</h1>${body}</body></html>`
 
+// 20 s of a quiet 440 Hz tone, 8 kHz mono 16-bit WAV (the media hub fixture, e2e/shell/media.spec.ts)
+const TONE = (() => {
+  const rate = 8000
+  const n = rate * 20
+  const b = Buffer.alloc(44 + n * 2)
+  b.write('RIFF', 0); b.writeUInt32LE(36 + n * 2, 4); b.write('WAVEfmt ', 8); b.writeUInt32LE(16, 16); b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22)
+  b.writeUInt32LE(rate, 24); b.writeUInt32LE(rate * 2, 28); b.writeUInt16LE(2, 32); b.writeUInt16LE(16, 34); b.write('data', 36); b.writeUInt32LE(n * 2, 40)
+  for (let i = 0; i < n; i++) b.writeInt16LE(Math.round(Math.sin((2 * Math.PI * 440 * i) / rate) * 2000), 44 + i * 2)
+  return b
+})()
+
 const FLAKY = Buffer.from(Uint8Array.from({ length: 4 * 1048576 }, (_, i) => (i * 31 + 7) & 255))
 const flakyStats = new Map()
 const site = http.createServer((req, res) => {
@@ -130,6 +141,17 @@ const site = http.createServer((req, res) => {
     // a game that reads controllers (Gamepad API), like an emulator: lists every gamepad it sees and its held buttons
     case '/pads':
       return send(200, 'text/html', page('Pad Game', `<canvas id="game" width="480" height="270" style="background:#231"></canvas><p id="pads">none</p><ol id="events"></ol><script>addEventListener('gamepadconnected',e=>{const li=document.createElement('li');li.textContent='connected '+e.gamepad.index;document.getElementById('events').append(li)});(function poll(){const out=[...navigator.getGamepads()].filter(Boolean).map(p=>p.index+':'+p.buttons.map((b,i)=>b.pressed?i:null).filter(i=>i!==null).join('+'));document.getElementById('pads').textContent=out.join(' ')||'none';requestAnimationFrame(poll)})()</script>`))
+    // a music player like a streaming site's: an <audio> element plus navigator.mediaSession metadata and handlers
+    case '/music':
+      return send(200, 'text/html', page('Music Page', `<button id="play">Play</button><p id="log"></p><script>const a=new Audio('/tone.wav');a.loop=true;const log=t=>document.getElementById('log').textContent=t;document.getElementById('play').onclick=()=>{a.play();navigator.mediaSession.metadata=new MediaMetadata({title:'Test Tone',artist:'Fixture Band',album:'Loopback',artwork:[{src:'/icon.png',sizes:'64x64',type:'image/png'}]});navigator.mediaSession.setActionHandler('nexttrack',()=>log('next'));navigator.mediaSession.setActionHandler('pause',()=>{a.pause();log('paused by handler')});navigator.mediaSession.setActionHandler('play',()=>{a.play();log('played by handler')})}</script>`))
+    case '/tone.wav': {
+      // ranges, like any real media host: without them Chrome cannot seek
+      const m = /bytes=(\d+)-(\d*)/.exec(req.headers.range ?? '')
+      if (!m) return send(200, 'audio/wav', TONE, { 'Accept-Ranges': 'bytes', 'Content-Length': TONE.length })
+      const start = Number(m[1])
+      const end = m[2] ? Math.min(Number(m[2]), TONE.length - 1) : TONE.length - 1
+      return send(206, 'audio/wav', TONE.subarray(start, end + 1), { 'Accept-Ranges': 'bytes', 'Content-Range': `bytes ${start}-${end}/${TONE.length}`, 'Content-Length': end - start + 1 })
+    }
     case '/slow':
       return void setTimeout(() => send(200, 'text/html', page('Slow Page', '<p>finally</p>')), Number(url.searchParams.get('ms') || 6000))
     case '/spa':

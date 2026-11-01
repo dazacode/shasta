@@ -78,7 +78,7 @@ test('support page: 3-step guide, inline code box, success state', async ({ page
 
   await box.fill(' shasta-abcd-efgh-jkmo ')
   await page.getByRole('button', { name: 'Redeem' }).click()
-  await expect(page.getByText('Code accepted. Thank you!')).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText('Code accepted, thank you')).toBeVisible({ timeout: 15_000 })
   expect(redeemed).toBe('SHASTA-ABCD-EFGH-JKM0')
   await expect(page.getByRole('button', { name: 'See the new tab wallpapers' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Supporter settings' })).toBeVisible()

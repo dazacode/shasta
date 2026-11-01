@@ -158,7 +158,7 @@ export function MetadataImport({ app, draft, onApplied }: { app: DevApp; draft: 
               <div className="flex items-start gap-3">
                 {web(meta.data.iconUrl) && <img src={meta.data.iconUrl} alt="" className="size-14 shrink-0 rounded-xl object-cover" />}
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold">{meta.data.name}</p>
+                  <p className="font-medium">{meta.data.name}</p>
                   {meta.data.developer && <p className="text-xs text-shasta-muted">{meta.data.developer}</p>}
                   {meta.data.sourceUrl && (
                     <a href={meta.data.sourceUrl} target="_blank" rel="noreferrer noopener" className="mt-0.5 inline-flex items-center gap-1 text-xs text-shasta-accent hover:underline">

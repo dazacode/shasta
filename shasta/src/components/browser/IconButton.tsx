@@ -31,7 +31,7 @@ export function IconButton({ label, shortcut, children, className, ...props }: P
       </TooltipTrigger>
       <TooltipContent>
         {label}
-        {shortcut && <span className="opacity-60">{shortcut}</span>}
+        {shortcut && <kbd className="ml-1.5 rounded-[4px] border border-current/20 px-1 font-mono text-[11px] leading-4 opacity-70">{shortcut}</kbd>}
       </TooltipContent>
     </Tooltip>
   )

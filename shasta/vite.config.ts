@@ -14,8 +14,7 @@ const LICENSES: Record<string, string> = {
   '../LICENSE': 'AGPL-3.0.txt',
   '../NOTICE.md': 'NOTICE.md',
   'node_modules/@fontsource-variable/geist/LICENSE': 'OFL-Geist.txt',
-  'node_modules/@fontsource/poppins/LICENSE': 'OFL-Poppins.txt',
-  'node_modules/@fontsource/urbanist/LICENSE': 'OFL-Urbanist.txt',
+  'node_modules/@fontsource-variable/geist-mono/LICENSE': 'OFL-Geist-Mono.txt',
 }
 
 const scramjet = (p: string) => path.resolve(import.meta.dirname, '../scramjet/packages', p)

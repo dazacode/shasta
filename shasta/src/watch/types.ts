@@ -94,7 +94,7 @@ export interface Candidate {
 export interface Row {
   key: string
   title: string
-  /** a themed group drawn as one block ("halloween"); seasonal, see lib/seasonal.ts */
+  /** a holiday theme ("halloween", "harvest", "winter") drawn as one block; see lib/events.ts */
   section?: string
 }
 export interface RowData extends Row {

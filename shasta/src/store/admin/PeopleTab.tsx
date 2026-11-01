@@ -107,7 +107,7 @@ export function PeopleTab() {
 
       <section aria-label="Invite or grant" className="grid gap-4 md:grid-cols-2">
         <Card className="grid content-start gap-3">
-          <h3 className="font-semibold">Invite code</h3>
+          <h3 className="font-medium">Invite code</h3>
           <p className="text-sm text-shasta-muted">Best when you can hand the person a code directly.</p>
           <div>
             <Button onClick={() => setInviting(true)}>
@@ -126,7 +126,7 @@ export function PeopleTab() {
               }
             }}
           >
-            <h3 className="font-semibold">Grant by Account ID</h3>
+            <h3 className="font-medium">Grant by Account ID</h3>
             <Field label="Account ID" hint="The person copies it from Store → Account.">
               <Input value={grantId} onChange={(e) => setGrantId(e.target.value)} placeholder="K7QM-2XPD" spellCheck={false} autoComplete="off" />
             </Field>
@@ -144,7 +144,7 @@ export function PeopleTab() {
 
       <section aria-label="Accounts">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-          <h2 className="text-lg font-semibold">Owners and contributors</h2>
+          <h2 className="sh-heading">Owners and contributors</h2>
           <Input className="max-w-64" aria-label="Search visitors by Account ID or name" placeholder="Find any account by ID or name" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         {users.error && !users.data ? (
@@ -194,7 +194,7 @@ export function PeopleTab() {
       </section>
 
       <section aria-label="Invites">
-        <h2 className="mb-3 text-lg font-semibold">Invite codes</h2>
+        <h2 className="mb-3 sh-heading">Invite codes</h2>
         {invites.error && !invites.data ? (
           <LoadError message={invites.error} offline={invites.offline} onRetry={invites.reload} />
         ) : !invites.data ? (

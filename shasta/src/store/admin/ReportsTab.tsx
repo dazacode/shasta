@@ -44,11 +44,11 @@ export function ReportsTab() {
                 <div className="min-w-0 flex-1 basis-60">
                   <div className="flex flex-wrap items-center gap-2">
                     {r.appStatus === 'published' ? (
-                      <button className="font-semibold text-shasta-accent hover:underline" onClick={() => go(appPath(r.appSlug))}>
+                      <button className="font-medium underline-offset-4 hover:underline" onClick={() => go(appPath(r.appSlug))}>
                         {r.appName}
                       </button>
                     ) : (
-                      <span className="font-semibold">{r.appName}</span>
+                      <span className="font-medium">{r.appName}</span>
                     )}
                     <StatusBadge status={r.appStatus as AppStatus} />
                     <span className="rounded-full bg-shasta-field px-2 py-0.5 text-[11px]">{(r.problem && PROBLEM[r.problem]) || REASON[r.reason] || r.reason}</span>
