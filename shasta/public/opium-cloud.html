@@ -110,14 +110,16 @@ window.__OPIUM_API__ = /*__API__*/null;
   const apiBase = () => (API.base || `https://${HOST}`).replace(/\/+$/, "");
   const apiHdr = (json) => { const h = {}; if (API.key) h["x-api-key"] = API.key; if (json) h["content-type"] = "application/json"; return h; };
   const urlFor = (p) => `${apiBase()}/${V1 ? "cloud/v1" : "stratus"}/${p}`;
-  const jfetch = (p, opt = {}) => fetch(urlFor(p), { method: opt.method || "GET", headers: apiHdr(!!opt.body), body: opt.body ? JSON.stringify(opt.body) : undefined, credentials: "include" }).then((r) => r.json());
+  // every request gives up after a while: a relay that a network black-holes must never hang the player
+  const tfetch = (u, opt = {}, ms = 12000) => fetch(u, { ...opt, signal: AbortSignal.timeout(ms) });
+  const jfetch = (p, opt = {}) => tfetch(urlFor(p), { method: opt.method || "GET", headers: apiHdr(!!opt.body), body: opt.body ? JSON.stringify(opt.body) : undefined, credentials: "include" }).then((r) => r.json());
   const rndKey = () => [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, "0")).join("");
 
   // ---- cloud API adapter: /stratus (opium mirrors) <-> /cloud/v1 (stratus-api) ----
   const norm = (g) => (g && (g.key || g.game_key) && g.name ? { key: g.key || g.game_key, name: g.name, image: g.image, cover: g.cover, tags: g.tags, description: g.description } : null);
   async function createSession(key) {
     if (V1) {
-      const r = await fetch(urlFor("createSession"), { method: "POST", headers: apiHdr(true), body: JSON.stringify({ game_key: key }) });
+      const r = await tfetch(urlFor("createSession"), { method: "POST", headers: apiHdr(true), body: JSON.stringify({ game_key: key }) });
       const text = await r.text();
       let last = null;
       for (const line of text.split("\n")) {
@@ -134,16 +136,17 @@ window.__OPIUM_API__ = /*__API__*/null;
     return jfetch("session", { method: "POST", body: { game_key: key, relay: false, client_key: rndKey() } });
   }
   async function pollSession(uuid) {
-    if (V1) { const j = await fetch(urlFor(`getQueue?uuid=${uuid}`), { headers: apiHdr() }).then((r) => r.json()); return { state: j.status === "finished_queue" ? "finished_queue" : "queued", queue_pos: j.queue_pos, error: j.error }; }
+    if (V1) { const j = await tfetch(urlFor(`getQueue?uuid=${uuid}`), { headers: apiHdr() }).then((r) => r.json()); return { state: j.status === "finished_queue" ? "finished_queue" : "queued", queue_pos: j.queue_pos, error: j.error }; }
     return jfetch(`session/${uuid}`);
   }
-  const startSession = (uuid) => (V1 ? fetch(urlFor("startGame"), { method: "POST", headers: apiHdr(true), body: JSON.stringify({ uuid }) }).then((r) => r.json()) : jfetch(`session/${uuid}/start`, { method: "POST", body: {} }));
+  const startSession = (uuid) => (V1 ? tfetch(urlFor("startGame"), { method: "POST", headers: apiHdr(true), body: JSON.stringify({ uuid }) }).then((r) => r.json()) : jfetch(`session/${uuid}/start`, { method: "POST", body: {} }));
   const signalUrl = (uuid, st) => (V1 ? st.signaling_ws : `${apiBase().replace(/^http/, "ws")}/stratus/signal/${uuid}`);
   function quitSession(uuid) {
     if (V1) return void fetch(urlFor("quitSession"), { method: "POST", headers: apiHdr(true), body: JSON.stringify({ uuid }), keepalive: true }).catch(() => {});
     return void fetch(urlFor(`session/${uuid}/quit`), { method: "POST", headers: { "content-type": "application/json" }, body: "{}", keepalive: true }).catch(() => {});
   }
 
+  let HOSTS = [];
   async function pickHost() {
     if (HOST) return HOST;
     // the relays are independent and churn: prefer one that is up with spare machines
@@ -156,15 +159,29 @@ window.__OPIUM_API__ = /*__API__*/null;
       } catch { return null; }
     }));
     const up = probes.filter((x) => x && !x.down).sort((a, b) => b.idle - a.idle);
-    return (HOST = (up[0] || probes.find(Boolean) || { h: MIRRORS[0] }).h);
+    HOSTS = (up.length ? up : probes.filter(Boolean)).map((x) => x.h);
+    // none answered: this network blocks or cannot reach them (common on school Wi-Fi)
+    if (!HOSTS.length) throw new Error("unreachable");
+    return (HOST = HOSTS[0]);
   }
+  /** the next relay that answered, after one failed us; false when there is none left */
+  function nextHost() {
+    if (API.base) return false;
+    const i = HOSTS.indexOf(HOST);
+    if (i < 0 || i + 1 >= HOSTS.length) return false;
+    HOST = HOSTS[i + 1];
+    return true;
+  }
+  const UNREACHABLE = "Couldn't reach the cloud servers. This network may block them; try another network, or try again in a minute.";
 
   // ---- catalogue ------------------------------------------------------
   let GAMES = [];
   async function loadCatalog() {
+    // a one-game package needs no catalogue: start the game at once (waiting on the list hung on slow relays)
+    if (cfg && cfg.key) { $("status").textContent = ""; return start(cfg.key, cfg.name, cfg.cover); }
     $("status").textContent = "finding a cloud server…";
     if (!API.base) await pickHost();
-    const tryJson = async (u) => { try { const r = await fetch(u, { cache: "no-cache" }); if (!r.ok) return null; const j = await r.json(); return Array.isArray(j) ? j : j.games; } catch { return null; } };
+    const tryJson = async (u) => { try { const r = await tfetch(u, { cache: "no-cache" }); if (!r.ok) return null; const j = await r.json(); return Array.isArray(j) ? j : j.games; } catch { return null; } };
     // snapshot next to the page/API -> self-hosted catalogue -> the API's own /stratus/games
     let raw = await tryJson(API.catalog || "./opium-cloud.json");
     if (!raw && V1 && API.base) raw = await tryJson(`${apiBase()}/cloud.json`);
@@ -174,7 +191,6 @@ window.__OPIUM_API__ = /*__API__*/null;
     $("status").textContent = `${games.length} games · via ${HOST}`;
     $("count").textContent = games.length ? `${games.length} titles` : "";
     render("");
-    if (cfg && cfg.key) start(cfg.key, cfg.name, cfg.cover);
   }
 
   function render(filter) {
@@ -252,7 +268,18 @@ window.__OPIUM_API__ = /*__API__*/null;
   let ws = null, pc = null, uuid = null, busy = false;
   let iceServers = [], closing = false, signalTries = 0, readyTimer = null, SIG = null;
   const sub = (t) => { $("psub").textContent = t; };
-  const fail = (m) => { $("pmsg").innerHTML = `<span class="err">${m}</span>`; $("overlay").classList.remove("gone"); };
+  let lastStart = null;
+  // an error always comes with a way out: Retry starts the same game again from a fresh relay pick
+  const fail = (m) => {
+    const box = $("pmsg");
+    box.replaceChildren();
+    const err = document.createElement("span"); err.className = "err"; err.textContent = m;
+    const again = document.createElement("button"); again.className = "btn"; again.textContent = "Try again"; again.style.marginTop = "12px";
+    again.onclick = () => { if (busy || !lastStart) return; teardownQuiet(); HOST = qs.get("h") || null; start(...lastStart); };
+    box.append(err, document.createElement("br"), again);
+    $("overlay").classList.remove("gone");
+  };
+  const clock = (s) => `${Math.floor(s / 60)}:${String(Math.max(0, s % 60)).padStart(2, "0")}`;
   const phase = (m) => { $("pmsg").innerHTML = `<span class="spin"></span><div style="margin-top:8px;color:#9aa0ad;font-size:13px">${m}</div>`; $("overlay").classList.remove("gone"); };
 
   // The relay 502s/timeouts while an instance is still attaching, so a socket that dies before
@@ -268,7 +295,8 @@ window.__OPIUM_API__ = /*__API__*/null;
       else if (m.type === "rtc_answer") await pc?.setRemoteDescription(m.sdp).catch(() => {});
       else if (m.type === "rtc_candidate") await pc?.addIceCandidate(m.candidate).catch(() => {});
       else if (m.type === "ping") { clearTimeout(readyTimer); if (ws.readyState === 1) ws.send(JSON.stringify({ type: "ping" })); }
-      else if (m.type === "time_left") sub(`${m.time_left}s left`);
+      // the cloud's play-time limit for this session, not a loading time
+      else if (m.type === "time_left") sub(`Play time left ${clock(m.time_left)}`);
       else if (m.type === "game_cap") end("time is up", m.message);
       else if (m.type === "game_ended") end("session ended", m.message);
     };
@@ -294,38 +322,44 @@ window.__OPIUM_API__ = /*__API__*/null;
     $("pname").textContent = name || key; $("pbar").textContent = name || key;
     $("pcover").src = cover || "";
     $("pcover").style.display = cover ? "" : "none";
-    closing = false; signalTries = 0; sub(""); phase("requesting a machine…");
+    closing = false; signalTries = 0; sub(""); phase("Finding a cloud server…");
+    lastStart = [key, name, cover];
     try {
-      if (!API.base) await pickHost();
-      // session creation and boot are retried: the pool drops requests while it respawns machines
-      let o = null;
-      for (let i = 0; i < 3 && (!o || o.error); i++) {
-        o = await createSession(key).catch(() => null);
-        if (!o || o.error) await new Promise((r) => setTimeout(r, 1200));
+      if (!API.base) {
+        try { await pickHost(); } catch { return fail(UNREACHABLE); }
       }
-      if (!o || o.error) return fail((o && o.error) || "could not start a session");
+      phase("Asking for a gaming PC…");
+      // session creation is retried (the pool drops requests while it respawns machines), then moved to the next relay
+      let o = null;
+      for (let i = 0; i < 6 && (!o || o.error); i++) {
+        o = await createSession(key).catch(() => null);
+        if (o && !o.error) break;
+        if (i % 2 === 1 && !nextHost()) break;
+        await new Promise((r) => setTimeout(r, 1200));
+      }
+      if (!o || o.error) return fail((o && o.error) || "No gaming PC is free right now. Try again in a minute.");
       uuid = o.uuid;
       while (o.state === "queued") {
-        phase(`queued · position #${o.queue_pos ?? "?"}`);
+        phase(`Waiting for a free PC · you are #${o.queue_pos ?? "?"} in line`);
         await new Promise((r) => setTimeout(r, V1 ? 3200 : 2000));
         o = await pollSession(uuid).catch(() => ({}));
       }
-      phase("booting…");
+      phase("Starting the game on the PC…");
       let st = null;
       for (let i = 0; i < 3 && (!st || st.error); i++) {
         st = await startSession(uuid).catch(() => null);
         if (!st || st.error) await new Promise((r) => setTimeout(r, 1500));
       }
-      if (!st || st.error) return fail((st && st.error) || "the machine did not boot");
+      if (!st || st.error) return fail((st && st.error) || "The gaming PC did not start. Try again.");
       iceServers = st.ice_servers || [];
       SIG = signalUrl(uuid, st);
       openSignal();
-    } catch (e) { fail(String(e.message || e)); }
+    } catch (e) { fail(/timeout|abort/i.test(String(e && e.name)) ? UNREACHABLE : String(e.message || e)); }
     finally { busy = false; }
   }
 
   async function negotiate(servers) {
-    phase("connecting video…");
+    phase("Connecting the picture…");
     pc = new RTCPeerConnection({ iceServers: servers || [], bundlePolicy: "max-bundle", rtcpMuxPolicy: "require" });
     pc.addTransceiver("audio", { direction: "recvonly" });
     const v = pc.addTransceiver("video", { direction: "recvonly" });
@@ -351,6 +385,15 @@ window.__OPIUM_API__ = /*__API__*/null;
   }
 
   function end(reason, msg) { fail(`${reason}${msg ? " — " + msg : ""}`); setTimeout(teardown, 1500); }
+  /** ends the current attempt (session, socket, stream) but keeps the player on screen, for "Try again" */
+  function teardownQuiet() {
+    closing = true; clearTimeout(readyTimer);
+    try { dc?.close(); } catch {}
+    try { pc?.close(); } catch {}
+    try { ws?.close(); } catch {}
+    if (uuid) quitSession(uuid);
+    dc = pc = ws = uuid = null; SIG = null;
+  }
   function teardown() {
     closing = true; clearTimeout(readyTimer);
     try { dc?.close(); } catch {}
@@ -371,7 +414,7 @@ window.__OPIUM_API__ = /*__API__*/null;
   addEventListener("keydown", (e) => { if (e.key === "Escape" && player.classList.contains("on") && !document.pointerLockElement) { /* let Esc free the pointer first */ } });
   addEventListener("pagehide", () => { if (uuid) teardown(); });
 
-  loadCatalog().catch((e) => { $("status").textContent = "could not load the catalogue: " + e.message; });
+  loadCatalog().catch((e) => { $("status").textContent = e.message === "unreachable" ? UNREACHABLE : "could not load the catalogue: " + e.message; });
 })();
 </script>
 </body>
