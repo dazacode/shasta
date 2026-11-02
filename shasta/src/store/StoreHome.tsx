@@ -275,6 +275,7 @@ export default function StoreHome() {
   const { data, loading, error, offline, reload } = useApi<Home>('/api/catalog/home')
   const followingKey = useStore((s) => (s.local?.following ?? []).join(','))
   const catalogVersion = useStore((s) => s.catalogVersion)
+  const liveTrending = useStore((s) => s.liveTrending)
   const [feedApps, setFeedApps] = useState<AppCard[]>([])
   useEffect(() => {
     if (!followingKey) {
@@ -305,7 +306,8 @@ export default function StoreHome() {
       return out
     }
     // the Top 10 is a ranking: it goes first, so a featured or installed app keeps its place in it
-    const top = take(data.trending.length >= 3 ? data.trending : data.popular, 10, Math.min(min, 3))
+    const trending = liveTrending ?? data.trending
+    const top = take(trending.length >= 3 ? trending : data.popular, 10, Math.min(min, 3))
     const installed = (library?.installed ?? []).filter((i) => i.available && fit(i.app))
     const recent = [...installed].filter((i) => i.lastLaunchedAt).sort((a, b) => (b.lastLaunchedAt ?? 0) - (a.lastLaunchedAt ?? 0)).slice(0, 10).map((i) => i.app)
     installed.forEach((i) => shown.add(i.app.id))
@@ -319,8 +321,8 @@ export default function StoreHome() {
     const facets = facetsOf(data.categories, data.genres, kind)
     // genres overlap, so the total comes from the categories (each app has one)
     const kindTotal = kind === 'all' ? data.total : data.categories.filter((c) => (kind === 'games') === c.isGame).reduce((n, c) => n + c.count, 0)
-    return { recent, top, follow, collections, added, favourites, updated, newThisWeek, facets, kindTotal, exclude: new Set(shown) }
-  }, [data, kind, library, feedApps])
+    return { live: trending.length >= 3, recent, top, follow, collections, added, favourites, updated, newThisWeek, facets, kindTotal, exclude: new Set(shown) }
+  }, [data, kind, library, feedApps, liveTrending])
 
   // "Picked for you" loads on its own: it skips everything the other rails show, and the genre rails skip its picks
   const [picked, setPicked] = useState<string[]>([])
@@ -408,7 +410,7 @@ export default function StoreHome() {
       )}
 
       {page.top.length > 0 && (
-        <Section title={kind === 'games' ? 'Top games' : kind === 'apps' ? 'Top apps' : 'Top 10 right now'} subtitle={data.trending.length >= 3 ? 'Most installed in the last two weeks' : 'Most installed'} action={<SeeAll path={`/search?${group}sort=popular`} />}>
+        <Section title={kind === 'games' ? 'Top games' : kind === 'apps' ? 'Top apps' : 'Top 10 right now'} subtitle={page.live ? 'Live: what people are installing and playing now' : 'Most installed'} action={<SeeAll path={`/search?${group}sort=popular`} />}>
           <Shelf>{page.top.map((a, i) => <RankTile key={a.id} app={a} rank={i + 1} />)}</Shelf>
         </Section>
       )}

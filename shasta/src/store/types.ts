@@ -373,8 +373,10 @@ export interface Report {
 }
 
 export interface CatalogEvent {
-  type: 'app-published' | 'app-updated' | 'app-unpublished' | 'app-removed' | 'catalog-changed' | 'queue-changed'
+  type: 'app-published' | 'app-updated' | 'app-unpublished' | 'app-removed' | 'catalog-changed' | 'queue-changed' | 'trending'
   appId?: string
+  /** 'trending': the new "Top 10 right now" ranking */
+  apps?: AppCard[]
   slug?: string
   name?: string
   version?: string

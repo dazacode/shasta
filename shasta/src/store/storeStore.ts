@@ -41,6 +41,8 @@ interface StoreState {
   libraryError: string | null
   /** bumped whenever the catalog changes on the server; lists refetch when it moves */
   catalogVersion: number
+  /** the "Top 10 right now" ranking pushed by the server since /home was fetched (null = use /home's) */
+  liveTrending: AppCard[] | null
   /** a staff account's recovery key, shown once */
   pendingRecoveryKey: string | null
   busy: Record<string, boolean>
@@ -85,7 +87,7 @@ const toast = (message: string, opts?: Parameters<ReturnType<typeof useUi.getSta
 function refetchSoon() {
   clearTimeout(refreshTimer)
   refreshTimer = setTimeout(() => {
-    useStore.setState((s) => ({ catalogVersion: s.catalogVersion + 1 }))
+    useStore.setState((s) => ({ catalogVersion: s.catalogVersion + 1, liveTrending: null }))
     void useStore.getState().refreshLibrary()
   }, 250)
 }
@@ -103,6 +105,11 @@ function startEvents() {
         return
       }
       const st = useStore.getState()
+      // the live ranking moves on every install/launch: swap it in, never refetch the whole Store for it
+      if (ev.type === 'trending') {
+        if (Array.isArray(ev.apps)) useStore.setState({ liveTrending: ev.apps })
+        return
+      }
       refetchSoon()
       if (ev.type === 'app-published' && ev.name && ev.storeId && st.library?.following.some((f) => f.id === ev.storeId)) {
         const from = st.library.following.find((f) => f.id === ev.storeId)!.name
@@ -130,6 +137,7 @@ export const useStore = create<StoreState>()((set, get) => ({
   library: null,
   libraryError: null,
   catalogVersion: 0,
+  liveTrending: null,
   pendingRecoveryKey: null,
   busy: {},
 
