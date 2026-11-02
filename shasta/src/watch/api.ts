@@ -1,7 +1,7 @@
 // Tiny client for the Watch API. Same-origin in a normal tab; in the installed app /api is another origin
 // (lib/appApi.ts) and the app's global fetch sends it there, so relative URLs are correct everywhere.
 import { APP_API_ORIGIN } from '@/lib/appApi'
-import type { Candidate, Card, Featured, Kind, Row, RowData, Scope, Title } from './types'
+import type { Candidate, Card, Featured, Kind, ReadPages, ReadText, Row, RowData, Scope, Title } from './types'
 
 export class WatchError extends Error {
   status: number
@@ -46,15 +46,21 @@ export function artUrl(url?: string | null): string | undefined {
 }
 
 export const watchApi = {
-  check: () => get<{ enabled: boolean; tmdb: boolean; direct?: boolean; kuhi: boolean }>('/api/watch/check'),
-  home: (scope: Scope) => get<{ enabled: boolean; tmdb: boolean; rows: Row[] }>(`/api/watch/home?kind=${scope}`),
+  check: () => get<{ enabled: boolean; tmdb: boolean; direct?: boolean; read?: boolean; kuhi: boolean }>('/api/watch/check'),
+  home: (scope: Scope) => get<{ enabled: boolean; tmdb: boolean; read?: boolean; rows: Row[] }>(`/api/watch/home?kind=${scope}`),
   row: (key: string, signal?: AbortSignal) => get<RowData>(`/api/watch/row/${encodeURIComponent(key)}`, signal),
   featured: (signal?: AbortSignal) => get<{ items: Featured[] }>('/api/watch/featured', signal),
   search: (q: string, type?: Kind, signal?: AbortSignal) =>
     get<{ results: Card[] }>(`/api/watch/search?q=${encodeURIComponent(q)}${type ? `&type=${type}` : ''}`, signal),
+  /** type-ahead: the fast sources only, a handful of best matches */
+  suggest: (q: string, signal?: AbortSignal) => get<{ results: Card[] }>(`/api/watch/suggest?q=${encodeURIComponent(q)}`, signal),
   title: (kind: Kind, id: string, season?: number) => get<Title>(`/api/watch/title/${kind}/${encodeURIComponent(id)}${season ? `?season=${season}` : ''}`),
   sources: (kind: Kind, id: string, opts: { season?: number; episode?: number } = {}) =>
     get<{ sources: Candidate[] }>(`/api/watch/sources/${kind}/${encodeURIComponent(id)}?season=${opts.season ?? 1}&episode=${opts.episode ?? 1}`),
+  /** reading (image kinds): the page images for one chapter */
+  pages: (kind: Kind, id: string, chapter: number) => get<ReadPages>(`/api/watch/pages/${kind}/${encodeURIComponent(id)}?chapter=${chapter}`),
+  /** reading (text kinds): the clean text for one chapter */
+  chapter: (kind: Kind, id: string, chapter: number) => get<ReadText>(`/api/watch/chapter/${kind}/${encodeURIComponent(id)}?chapter=${chapter}`),
   /** the direct resolver alone, with the metadata check it ran (verified = the host's title matched ours) */
   resolve: (kind: Kind, id: string, opts: { season?: number; episode?: number } = {}) =>
     get<{ title: string; verified: boolean; served: string | null; candidates: Candidate[] }>(

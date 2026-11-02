@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { api, errorMessage, ApiError } from './api'
 import { useStore } from './storeStore'
-import type { AppCard, SearchResult } from './types'
+import type { AppCard, SearchMeta, SearchResult } from './types'
 
 // ---- prefetch ---------------------------------------------------------------------------------------
 
@@ -81,22 +81,25 @@ export interface PagedApps {
   hasMore: boolean
   loadMore: () => void
   reload: () => void
+  /** what a text search understood (first page only; null for plain lists and older servers) */
+  meta: SearchMeta | null
 }
 
 interface PagedState {
   key: string | null
   items: AppCard[]
   total: number | null
+  meta: SearchMeta | null
   loading: boolean
   error: string | null
   offline: boolean
 }
 
 // what each list had loaded, so coming back to a list (back button, Discover <-> Explore) shows it at once
-const pagedCache = new Map<string, { items: AppCard[]; total: number }>()
-const remember = (key: string, items: AppCard[], total: number) => {
+const pagedCache = new Map<string, { items: AppCard[]; total: number; meta: SearchMeta | null }>()
+const remember = (key: string, items: AppCard[], total: number, meta: SearchMeta | null) => {
   pagedCache.delete(key)
-  pagedCache.set(key, { items, total })
+  pagedCache.set(key, { items, total, meta })
   if (pagedCache.size > 12) pagedCache.delete(pagedCache.keys().next().value!)
 }
 
@@ -113,7 +116,7 @@ const merge = (a: AppCard[], b: AppCard[]) => {
 export function usePagedApps(query: string | null, pageSize = PAGE_SIZE): PagedApps {
   const fresh = (key: string | null): PagedState => {
     const hit = key ? pagedCache.get(key) : undefined
-    return { key, items: hit?.items ?? [], total: hit?.total ?? null, loading: !!key, error: null, offline: false }
+    return { key, items: hit?.items ?? [], total: hit?.total ?? null, meta: hit?.meta ?? null, loading: !!key, error: null, offline: false }
   }
   const [state, setState] = useState<PagedState>(() => fresh(query))
   const version = useStore((s) => s.catalogVersion)
@@ -128,7 +131,9 @@ export function usePagedApps(query: string | null, pageSize = PAGE_SIZE): PagedA
     for (let o = offset; o < offset + count; o += MAX_LIMIT)
       parts.push(api.get<SearchResult>(`/api/catalog/apps?${q}${q ? '&' : ''}limit=${Math.min(MAX_LIMIT, offset + count - o)}&offset=${o}`, signal))
     const pages = await Promise.all(parts)
-    return { items: pages.reduce<AppCard[]>((all, p) => merge(all, p.items), []), total: pages[0]?.total ?? 0 }
+    const first = offset === 0 ? pages[0] : undefined
+    const meta: SearchMeta | null = first && 'refine' in first && first.refine ? { topId: first.topId ?? null, intent: first.intent ?? null, corrected: first.corrected ?? null, refine: first.refine, developers: first.developers ?? [] } : null
+    return { items: pages.reduce<AppCard[]>((all, p) => merge(all, p.items), []), total: pages[0]?.total ?? 0, meta }
   }, [])
 
   // first page, a refresh after a live change, or a retry: (re)load everything that is meant to be on screen
@@ -144,10 +149,10 @@ export function usePagedApps(query: string | null, pageSize = PAGE_SIZE): PagedA
     const count = Math.max(pageSize, prev.items.length)
     setState({ ...prev, key: query, loading: true, error: null })
     fetchRange(query, 0, count, c.signal)
-      .then(({ items, total }) => {
+      .then(({ items, total, meta }) => {
         if (mine !== gen.current) return
-        remember(query, items, total)
-        setState({ key: query, items, total, loading: false, error: null, offline: false })
+        remember(query, items, total, meta)
+        setState({ key: query, items, total, meta, loading: false, error: null, offline: false })
       })
       .catch((e) => {
         if (e instanceof DOMException && e.name === 'AbortError') return
@@ -168,7 +173,7 @@ export function usePagedApps(query: string | null, pageSize = PAGE_SIZE): PagedA
         if (mine !== gen.current) return
         setState((cur) => {
           const all = merge(cur.items, items)
-          remember(key, all, total)
+          remember(key, all, total, cur.meta)
           return { ...cur, items: all, total, loading: false }
         })
       })
@@ -195,6 +200,7 @@ export function usePagedApps(query: string | null, pageSize = PAGE_SIZE): PagedA
     hasMore: total !== null && items.length < total,
     loadMore,
     reload: useCallback(() => setNonce((n) => n + 1), []),
+    meta: mineNow ? state.meta : null,
   }
 }
 

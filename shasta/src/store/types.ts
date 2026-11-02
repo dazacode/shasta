@@ -134,9 +134,41 @@ export interface Home {
   announcement: { id: string; title: string; body: string; appSlug: string | null } | null
 }
 
-export interface SearchResult {
+export interface SearchResult extends Partial<SearchMeta> {
   total: number
   items: AppCard[]
+}
+
+/** What a search understood and how to narrow it, sent with the first page of a text search (server: services/catalog.ts). Absent from older servers. */
+export interface SearchMeta {
+  /** the first item is a clear best match (its title or initials were typed) */
+  topId: string | null
+  intent: SearchIntent | null
+  /** `applied`: nothing matched as typed, so these are the corrected words' results; else only a suggestion */
+  corrected: { query: string; applied: boolean } | null
+  refine: SearchRefine
+  developers: { name: string; count: number }[]
+}
+
+export interface SearchIntent {
+  /** words that still had to match a title or description */
+  text: string
+  /** genres, topics, systems and sub-genres the words named */
+  facets: { label: string; genre: string | null; tags: string[] | null }[]
+  group: 'games' | 'apps' | null
+  kind: 'package' | 'linked' | null
+  order: 'popular' | 'newest' | null
+  developer: string | null
+  /** "games like X": the app X was matched to */
+  like: AppCard | null
+  /** the query was only an intention: every app that fits it is a result */
+  browse: boolean
+}
+
+export interface SearchRefine {
+  genres: GenreCount[]
+  groups: { games: number; apps: number }
+  kinds: { linked: number; package: number }
 }
 
 export interface Suggestions {
@@ -144,6 +176,10 @@ export interface Suggestions {
   categories: { id: string; name: string }[]
   genres?: GenreRef[]
   developers: string[]
+  /** "horror games" -> "Horror games": opens the results page, which shows how it was read */
+  intent?: { label: string; query: string } | null
+  /** the apps are for these corrected words */
+  corrected?: string | null
 }
 
 export interface InstalledApp {

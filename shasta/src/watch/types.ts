@@ -1,6 +1,9 @@
 // Shapes returned by the Watch API (server/src/routes/watch.ts), kept in one place so the two cannot drift silently.
-export type Kind = 'anime' | 'movie' | 'tv'
+export type Kind = 'anime' | 'movie' | 'tv' | 'manga' | 'comic' | 'book'
 export type Scope = 'all' | Kind
+/** the reading kinds (image or text), which render the Reader instead of the Player */
+export const READ_KINDS: Kind[] = ['manga', 'comic', 'book']
+export const isReadKind = (k: Kind) => READ_KINDS.includes(k)
 
 export interface Card {
   kind: Kind
@@ -22,6 +25,8 @@ export interface Episode {
   overview: string
   still: string | null
   airDate: string | null
+  /** reading providers only: the provider's own chapter id */
+  id?: string
 }
 
 export interface Season {
@@ -49,7 +54,7 @@ export interface Title extends Card {
   trailer?: { key: string; site: string } | null
   recommendations?: Card[]
   logo?: string | null
-  external: { tmdb?: string; anilist?: string; imdb?: string }
+  external: { tmdb?: string; anilist?: string; imdb?: string; provider?: string; ref?: string }
   studio?: string
   status?: string
   rating: number | null
@@ -112,4 +117,28 @@ export interface Continue {
   /** seconds watched */
   position: number
   duration: number
+  /** reading only: last chapter/page read */
+  chapter?: number
+  page?: number
+}
+
+/** A chapter's page images (manga/comic). */
+export interface ReadPages {
+  kind: Kind
+  title: string
+  chapter: number
+  chapterTitle: string
+  total: number | null
+  pages: { url: string; referer?: string }[]
+}
+
+/** A chapter's clean text (book/novel). */
+export interface ReadText {
+  title: string
+  chapter: number
+  chapterTitle: string
+  html: string
+  total: number | null
+  prev: number | null
+  next: number | null
 }

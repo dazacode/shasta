@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { CloudOff, Compass, LayoutGrid, Search, Send, ShieldCheck, Store, UserRound, Wrench, X } from 'lucide-react'
+import { CloudOff, Compass, LayoutGrid, ListFilter, Search, Send, ShieldCheck, SpellCheck, Store, UserRound, Wrench, X } from 'lucide-react'
 import { Logo } from '@/components/Logo'
 import { cn } from '@/lib/utils'
 import { AdSlot } from '@/components/ads/AdSlot'
@@ -47,14 +47,18 @@ function SearchBox() {
     return () => document.removeEventListener('mousedown', close)
   }, [])
 
-  type Row = { key: string; label: string; sub?: string; app?: AppCard; run: () => void }
+  type Row = { key: string; label: string; sub?: string; app?: AppCard; icon?: ReactNode; run: () => void }
   const rows = useMemo<Row[]>(() => {
     if (!data || !q) return []
+    const search = (words: string) => go(`/search?q=${encodeURIComponent(words)}`)
     return [
+      // what the words mean ("horror games" -> Horror games): the results page shows how it was read
+      ...(data.intent ? [{ key: 'intent', label: data.intent.label, sub: 'Search by what you meant', icon: <ListFilter className="size-4 text-shasta-muted" />, run: () => search(data.intent!.query) }] : []),
+      ...(data.corrected ? [{ key: 'fix', label: data.corrected, sub: `Did you mean this? Nothing matches “${q}”`, icon: <SpellCheck className="size-4 text-shasta-muted" />, run: () => search(data.corrected!) }] : []),
       ...data.apps.map((a) => ({ key: a.id, label: a.name, sub: [a.developer, a.category?.name].filter(Boolean).join(' · '), app: a, run: () => go(appPath(a.slug)) })),
       ...(data.genres ?? []).map((g) => ({ key: `g-${g.id}`, label: g.name, sub: 'isGame' in g && g.isGame === false ? 'Topic' : 'Genre', run: () => go(`/search?genre=${g.id}`) })),
       ...data.categories.filter((c) => !(data.genres?.length && c.name === 'Games')).map((c) => ({ key: `c-${c.id}`, label: c.name, sub: 'Category', run: () => go(`/search?category=${c.id}`) })),
-      ...data.developers.map((d) => ({ key: `d-${d}`, label: d, sub: 'Developer', run: () => go(`/search?q=${encodeURIComponent(d)}`) })),
+      ...data.developers.map((d) => ({ key: `d-${d}`, label: d, sub: 'Developer', icon: <UserRound className="size-4 text-shasta-muted" />, run: () => search(`by ${d}`) })),
     ]
   }, [data, q, go])
 
@@ -109,7 +113,7 @@ function SearchBox() {
                 onClick={() => (setOpen(false), r.run())}
                 className={cn('flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm', i === active && 'bg-shasta-hover')}
               >
-                {r.app ? <AppIcon app={r.app} size={32} /> : <Search className="size-4 text-shasta-muted" />}
+                {r.app ? <AppIcon app={r.app} size={32} /> : <span className="grid size-8 shrink-0 place-items-center">{r.icon ?? <Search className="size-4 text-shasta-muted" />}</span>}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">{r.label}</span>
                   {r.sub && <span className="block truncate text-xs text-shasta-faint">{r.sub}</span>}

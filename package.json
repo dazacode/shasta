@@ -19,6 +19,7 @@
 		"engine": "bun scripts/engine.ts",
 		"wisp": "bun scripts/wisp.ts",
 		"media:probe": "bun scripts/media-probe.ts",
+		"read:probe": "bun scripts/read-probe.ts",
 		"shasta": "bun server/cli/shasta.ts",
 		"build:ai-app": "bun scripts/build-ai-app.ts",
 		"build:adblock": "bun scripts/build-adblock.ts",
