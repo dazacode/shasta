@@ -112,7 +112,7 @@ export function itemFromGame(g: CloudGame, opts: CloudItemOptions): ImportItem {
 	// " (Cloud)" so it is clear these stream from a remote PC rather than being a web port
 	const name = `${(g.name || g.key).replace(/\s+/g, " ").trim().slice(0, 52)} (Cloud)`;
 	const blurb = tidyBlurb(g.description || "");
-	const tags = [...(g.tags ?? []).filter((t): t is string => typeof t === "string" && !!t.trim()), "cloud"];
+	const tags = [...(g.tags ?? []).filter((t): t is string => typeof t === "string" && !!t.trim()), "cloud", "cloud-gaming"];
 	const description =
 		`${blurb ? `${blurb} ` : ""}Streamed from the cloud: Shasta runs a remote gaming PC and pipes the picture back into the tab, ` +
 		`so a full desktop title plays without a download. Click the picture to lock the pointer; keyboard and mouse (and a gamepad) control the game. ` +

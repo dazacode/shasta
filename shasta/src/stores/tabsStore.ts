@@ -581,6 +581,10 @@ export const useTabs = create<TabsState>()((set, get) => {
 
       failed: ({ message, url }) =>
         update(id, (t) => ({ ...t, loading: false, pendingCommit: false, expectReplace: false, error: { message, url: url || tabUrl(t) } })),
+
+      // only onto the same error still on screen (a retry or new page in between drops it)
+      checked: ({ url, check }) =>
+        update(id, (t) => (t.error && t.error.url === url && !t.error.check ? { ...t, error: { ...t.error, check } } : t)),
     }),
   }
 

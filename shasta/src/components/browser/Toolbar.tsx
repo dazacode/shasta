@@ -162,7 +162,7 @@ export function Toolbar() {
             <Film /> Watch
           </DropdownMenuItem>
           {tab?.app && (
-            <DropdownMenuItem onClick={() => openReport({ appId: tab.app!.id, name: tab.app!.name, isGame: tab.app!.scheme === 'game', kind: tab.app!.kind, error: tab.error?.message ?? null })}>
+            <DropdownMenuItem onClick={() => openReport({ appId: tab.app!.id, name: tab.app!.name, isGame: tab.app!.scheme === 'game', kind: tab.app!.kind, error: tab.error?.message ?? null, tabId: tab.id })}>
               <Flag /> Report a problem with {tab.app.name.length > 22 ? `${tab.app.name.slice(0, 21)}…` : tab.app.name}
             </DropdownMenuItem>
           )}

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
 import { useSettings } from '@/stores/settingsStore'
+import { useTabs } from '@/stores/tabsStore'
 import { chromeVersion } from '@/lib/browserSupport'
 import { cn } from '@/lib/utils'
 import { api, errorMessage } from './api'
@@ -28,6 +29,8 @@ export interface ReportTarget {
   error?: string | null
   /** start on this problem (e.g. "wont-load" from an error screen) */
   problem?: Problem
+  /** the tab showing the error: its filter check (proxy/frameCheck.ts) is attached once it has run */
+  tabId?: string
 }
 
 export const useReport = create<{ target: ReportTarget | null; open: (t: ReportTarget) => void; close: () => void }>((set) => ({
@@ -97,13 +100,14 @@ function browserName(): string {
 }
 
 /** exactly what is sent when "Include technical details" is on (also shown to the person) */
-function techInfo(t: ReportTarget, engine: string) {
+function techInfo(t: ReportTarget, engine: string, check?: string) {
   const info: Record<string, string> = { shasta: __APP_VERSION__, browser: browserName(), os: osName(), engine: t.kind === 'package' ? 'app runtime' : engine }
   if (t.appVersion) info.appVersion = t.appVersion
   if (t.error) info.error = t.error.slice(0, 300)
+  if (check) info.check = check.slice(0, 300)
   return Object.fromEntries(Object.entries(info).filter(([, v]) => v))
 }
-const INFO_LABEL: Record<string, string> = { shasta: 'Shasta version', browser: 'Browser', os: 'System', engine: 'Page engine', appVersion: 'App version', error: 'Error shown' }
+const INFO_LABEL: Record<string, string> = { shasta: 'Shasta version', browser: 'Browser', os: 'System', engine: 'Page engine', appVersion: 'App version', error: 'Error shown', check: 'Filter check' }
 
 /** Mounted once (App.tsx). */
 export function ReportHost() {
@@ -114,6 +118,8 @@ export function ReportHost() {
 
 function ReportDialog({ target, onClose }: { target: ReportTarget | null; onClose: () => void }) {
   const engine = useSettings((s) => s.settings.pageEngine)
+  // a string (not the object): a fresh object every render would loop (React #185)
+  const check = useTabs((s) => (target?.tabId ? s.tabs.find((t) => t.id === target.tabId)?.error?.check?.summary : undefined))
   const library = useStore((s) => s.library)
   const [choice, setChoice] = useState('')
   const [details, setDetails] = useState('')
@@ -137,7 +143,7 @@ function ReportDialog({ target, onClose }: { target: ReportTarget | null; onClos
   const official = target.official ?? installed?.store?.official ?? false
   const thing = (target.isGame ?? installed?.category?.isGame) ? 'game' : 'app'
   const reportedAt = seen()[target.appId]
-  const info = techInfo(target, engine)
+  const info = techInfo(target, engine, check)
   const [kind, value] = (choice ? choice.split(':') : ['', '']) as ['p' | 'r' | '', string]
 
   const send = async () => {

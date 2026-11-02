@@ -7,6 +7,8 @@
 // The engine (~3.8 MB) and the transports are loaded with dynamic imports so the browser shell
 // can paint before Scramjet has been parsed.
 import { ResumingTransport } from './resumingTransport'
+import { checkFrame, forgetTab, type FrameCheck } from './frameCheck'
+import type { ProxyTransport } from '@mercuryworkshop/proxy-transports'
 import type { Controller, Frame } from '@mercuryworkshop/scramjet-controller'
 import type { ContextInfo } from '@/lib/contextMenu'
 import type { MissingFeature } from '@/lib/browserSupport'
@@ -85,6 +87,8 @@ export interface FrameEvents {
   loaded: () => void
   /** the navigation failed (proxy/transport error page, browser error page, or timeout) */
   failed: (error: { message: string; url: string }) => void
+  /** the filter check for a page the browser refused to show (frameCheck.ts), a few seconds after `failed` */
+  checked?: (result: { url: string; check: FrameCheck }) => void
   /** a keyboard shortcut candidate typed inside the proxied page (the shell never sees these otherwise) */
   key: (e: KeyboardEvent) => void
   /** a right-click inside the proxied page (Shasta shows its own menu instead of the browser's) */
@@ -582,7 +586,17 @@ function handleLoad(entry: Entry) {
   }
   if (crossOrigin || (doc === null && entry.iframe.contentWindow !== null)) {
     // the browser's own error page (chrome-error://) is not readable from the shell
-    entry.events.failed({ message: 'The browser could not load this page.', url: entry.lastUrl })
+    const url = entry.lastUrl
+    entry.events.failed({ message: 'The browser could not load this page.', url })
+    // was it stopped before Shasta saw it (a filter), or does the site/proxy fail? measured, then judged (frameCheck.ts)
+    const transport = controller?.transport as ProxyTransport | undefined
+    void checkFrame(entry.tabId, url, {
+      proxyConnected: info.state === 'connected',
+      request: transport ? (u, signal) => transport.request(u, 'GET', null, [['accept', 'text/html,application/xhtml+xml,*/*;q=0.8']], signal) : null,
+    }).then((check) => {
+      log(check.verdict === 'filtered' ? 'warn' : 'info', `Filter check: ${check.summary}`)
+      if (entry.lastUrl === url) entry.events.checked?.({ url, check })
+    })
     return
   }
   if (!doc || doc.location.href === 'about:blank') return
@@ -719,6 +733,7 @@ export function attach(tabId: string, iframe: HTMLIFrameElement, events: FrameEv
 
 function dispose(entry: Entry) {
   clearNavTimer(entry)
+  forgetTab(entry.tabId)
   entry.iframe.removeEventListener('load', entry.onLoad)
   entry.timers.forEach(clearTimeout)
   if (byTab.get(entry.tabId) === entry) byTab.delete(entry.tabId)

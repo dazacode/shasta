@@ -18,6 +18,7 @@ import { watchCrashes } from './crashWatch'
 import { captureConsole } from '@/lib/consoleCapture'
 import { diagnoseCrash } from '@/lib/browserSupport'
 import { netNote, netRecords, netStart, netUpdate } from '@/lib/netLog'
+import { noteDocument } from './frameCheck'
 import { hasMemory64, installMemory64Shim } from './memory64Shim'
 import { prependBody, workerPrelude } from './workerPrelude'
 import { lowerWasmIfNeeded } from './wasmLower'
@@ -306,7 +307,11 @@ class ShastaPlugin extends ManagedPlugin {
     // Diagnostics: name requests that hang or crawl (the usual cause of "stuck at 6%" in big web apps and games).
     // Only host + path are logged, never query strings.
     const pending = new WeakMap<object, { timer: number; started: number; label: string }>()
+    // the filter check (frameCheck.ts) asks whether a page's request ever reached the engine
+    const docNotes = new WeakMap<object, { status?: number }>()
     this.tap(frame.hooks.fetch.request, (ctx: { request: object; parsed: { url: URL; destination?: string; clientUrl?: URL } }, props: { init?: { method?: string } }) => {
+      const dest = ctx.parsed.destination
+      if (dest === 'document' || dest === 'iframe' || dest === 'frame') docNotes.set(ctx.request, noteDocument(this.tabId, ctx.parsed.url.href))
       // Settings -> Advanced -> Developer tools -> Network (lib/netLog.ts; memory only, never private tabs)
       if (netRecords(this.tabId)) netStart(ctx.request, { method: (props?.init?.method || 'GET').toUpperCase(), url: ctx.parsed.url.href, type: ctx.parsed.destination ?? '', page: ctx.parsed.clientUrl?.hostname })
       const label = `${ctx.parsed.url.host}${ctx.parsed.url.pathname}`.slice(0, 160)
@@ -317,6 +322,8 @@ class ShastaPlugin extends ManagedPlugin {
     this.tap(frame.hooks.fetch.response, (ctx: { request: object }, props: { response: { status: number; headers: { get(k: string): string | null } } }) => {
       const length = props.response.headers.get('content-length')
       netUpdate(ctx.request, { status: props.response.status, size: length ? Number(length) : undefined, mime: (props.response.headers.get('content-type') ?? '').split(';')[0] || undefined })
+      const doc = docNotes.get(ctx.request)
+      if (doc) doc.status = props.response.status
       const p = pending.get(ctx.request)
       if (!p) return
       clearTimeout(p.timer)

@@ -9,7 +9,7 @@ import type { AppStatus, Report } from '../types'
 import { Card, ConfirmDialog, ListSkeleton, useAction } from './common'
 
 const PROBLEM: Record<string, string> = { 'wont-load': "Won't load", 'stuck-loading': 'Stuck loading', crash: 'Crashes or freezes', controls: "Controls don't work", sound: 'No sound', slow: 'Slow', dead: 'Dead link', outdated: 'Needs an update', other: 'Broken (other)' }
-const INFO: Record<string, string> = { shasta: 'Shasta', browser: 'Browser', os: 'System', engine: 'Engine', appVersion: 'App', error: 'Error' }
+const INFO: Record<string, string> = { shasta: 'Shasta', browser: 'Browser', os: 'System', engine: 'Engine', appVersion: 'App', error: 'Error', check: 'Filter check' }
 const REASON: Record<string, string> = { broken: 'Broken or needs an update', inappropriate: 'Inappropriate content', malicious: 'Malicious or deceptive', copyright: 'Copyright', other: 'Other' }
 const STATES = ['open', 'resolved', 'dismissed'] as const
 

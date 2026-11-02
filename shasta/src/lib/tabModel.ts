@@ -1,6 +1,7 @@
 // Pure tab data model and the rules that keep it consistent. No side effects, so it is unit-testable.
 import { NEW_TAB_URL, isInternalUrl, originOf, parseAppAddress, titleFor, type AppScheme } from './url'
 import type { AccentName } from '@/stores/settingsStore'
+import type { FrameCheck } from '@/proxy/frameCheck'
 
 export interface NavEntry {
   url: string
@@ -10,6 +11,8 @@ export interface NavEntry {
 export interface TabError {
   message: string
   url: string
+  /** filter check for a page the browser refused to show (proxy/frameCheck.ts); arrives a few seconds after the error */
+  check?: FrameCheck
 }
 
 /** The installed Store app a tab belongs to: it is shown as app://name or game://name and titled with the app's name. */

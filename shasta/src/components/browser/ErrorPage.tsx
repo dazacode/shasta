@@ -63,7 +63,7 @@ export function ErrorPage({ tab }: { tab: Tab }) {
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => openReport({ appId: tab.app!.id, name: tab.app!.name, isGame: tab.app!.scheme === 'game', kind: tab.app!.kind, problem: info.kind === 'dns' || info.kind === 'refused' ? 'dead' : 'wont-load', error: `${info.title} (${tab.error!.message})` })}
+              onClick={() => openReport({ appId: tab.app!.id, name: tab.app!.name, isGame: tab.app!.scheme === 'game', kind: tab.app!.kind, problem: info.kind === 'dns' || info.kind === 'refused' ? 'dead' : 'wont-load', error: `${info.title} (${tab.error!.message})`, tabId: tab.id })}
             >
               <Flag /> Report this {tab.app.scheme === 'game' ? 'game' : 'app'}
             </Button>
@@ -75,9 +75,14 @@ export function ErrorPage({ tab }: { tab: Tab }) {
             <button className="font-medium text-shasta-accent underline-offset-2 hover:underline" onClick={() => useTabs.getState().openInternal('get-app')}>Get the app</button>
           </p>
         )}
+        {tab.error.check?.verdict === 'filtered' && (
+          <p className="mt-4 rounded-xl bg-shasta-field px-4 py-3 text-sm">
+            This page likely didn't reach Shasta: the site answers, but something on this device or network stopped the page before it got here, usually a school filter or a device policy. That isn't something Shasta can fix.
+          </p>
+        )}
         <details className="mt-8 text-xs text-shasta-muted">
           <summary className="cursor-pointer">Technical details</summary>
-          <pre className="mt-2 whitespace-pre-wrap">{tab.error.message}</pre>
+          <pre className="mt-2 whitespace-pre-wrap">{tab.error.message}{tab.error.check ? `\nFilter check: ${tab.error.check.summary}` : ''}</pre>
         </details>
       </div>
     </div>

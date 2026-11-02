@@ -379,6 +379,20 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     dc.send(buf.slice(0, o));
     e.preventDefault();
   }
+  // Chrome refuses a new pointer lock for about a second after one was released (Esc): requestPointerLock then
+  // rejects with SecurityError ("cannot be acquired immediately after the user has exited the lock"). Skip the
+  // request in that window instead of throwing; the click itself still reaches the game.
+  const LOCK_HINT = "click for pointer lock · Esc to release";
+  let unlockedAt = 0;
+  document.addEventListener("pointerlockchange", () => {
+    if (!document.pointerLockElement) unlockedAt = Date.now();
+    else if ($("hint").textContent !== LOCK_HINT && $("hint").textContent) $("hint").textContent = LOCK_HINT;
+  });
+  function lockMouse(v) {
+    if (document.pointerLockElement || !v.requestPointerLock) return;
+    if (Date.now() - unlockedAt < 1300) { $("hint").textContent = "click again in a moment to lock the mouse · Esc to release"; return; }
+    try { Promise.resolve(v.requestPointerLock()).catch(() => {}); } catch {}
+  }
   let last = null;
   function bindInput() {
     const v = $("video");
@@ -387,7 +401,7 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     on("mousedown", (e) => sendMouse(0, e));
     on("mouseup", (e) => sendMouse(1, e));
     on("wheel", (e) => { sendMouse(3, e, -e.deltaY / 3); e.preventDefault(); }, { passive: false });
-    on("click", () => { v.focus(); if (!document.pointerLockElement) v.requestPointerLock?.(); });
+    on("click", () => { v.focus(); lockMouse(v); });
     on("contextmenu", (e) => e.preventDefault());
     addEventListener("keydown", (e) => { if (player.classList.contains("on")) sendKey(e, true); });
     addEventListener("keyup", (e) => { if (player.classList.contains("on")) sendKey(e, false); });
@@ -400,6 +414,8 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
   let ws = null, pc = null, uuid = null, busy = false;
   let iceServers = [], closing = false, signalTries = 0, readyTimer = null, iceTimer = null, iceGiveUp = null, SIG = null;
   const ICE_GIVE_UP_MS = 45000;
+  /** how long a session may stay "creating" (the provider building a PC because none is idle) before giving up */
+  const CREATING_WAIT_MS = 180000;
   const OFFER_LIMIT = 8300;
   let lastOfferSdp = ""; // largest offer message measured to still get an answer
   const NO_PICTURE = "Unable to establish the game video connection. This network may restrict the required streaming ports.";
@@ -778,11 +794,27 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
         o = await pollSession(uuid).catch(() => ({}));
       }
       phase("Starting the game on the PC…");
+      // A session can exist before its PC does: with no idle machine in the provider's pool (status `idle: 0`,
+      // `creating: N`) it stays "creating" and start answers 400 "state is 'creating'" until a machine is built.
+      // That takes a minute or more, so wait for it (2026-11-02: three tries in 4.5 s gave up on every such session).
       let st = null;
-      for (let i = 0; i < 3 && (!st || st.error); i++) {
+      const readyBy = Date.now() + CREATING_WAIT_MS;
+      const waitFrom = Date.now();
+      for (let tries = 0; ; ) {
+        if (closing) return;
         st = await startSession(uuid).catch(() => null);
-        if (!st || st.error) await new Promise((r) => setTimeout(r, 1500));
+        if (st && !st.error) break;
+        if (st && /creating/i.test(String(st.error)) && Date.now() < readyBy) {
+          phase("Getting a gaming PC ready…");
+          sub(`every PC is busy, so a new one is being set up for you (${Math.round((Date.now() - waitFrom) / 1000)} s)`);
+          await sleepMs(3000);
+          continue;
+        }
+        if (++tries >= 3) break;
+        await sleepMs(1500);
       }
+      sub("");
+      if (st && /creating/i.test(String(st.error))) return fail(`No gaming PC became ready within ${CREATING_WAIT_MS / 60000} minutes: the service is very busy. Try again later.`);
       if (!st || st.error) return fail((st && st.error) || "The gaming PC did not start. Try again.");
       RELAYS = await loadRelays();
       iceServers = withRelays(st.ice_servers || [], RELAYS);
@@ -846,7 +878,7 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     pc.onconnectionstatechange = () => {
       if (me !== pc) return;
       diag.conn = pc.connectionState;
-      if (pc && ["connected", "completed"].includes(pc.iceConnectionState)) { if (!diag.connectedMs) diag.connectedMs = Date.now() - diag.startedAt; clearTimeout(iceTimer); clearTimeout(iceGiveUp); mediaFails = 0; signalTries = 0; sub(""); $("overlay").classList.add("gone"); $("hint").textContent = "click for pointer lock · Esc to release"; }
+      if (pc && ["connected", "completed"].includes(pc.iceConnectionState)) { if (!diag.connectedMs) diag.connectedMs = Date.now() - diag.startedAt; clearTimeout(iceTimer); clearTimeout(iceGiveUp); mediaFails = 0; signalTries = 0; sub(""); $("overlay").classList.add("gone"); $("hint").textContent = LOCK_HINT; }
       if (pc && pc.connectionState === "failed") {
         noteErr(`connection failed at ${stamp()}`);
         restartSession();
