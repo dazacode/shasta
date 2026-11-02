@@ -247,12 +247,16 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
   /** an opaque answer = the host is there but will not answer us plainly (a challenge); a rejection = blocked/unreachable */
   const reaches = (h) => fetch(`https://${h}/stratus/status`, { mode: "no-cors", credentials: "include", cache: "no-store", signal: AbortSignal.timeout(5000) }).then(() => true, () => false);
   let challengedHost = null;
+  // what the server search found, for reports: "" = not checked yet, "ok", "challenge" (a Cloudflare check
+  // answered), "unreachable" (every mirror refused/blocked); counts per mirror, no addresses
+  const hostCheck = { result: "", plain: 0, challenged: 0, blocked: 0, total: 0, proxy: "" };
   async function pickHost() {
     if (HOST) return HOST;
     // the relays are independent and churn: prefer one that is up with spare machines
     const probes = await Promise.all(MIRRORS.map(probeStatus));
     const up = probes.filter((x) => x && !x.down).sort((a, b) => b.idle - a.idle);
     if (up.length) {
+      Object.assign(hostCheck, { result: "ok", plain: up.length, challenged: 0, blocked: 0, total: MIRRORS.length });
       HOSTS = up.map((x) => x.h);
       return (HOST = HOSTS[0]);
     }
@@ -261,11 +265,13 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     // wait for one to start answering; a school/datacenter/VPN IP trips this while a normal home network does not.
     if (CAN_WARM) for (const h of MIRRORS) warm(h);
     challengeHost = true;
+    hostCheck.result = "waiting";
     const until = Date.now() + CHALLENGE_MS;
     while (Date.now() < until) {
       await sleepMs(2500);
       const hit = (await Promise.all(MIRRORS.map(probeStatus))).find((x) => x && !x.down);
       if (hit) {
+        Object.assign(hostCheck, { result: "ok", plain: 1, challenged: 0, blocked: 0, total: MIRRORS.length });
         HOSTS = [hit.h, ...MIRRORS.filter((h) => h !== hit.h)];
         return (HOST = hit.h);
       }
@@ -274,6 +280,8 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     // and the player looked stuck on "security check" for many minutes. Say which of the two cases it is.
     const reach = await Promise.all(MIRRORS.map(reaches));
     challengedHost = MIRRORS[reach.indexOf(true)] || null;
+    const opaque = reach.filter(Boolean).length;
+    Object.assign(hostCheck, { result: challengedHost ? "challenge" : "unreachable", plain: 0, challenged: opaque, blocked: MIRRORS.length - opaque, total: MIRRORS.length });
     throw new Error(challengedHost ? "challenge" : "unreachable");
   }
   /** the next relay that answered, after one failed us; false when there is none left */
@@ -490,6 +498,8 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     renderDiag();
   }
   function verdict() {
+    if (!diag.startedAt && hostCheck.result === "challenge") return { ok: false, text: `no cloud server answered plainly: ${hostCheck.challenged} of ${hostCheck.total} answered with a Cloudflare security check this game window cannot pass, ${hostCheck.blocked} were unreachable${hostCheck.proxy === "unavailable" ? ", and Shasta's proxy was unavailable" : ""}. Opening the mirror's /stratus/status in a normal tab may clear it.` };
+    if (!diag.startedAt && hostCheck.result === "unreachable") return { ok: false, text: `none of the ${hostCheck.total} cloud server domains could be reached from this network (blocked by a filter or down)${hostCheck.proxy === "unavailable" ? ", and Shasta's proxy was unavailable" : ""}.` };
     if (!diag.startedAt) return { ok: false, text: `the video connection has not started yet (${phaseText.replace(/…$/, "") || "not started"}), so nothing is known about this network's ports.` };
     const L = diag.local;
     const keys = Object.keys(L);
@@ -513,7 +523,7 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
   }
   function snapshot() {
     const v = verdict();
-    return { at: stamp(), ms: diag.startedAt ? Date.now() - diag.startedAt : 0, verdict: v.text, ok: v.ok, iceMode: ICE_MODE || "normal", relays443: RELAYS.length, iceGatheringState: diag.gathering, iceConnectionState: diag.ice, connectionState: diag.conn, localCandidates: diag.local, remoteCandidates: diag.remote, signalling: diag.sig, messages: sigLog.lines, messageCounts: sigLog.counts, offerSdp: lastOfferSdp, chrome: chromeVersion(), selectedPair: diag.pair && { local: diag.pair.local, remote: diag.pair.remote, rttMs: diag.pair.rtt != null ? Math.round(diag.pair.rtt * 1000) : null, inKbps: diag.pair.inKbps }, errors: diag.errors, via: API.base ? "shasta proxy" : "mirror", ua: navigator.userAgent };
+    return { at: stamp(), ms: diag.startedAt ? Date.now() - diag.startedAt : 0, verdict: v.text, ok: v.ok, iceMode: ICE_MODE || "normal", relays443: RELAYS.length, iceGatheringState: diag.gathering, iceConnectionState: diag.ice, connectionState: diag.conn, localCandidates: diag.local, remoteCandidates: diag.remote, signalling: diag.sig, messages: sigLog.lines, messageCounts: sigLog.counts, offerSdp: lastOfferSdp, chrome: chromeVersion(), selectedPair: diag.pair && { local: diag.pair.local, remote: diag.pair.remote, rttMs: diag.pair.rtt != null ? Math.round(diag.pair.rtt * 1000) : null, inKbps: diag.pair.inKbps }, errors: diag.errors, via: API.base ? "shasta proxy" : "mirror", servers: { ...hostCheck }, ua: navigator.userAgent };
   }
   function renderDiag() {
     const wrap = $("diag");
@@ -734,6 +744,7 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     try {
       if (!API.base) {
         await ensureApi();
+        hostCheck.proxy = API.base ? "answered" : PROXY_BASES.length ? "unavailable" : "none";
         if (!API.base) {
           try { await pickHost(); } catch (e) { return fail(e && e.message === "challenge" && challengedHost ? CHALLENGED(challengedHost) : UNREACHABLE); }
         }

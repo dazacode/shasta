@@ -264,7 +264,9 @@ async function uploadPackageWithWait(versionId: string, bytes: Uint8Array) {
 }
 
 export async function runImport(items: ImportItem[], opts: RunOptions = {}) {
-	const wanted = items.filter((i) => !opts.only || i.name.toLowerCase().includes(opts.only.toLowerCase()));
+	// --only "a|b" = any of several names
+	const onlyAny = (opts.only ?? "").toLowerCase().split("|").map((x) => x.trim()).filter(Boolean);
+	const wanted = items.filter((i) => !onlyAny.length || onlyAny.some((o) => i.name.toLowerCase().includes(o)));
 	if (!wanted.length) die(`nothing matches --only "${opts.only}"`);
 
 	const work = mkdtempSync(path.join(tmpdir(), "import-"));

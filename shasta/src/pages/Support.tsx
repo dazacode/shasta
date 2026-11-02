@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { SupporterBadge } from '@/components/SupporterBadge'
 import { useTabs } from '@/stores/tabsStore'
 import { useSupporter, useSupporterStore } from '@/stores/supporterStore'
-import { DISCORD_INVITE, MEMBERSHIP_URL, SUPPORT_URL, purgeLegacyPaymentKeys } from '@/lib/supporter'
+import { DISCORD_INVITE, MEMBERSHIP_URL, SUPPORT_URL, purgeLegacyPaymentKeys, termText } from '@/lib/supporter'
 import { DiscordQrButton } from '@/components/DiscordQr'
 import { SupportDemo } from '@/components/demos/SupportDemo'
 
@@ -44,7 +44,7 @@ export default function SupportPage() {
     setJustAdded(true)
   }
 
-  const days = `${sup.daysLeft} day${sup.daysLeft === 1 ? '' : 's'}`
+  const term = termText(sup.until, sup.daysLeft)
 
   return (
     <PageShell title="Support Shasta" subtitle="Shasta is free, and everything that does something stays free." actions={<SupporterBadge />}>
@@ -64,11 +64,11 @@ export default function SupportPage() {
 
           {sup.perks ? (
             justAdded ? (
-              <Done title="Code accepted, thank you">Ads are gone and the extras are on for this device ({days} left on this pass). It renews on its own while your membership continues.</Done>
+              <Done title="Code accepted, thank you">Ads are gone and the extras are on for this device ({term}). The pass renews on its own while your membership continues.</Done>
             ) : sup.kind === 'trial' ? (
-              <Done title="You're on a free trial">{days} left. No ads until then. To keep it that way, become a Supporter on Ko-fi and get your code with /supporter in the Discord.</Done>
+              <Done title="You're on a free trial">{term.charAt(0).toUpperCase() + term.slice(1)}. No ads until then. To keep it that way, become a Supporter on Ko-fi and get your code with /supporter in the Discord.</Done>
             ) : (
-              <Done title="You're a Supporter, thank you">{days} left on this device's pass. It renews on its own while your membership continues.</Done>
+              <Done title="You're a Supporter, thank you">Your membership runs {term === 'no end date' ? 'with no end date' : term}. The pass renews on its own while it continues.</Done>
             )
           ) : (
             <>

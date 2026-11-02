@@ -14,6 +14,7 @@
  *                                     [--mode packages|linked] [--origin https://edushasta.lol]
  */
 import { fetchCloudGames, itemFromGame, pickMirror } from "./lib/opiumCloud";
+import path from "node:path";
 import { runImport } from "./lib/storeImport";
 
 const argv = process.argv.slice(2);
@@ -32,7 +33,15 @@ const api = apiBase
 	? { base: apiBase.replace(/\/+$/, ""), prefix: opt("api-prefix") ?? "cloud/v1", key: opt("api-key") ?? "", catalog: opt("catalog") ?? "" }
 	: null;
 
-let games = (await fetchCloudGames(host)).games;
+// the live catalogue, else the snapshot `fetch:opium-cloud` saved (the provider's API sometimes hangs for everyone)
+let games = await fetchCloudGames(host).then(
+	(r) => r.games,
+	async (e) => {
+		const snap = path.resolve(import.meta.dir, "../data/opium-cloud.json");
+		console.warn(`live catalogue failed (${e?.message ?? e}); using the snapshot ${snap}`);
+		return ((await Bun.file(snap).json()) as { games: any[] }).games.filter((g) => g && g.key && g.name);
+	},
+);
 const catalog = opt("catalog");
 if (catalog) {
 	const fromCatalog = await fetch(catalog).then((r) => r.json());

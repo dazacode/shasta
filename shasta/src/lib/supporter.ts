@@ -19,8 +19,10 @@ export interface TokenPayload {
   kind: SupporterKind
   /** issued at, unix seconds */
   iat: number
-  /** expires at, unix seconds */
+  /** this pass must be renewed by then, unix seconds (at most ~35 days ahead) */
   exp: number
+  /** when the code itself ends, unix seconds; null = no end date; undefined = an older pass that does not say */
+  until?: number | null
 }
 
 // ---- code input --------------------------------------------------------------------------
@@ -79,7 +81,8 @@ export function decodeToken(token: string): { payload: TokenPayload; payloadByte
   if (!p || typeof p !== 'object') return { error: 'malformed' }
   if (p.v !== 1) return { error: 'version' }
   if ((p.kind !== 'trial' && p.kind !== 'supporter') || !Number.isFinite(p.iat) || !Number.isFinite(p.exp)) return { error: 'malformed' }
-  return { payload: { v: 1, kind: p.kind, iat: p.iat as number, exp: p.exp as number }, payloadBytes, signature }
+  const until = p.until === null ? null : typeof p.until === 'number' && Number.isFinite(p.until) ? p.until : undefined
+  return { payload: { v: 1, kind: p.kind, iat: p.iat as number, exp: p.exp as number, until }, payloadBytes, signature }
 }
 
 export type VerifyResult =
@@ -137,6 +140,18 @@ export function daysLeft(exp: number, now = Date.now() / 1000): number {
   return Math.max(0, Math.ceil((exp - now) / 86400))
 }
 
+/** How long the membership lasts, in words: "until 2 Nov 2027", "no end date", "5 days left". It describes the CODE
+ *  (`until`), not the pass, which lasts ~35 days and renews itself. An older pass without `until` falls back to its
+ *  own days until it is renewed. */
+export function termText(until: number | null | undefined, passDaysLeft: number, now = Date.now() / 1000): string {
+  const days = (n: number) => `${n} day${n === 1 ? '' : 's'} left`
+  if (until === null) return 'no end date'
+  if (until === undefined) return days(passDaysLeft)
+  const left = daysLeft(until, now)
+  const date = new Date(until * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+  return left <= 31 ? `${days(left)} (until ${date})` : `until ${date}`
+}
+
 /** What the device has, given a record and the outcome of checking its pass. */
 export function statusOf(record: SupporterRecord | null, result: VerifyResult | null): SupporterStatus {
   if (!record) return 'none'
@@ -150,6 +165,8 @@ export function needsRefresh(record: SupporterRecord | null, result: VerifyResul
   if (!record?.token) return false
   if (!result) return true
   if (!result.ok) return result.reason !== 'unsupported'
+  // a pass from before `until` existed is swapped once for one that knows when the code really ends
+  if (result.payload.until === undefined) return true
   return result.payload.exp - now < REFRESH_WITHIN_DAYS * 86400
 }
 

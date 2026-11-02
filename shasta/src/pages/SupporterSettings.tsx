@@ -7,11 +7,11 @@ import { useSettings } from '@/stores/settingsStore'
 import { useSupporter, useSupporterStore } from '@/stores/supporterStore'
 import { useTabs } from '@/stores/tabsStore'
 import { useUi } from '@/stores/uiStore'
-import { DISCORD_INVITE } from '@/lib/supporter'
+import { DISCORD_INVITE, termText } from '@/lib/supporter'
 import { DiscordQrButton } from '@/components/DiscordQr'
 
 function statusText(s: ReturnType<typeof useSupporter>): string {
-  if (s.perks) return `${s.kind === 'trial' ? 'Free trial' : 'Supporter'} · ${s.daysLeft} day${s.daysLeft === 1 ? '' : 's'} left`
+  if (s.perks) return `${s.kind === 'trial' ? 'Free trial' : 'Supporter'} · ${termText(s.until, s.daysLeft)}`
   if (!s.code) return 'Not a Supporter on this device. Everything in Shasta still works.'
   if (s.note === 'ended') return 'This code has ended (it expired or the membership stopped). Ads are back and the perks are off; everything else still works.'
   if (s.note === 'unsupported') return "This browser can't check Supporter passes (it lacks Ed25519 in WebCrypto), so ads stay on and the perks stay off here. Everything else works. A recent Chrome, Edge, Firefox or Safari can check them."

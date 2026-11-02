@@ -12,7 +12,7 @@ vi.stubGlobal('window', { addEventListener: () => undefined })
 vi.stubGlobal('document', { addEventListener: () => undefined })
 
 const sup = await import('@/lib/supporter')
-const { purgeLegacyPaymentKeys, base64urlEncode, daysLeft, needsRefresh, normalizeCode, sanitizeRecord, statusOf, verifyToken } = sup
+const { purgeLegacyPaymentKeys, base64urlEncode, daysLeft, needsRefresh, normalizeCode, sanitizeRecord, statusOf, termText, verifyToken } = sup
 const { migrateSettings, mergeSettings, defaultSettings, useSettings } = await import('@/stores/settingsStore')
 const { buildProfile, parseProfile, sanitizeSettings, PORTABLE_SETTINGS } = await import('@/lib/profile')
 const { WALLPAPERS, effectiveWallpaper, isLockedWallpaper } = await import('@/lib/wallpaper')
@@ -95,7 +95,7 @@ describe('status', () => {
   })
 
   it('refreshes under a week left or when over, never for an ended code', async () => {
-    const rec = (exp: number) => sign({ v: 1, kind: 'supporter', iat: NOW, exp }).then((token) => ({ code: 'SHASTA-ABCD-EFGH-JKMN', token }))
+    const rec = (exp: number) => sign({ v: 1, kind: 'supporter', iat: NOW, exp, until: null }).then((token) => ({ code: 'SHASTA-ABCD-EFGH-JKMN', token }))
     const far = await rec(NOW + 30 * DAY)
     const soon = await rec(NOW + 6 * DAY)
     const over = await rec(NOW - DAY)
@@ -104,6 +104,19 @@ describe('status', () => {
     expect(needsRefresh(over, await verifyToken(over.token, pub, NOW), NOW)).toBe(true)
     expect(needsRefresh({ code: far.code, token: null }, null, NOW)).toBe(false)
     expect(needsRefresh(null, null, NOW)).toBe(false)
+    // an older pass that does not say when the code ends is swapped once for one that does
+    const old = await sign({ v: 1, kind: 'supporter', iat: NOW, exp: NOW + 30 * DAY }).then((token) => ({ code: far.code, token }))
+    expect(needsRefresh(old, await verifyToken(old.token, pub, NOW), NOW)).toBe(true)
+  })
+
+  it('reads the code’s end from the pass and says it in words', async () => {
+    const t = await sign({ v: 1, kind: 'supporter', iat: NOW, exp: NOW + 35 * DAY, until: NOW + 365 * DAY })
+    const r = await verifyToken(t, pub, NOW)
+    expect(r.ok && r.payload.until).toBe(NOW + 365 * DAY)
+    expect(termText(NOW + 365 * DAY, 35, NOW)).toMatch(/^until /)
+    expect(termText(NOW + 5 * DAY, 5, NOW)).toMatch(/^5 days left \(until /)
+    expect(termText(null, 35, NOW)).toBe('no end date')
+    expect(termText(undefined, 35, NOW)).toBe('35 days left')
   })
 })
 

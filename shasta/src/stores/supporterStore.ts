@@ -27,6 +27,8 @@ interface SupporterState {
   exp: number
   /** whole days the pass has left, as of the last check */
   daysLeft: number
+  /** when the code itself ends (unix seconds), null = no end date, undefined = not known (older pass) */
+  until: number | null | undefined
   note: SupporterNote
   /** a redeem or refresh is in flight */
   busy: boolean
@@ -122,6 +124,7 @@ export const useSupporterStore = create<SupporterState>()((set, get) => ({
   status: 'none',
   exp: 0,
   daysLeft: 0,
+  until: undefined,
   note: null,
   busy: false,
   checked: false,
@@ -134,7 +137,7 @@ export const useSupporterStore = create<SupporterState>()((set, get) => ({
     const status = statusOf(record, result)
     const note: SupporterNote = !record ? null : !record.token ? 'ended' : result && !result.ok && result.reason !== 'expired' ? (result.reason === 'unsupported' ? 'unsupported' : 'invalid') : null
     const exp = result?.payload?.exp ?? 0
-    set({ status, exp, daysLeft: result?.ok ? daysLeftOf(exp) : 0, note, checked: true })
+    set({ status, exp, daysLeft: result?.ok ? daysLeftOf(exp) : 0, until: result?.ok ? result.payload.until : undefined, note, checked: true })
     // a pass that runs out while the tab stays open ends its perks right then, not at the next check
     clearTimeout(expiryTimer)
     const ms = exp * 1000 - Date.now()
@@ -184,7 +187,7 @@ export const useSupporterStore = create<SupporterState>()((set, get) => ({
   remove: () => {
     setRecord(null)
     if (getSettings().earlyPreviews) useSettings.getState().update({ earlyPreviews: false })
-    set({ status: 'none', exp: 0, daysLeft: 0, note: null })
+    set({ status: 'none', exp: 0, daysLeft: 0, until: undefined, note: null })
   },
 
   boot: () => {
@@ -206,7 +209,10 @@ export interface Supporter {
   /** perks are on: an active trial or supporter pass */
   perks: boolean
   kind: SupporterKind | null
+  /** days the current pass has left (it renews itself); use `until` for when the code ends */
   daysLeft: number
+  /** when the code itself ends (unix seconds), null = no end date, undefined = not known yet */
+  until: number | null | undefined
   note: SupporterNote
   code: string | null
   busy: boolean
@@ -216,11 +222,12 @@ export interface Supporter {
 export function useSupporter(): Supporter {
   const status = useSupporterStore((s) => s.status)
   const daysLeft = useSupporterStore((s) => s.daysLeft)
+  const until = useSupporterStore((s) => s.until)
   const note = useSupporterStore((s) => s.note)
   const busy = useSupporterStore((s) => s.busy)
   const code = useSettings((s) => s.settings.supporter?.code ?? null)
   const perks = status === 'trial' || status === 'supporter'
-  return { status, perks, kind: perks ? status : null, daysLeft: perks ? daysLeft : 0, note, code, busy }
+  return { status, perks, kind: perks ? status : null, daysLeft: perks ? daysLeft : 0, until: perks ? until : undefined, note, code, busy }
 }
 
 /** Perks are on right now (outside React). */
