@@ -76,10 +76,16 @@ export interface CloudApi {
 }
 
 /** A one-file package: the player page with this game's key/name/cover baked in. */
-export function buildPlayerPackage(g: CloudGame, api?: CloudApi | null): Uint8Array {
+export function buildPlayerPackage(g: CloudGame, api?: CloudApi | null, site?: string | null): Uint8Array {
 	const tpl = readFileSync(PLAYER_TEMPLATE, "utf8");
 	const cfg = JSON.stringify({ key: g.key, name: g.name, cover: g.cover ?? g.image ?? null });
-	const html = tpl.replace("/*__CONFIG__*/null", cfg).replace("/*__API__*/null", api ? JSON.stringify(api) : "null");
+	// `site` is the public origin of Shasta: its /cloud proxy is preferred over the mirrors (school filters block
+	// those domains). Baked, so an installed package reaches it without the person changing anything.
+	const proxy = site ? JSON.stringify(`${site.replace(/\/+$/, "")}/cloud`) : "null";
+	const html = tpl
+		.replace("/*__CONFIG__*/null", cfg)
+		.replace("/*__API__*/null", api ? JSON.stringify(api) : "null")
+		.replace("/*__PROXY__*/null", proxy);
 	return packageFromHtml(html, g.name);
 }
 
@@ -89,6 +95,8 @@ export interface CloudItemOptions {
 	mode: "packages" | "linked";
 	/** point the app at a self-hosted API; omit for the built-in mirrors */
 	api?: CloudApi | null;
+	/** bake the site's own /cloud proxy into the package (default true); false leaves the raw mirrors */
+	proxy?: boolean;
 }
 
 /** Source descriptions carry 【Label】: and [Note] markers; make them read cleanly. */
@@ -113,7 +121,7 @@ export function itemFromGame(g: CloudGame, opts: CloudItemOptions): ImportItem {
 		name,
 		// unique per game: used to keep two sources from listing the same URL twice
 		url: opts.mode === "linked" ? playerUrl(opts.origin, g.key) : undefined,
-		build: opts.mode === "packages" ? () => Promise.resolve(buildPlayerPackage(g, opts.api)) : undefined,
+		build: opts.mode === "packages" ? () => Promise.resolve(buildPlayerPackage(g, opts.api, opts.proxy === false ? null : opts.origin)) : undefined,
 		summary: summarize(blurb, `${name} — a PC game streamed in the browser`),
 		description,
 		developers: [],

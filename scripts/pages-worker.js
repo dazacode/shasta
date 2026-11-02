@@ -22,6 +22,10 @@ export default {
 		const path = url.pathname;
 
 		if (OVERSIZE[path]) return fromUpstream(request, OVERSIZE[path], path.startsWith("/assets/"));
+		// Cloud games: proxy the stratus API from Cloudflare's edge, NOT from the VPS. The mirrors' /stratus/*
+		// backend is fine from the US but stalls from the VPS's Frankfurt colo, so fetching it here (in the
+		// visitor's own colo) is what actually works. Falls back to the backend if every mirror fails.
+		if (path.startsWith("/cloud/")) return cloudProxy(request, env, backend);
 		if (path.startsWith("/ai-models/")) return backend ? toBackend(request, backend, env) : fromHuggingFace(request, path);
 		if (path.startsWith("/api/") || path.startsWith("/wisp/") || path === "/healthz") {
 			if (backend && EDGE_CACHED.test(path) && isAnonymousRead(request, url)) return cachedBackend(request, backend, env, ctx);
@@ -112,6 +116,88 @@ async function toBackend(request, backend, env) {
 	} catch {
 		return offline(url.pathname);
 	}
+}
+
+// ---- cloud games (opium.best "stratus") ------------------------------------------------------------------------
+// The player's control plane goes through /cloud/*. We forward it to one of the public mirror hosts from here, so
+// the visitor only ever talks to this domain (a school filter that blocks cdn.vipersfutbol.com still works).
+// Mirrors are interchangeable (a session created on one can be signalled on another), so one is picked, cached and
+// swapped on failure. The signalling WebSocket is passed through the same way Wisp is.
+const CLOUD_HOSTS = [
+	"cdn.vipersfutbol.com",
+	"cdn.northstreetumc.org",
+	"cdn.pcesc.org",
+	"cdn.kcchallengevbc.com",
+	"cdn.slcbmooc.org",
+	"cdn.topstargym.net",
+	"cdn.goaplytexas.org",
+	"cdn.clearfieldswimming.org",
+	"cdn.richardacademy.cfd",
+];
+let cloudHost = null;
+let cloudAt = 0;
+
+async function probeCloud(host) {
+	try {
+		const r = await fetch(`https://${host}/stratus/status`, { signal: AbortSignal.timeout(3000), headers: { accept: "application/json" } });
+		// a Cloudflare challenge answers with HTML/403: still alive, just not JSON. Take it over nothing.
+		if (!r.ok) return { host, idle: -1 };
+		const j = await r.json();
+		return j && j.pool && !j.pool.health?.down ? { host, idle: j.pool.idle ?? 0 } : null;
+	} catch {
+		return null;
+	}
+}
+
+async function pickCloud() {
+	if (cloudHost && Date.now() - cloudAt < 60_000) return cloudHost;
+	const alive = (await Promise.all(CLOUD_HOSTS.map(probeCloud))).filter(Boolean);
+	alive.sort((a, b) => b.idle - a.idle);
+	cloudHost = alive[0]?.host ?? CLOUD_HOSTS[0];
+	cloudAt = Date.now();
+	return cloudHost;
+}
+
+async function cloudProxy(request, env, backend) {
+	const url = new URL(request.url);
+	const seg = url.pathname.slice("/cloud/".length).split("/");
+	const pinned = seg[0] && seg[0] !== "stratus" ? seg[0] : null; // /cloud/<host>/stratus/... pins a mirror
+	const rest = `/${(pinned ? seg.slice(1) : seg).join("/")}${url.search}`;
+	const origin = request.headers.get("Origin");
+	const cors = { Vary: "Origin" };
+	if (origin) {
+		cors["Access-Control-Allow-Origin"] = origin;
+		cors["Access-Control-Allow-Credentials"] = "true"; // the player sends credentials:include
+		cors["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS";
+		cors["Access-Control-Allow-Headers"] = "content-type,x-api-key";
+		cors["Access-Control-Max-Age"] = "600";
+	}
+	if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { ...cors, "Cache-Control": "no-store" } });
+
+	const upgrade = (request.headers.get("Upgrade") || "").toLowerCase() === "websocket";
+	const fallback = upgrade ? request : request.clone();
+	const body = upgrade || request.method === "GET" || request.method === "HEAD" ? undefined : await request.arrayBuffer();
+	const headers = new Headers(request.headers);
+	headers.delete("host");
+
+	const primary = await pickCloud();
+	for (const host of pinned ? [pinned] : [primary, ...CLOUD_HOSTS.filter((h) => h !== primary)]) {
+		try {
+			const r = await fetch(`https://${host}${rest}`, { method: request.method, headers, body, redirect: "manual", signal: upgrade ? undefined : AbortSignal.timeout(8000) });
+			if (upgrade) {
+				if (r.webSocket) return new Response(null, { status: 101, webSocket: r.webSocket });
+				continue; // not a socket: try the next mirror (then the backend)
+			}
+			const out = new Headers(r.headers);
+			for (const [k, v] of Object.entries(cors)) out.set(k, v);
+			out.delete("set-cookie"); // the mirror's Domain= would be wrong on this host
+			out.set("Cache-Control", "no-store");
+			return new Response(r.body, { status: r.status, headers: out });
+		} catch {
+			cloudHost = null; // this one looks down; re-probe on the next call
+		}
+	}
+	return backend ? toBackend(fallback, backend, env) : new Response(JSON.stringify({ error: "no cloud mirror answered" }), { status: 502, headers: { ...cors, "content-type": "application/json", "Cache-Control": "no-store" } });
 }
 
 // No SHASTA_BACKEND_URL yet (a frontend-only deployment). The app reads `X-Shasta-Backend: none` and the

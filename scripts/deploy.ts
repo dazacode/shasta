@@ -26,6 +26,9 @@ const STAGED = join(ROOT, ".deploy", "staged.json");
 const stagedBackend = prod && existsSync(STAGED) ? JSON.parse(readFileSync(STAGED, "utf8")).backend : undefined;
 let backend = (process.env.SHASTA_BACKEND_URL ?? stagedBackend)?.replace(/\/+$/, "");
 const PAGES_HOST = process.env.SHASTA_PAGES_HOST ?? "shasta-dtg.pages.dev"; // Cloudflare picks the subdomain when the project is created
+// /cloud/* is served by the Cloudflare worker (cloudProxy in pages-worker.js), not the VPS: the mirrors are fine
+// from Cloudflare's edge but stall from the VPS's colo. Vercel rewrites it here so its users ride the same path.
+const PUBLIC_SITE = (process.env.VITE_SITE_ORIGIN ?? "https://edushasta.lol").replace(/\/+$/, "");
 
 if (target !== "vercel" && target !== "cloudflare") {
 	console.error("usage: bun run deploy <vercel|cloudflare> [--prod [--force] | --rollback [id]]   (SHASTA_BACKEND_URL, SHASTA_PROJECT optional)");
@@ -104,7 +107,7 @@ if (target === "vercel") {
 			{ source: "/assets/(.*)", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },
 			{ source: "/sw.js", headers: [{ key: "Service-Worker-Allowed", value: "/" }] },
 		],
-		rewrites: backend ? [{ source: "/api/:path*", destination: `${backend}/api/:path*` }, { source: "/ai-models/:path*", destination: `${backend}/ai-models/:path*` }] : [],
+		rewrites: [...(backend ? [{ source: "/api/:path*", destination: `${backend}/api/:path*` }, { source: "/ai-models/:path*", destination: `${backend}/ai-models/:path*` }] : []), { source: "/cloud/:path*", destination: `${PUBLIC_SITE}/cloud/:path*` }],
 	};
 	writeFileSync(join(stage, "vercel.json"), JSON.stringify(config, null, 2));
 	const scope = process.env.VERCEL_SCOPE ?? "dazaseals-projects";
@@ -137,7 +140,7 @@ if (target === "vercel") {
 		.replace('"__SHASTA_BACKEND__"', JSON.stringify(backend ?? ""))
 		.replace('JSON.parse("__SHASTA_OVERSIZE__")', JSON.stringify(oversize));
 	writeFileSync(join(stage, "_worker.js"), worker);
-	const include = ["/api/*", "/wisp/*", "/ai-models/*", "/healthz", ...Object.keys(oversize)];
+	const include = ["/api/*", "/wisp/*", "/ai-models/*", "/cloud/*", "/healthz", ...Object.keys(oversize)];
 	writeFileSync(join(stage, "_routes.json"), JSON.stringify({ version: 1, include, exclude: [] }, null, 2));
 	if (process.env.SHASTA_DRY_RUN === "1") {
 		console.log(`staged in ${stage} (SHASTA_DRY_RUN=1: not uploaded)`);

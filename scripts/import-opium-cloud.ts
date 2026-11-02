@@ -40,7 +40,7 @@ if (catalog) {
 }
 console.log(`${games.length} opium cloud games via ${host} · mode=${mode} · origin=${origin}${api ? ` · api=${api.base}` : ""}`);
 
-const items = games.map((g) => itemFromGame(g, { origin, mode, api }));
+const items = games.map((g) => itemFromGame(g, { origin, mode, api, proxy: !argv.includes("--no-proxy") }));
 await runImport(items, {
 	dry: argv.includes("--dry"),
 	only: opt("only"),

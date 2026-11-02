@@ -33,8 +33,9 @@ const config = {
 		{ source: "/assets/(.*)", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },
 		{ source: "/sw.js", headers: [{ key: "Service-Worker-Allowed", value: "/" }] },
 	],
-	// shasta:// pages and ?app= links are client-side: every unknown path answers the app
-	rewrites: [{ source: "/((?!assets/|scramjet/|controller/|adblock/|licenses/).*)", destination: "/index.html" }],
+	// shasta:// pages and ?app= links are client-side: every unknown path answers the app.
+	// /cloud/* rides the full site's Cloudflare worker (the cloud-game proxy), so a Lite mirror works too.
+	rewrites: [{ source: "/cloud/:path*", destination: "https://edushasta.lol/cloud/:path*" }, { source: "/((?!assets/|scramjet/|controller/|adblock/|licenses/).*)", destination: "/index.html" }],
 };
 writeFileSync(join(OUT, "vercel.json"), JSON.stringify(config, null, 2));
 

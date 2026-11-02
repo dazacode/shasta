@@ -94,7 +94,7 @@ export default defineConfig({
   ],
   // dev: forward the Wisp websocket to the backend started by `bun run dev`
   server: {
-    proxy: { '/wisp': { target: 'ws://localhost:8080', ws: true }, '/api': { target: 'http://localhost:8080', ws: true }, '/ai-models': { target: 'http://localhost:8080' } },
+    proxy: { '/wisp': { target: 'ws://localhost:8080', ws: true }, '/api': { target: 'http://localhost:8080', ws: true }, '/ai-models': { target: 'http://localhost:8080' }, '/cloud': { target: 'http://localhost:8080', ws: true } },
     // cross-origin isolation, like the production server (CROSS_ORIGIN_ISOLATION=0 turns it off)
     headers:
       process.env.CROSS_ORIGIN_ISOLATION === '0'
