@@ -53,6 +53,25 @@ for (const name of ["VITE_APP_BUNDLE_URL", "VITE_APP_UPDATE_MANIFEST_URL"]) {
 		process.exit(1);
 	}
 }
+// The offline shell installs an update only if EVERY file matches its sha256 in offline-manifest.json. A file copied
+// into dist by hand after the build (2026-11-01: opium-cloud.html) fails that check for every visitor ("Shasta
+// couldn't update to the newest version") until the next real build. Refuse such a dist.
+{
+	const manifestPath = join(DIST, "offline-manifest.json");
+	if (existsSync(manifestPath)) {
+		const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as { files: { url: string; sha256: string }[] };
+		const stale = manifest.files.filter((f) => {
+			const rel = f.url.split("?")[0].replace(/^\//, "");
+			const file = join(DIST, rel === "" || rel.endsWith("/") ? `${rel}index.html` : rel);
+			if (!existsSync(file)) return true;
+			return new Bun.CryptoHasher("sha256").update(readFileSync(file)).digest("hex") !== f.sha256;
+		});
+		if (stale.length) {
+			console.error(`shasta/dist does not match its offline manifest (${stale.map((f) => f.url).join(", ")}): the offline shell would refuse the update. Rebuild with \`bun run build\` instead of copying files into dist.`);
+			process.exit(1);
+		}
+	}
+}
 // Preview deployments (staging) have no SHASTA_BACKEND_URL in the Pages settings, so without a baked backend
 // staging loads with browsing and the Store dead. Ask the VPS for its current quick tunnel instead.
 if (!backend && target === "cloudflare" && !prod) {

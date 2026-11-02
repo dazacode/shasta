@@ -366,6 +366,8 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
   let ws = null, pc = null, uuid = null, busy = false;
   let iceServers = [], closing = false, signalTries = 0, readyTimer = null, iceTimer = null, iceGiveUp = null, SIG = null;
   const ICE_GIVE_UP_MS = 45000;
+  const OFFER_LIMIT = 8300;
+  let lastOfferSdp = ""; // largest offer message measured to still get an answer
   const NO_PICTURE = "Unable to establish the game video connection. This network may restrict the required streaming ports.";
   // ---- our 443 relay -----------------------------------------------------------------
   // The picture is WebRTC through the provider's TURN server on port 8632 (UDP and TCP), the one part the /cloud
@@ -419,7 +421,23 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
   // which candidates it gathered (and over which transport it reached each TURN server), ICE errors per server, the
   // ICE/gathering/connection states, the selected pair, and a plain verdict. Read-only: it never changes the path.
   // No addresses, ports of the visitor, credentials or session ids are kept: only counts, states and server kinds.
-  const diag = { startedAt: 0, gathering: "new", ice: "new", conn: "new", local: {}, remote: 0, pair: null, errors: [], connectedMs: 0 };
+  const diag = { startedAt: 0, gathering: "new", ice: "new", conn: "new", local: {}, remote: 0, pair: null, errors: [], connectedMs: 0, sig: null };
+  // signalling milestones of the current attempt: did our offer leave, did the PC answer, did this browser accept it
+  const newSig = () => ({ offer: "not sent", answer: "none", answerMs: 0, candidateMsgs: 0, candidateErrors: 0 });
+  // every signalling message of the launch, in and out (types + timing; unknown messages kept short, never SDP)
+  const sigLog = { t0: 0, lines: [], counts: {} };
+  const KNOWN = new Set(["game_ready", "rtc_answer", "rtc_candidate", "ping", "time_left", "game_cap", "game_ended", "socket-opened", "socket-closed", "non-json"]);
+  function logSig(dir, m, extra) {
+    const type = (m && m.type) || "?";
+    sigLog.counts[`${dir}${type}`] = (sigLog.counts[`${dir}${type}`] || 0) + 1;
+    if ((type === "ping" || type === "time_left") && sigLog.counts[`${dir}${type}`] > 1) return;
+    let line = `${dir}${type}@${((Date.now() - sigLog.t0) / 1000).toFixed(1)}s`;
+    if (extra) line += ` ${extra}`;
+    if (dir === "<" && !KNOWN.has(type)) { const c = { ...m }; delete c.sdp; line += ` ${JSON.stringify(c).slice(0, 220)}`; }
+    if (sigLog.lines.length < 40) sigLog.lines.push(line);
+    renderDiag();
+  }
+  const chromeVersion = () => (/Chrome\/(\d+)/.exec(navigator.userAgent) || [])[1] || "?";
   const bump = (o, k) => { o[k] = (o[k] || 0) + 1; };
   const stamp = () => new Date().toISOString().replace("T", " ").slice(0, 19);
   const noteErr = (t) => { if (!diag.errors.includes(t) && diag.errors.length < 12) diag.errors.push(t); };
@@ -467,14 +485,18 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     const viaUp = relays.some((k) => k.includes("upstream"));
     if (!relays.length && !srflx) return { ok: false, text: `no STUN or TURN server answered: this network blocks outbound UDP and the game's TURN port (8632)${RELAYS.length ? ", and our 443 relay did not answer either" : ""}.` };
     if (!relays.length) return { ok: false, text: `STUN answered but no TURN server did: the game's TURN server (port 8632) is blocked here${RELAYS.length ? " and our 443 relay did not answer" : " and no 443 relay is configured"}.` };
-    if (!diag.remote) return { ok: false, text: "a relay was reached but the gaming PC's candidates never arrived (signalling)." };
+    const g = diag.sig;
+    if (g && g.offer !== "sent") return { ok: false, text: `our offer was never sent (${g.offer}).` };
+    if (g && g.answer === "none") return { ok: false, text: `our offer was sent but the gaming PC never answered it${g.offerBytes > OFFER_LIMIT ? ` (the offer is ${g.offerBytes} bytes, over the ~${OFFER_LIMIT} the cloud accepts)` : ""}.` };
+    if (g && g.answer.startsWith("rejected")) return { ok: false, text: `the gaming PC answered but this browser (Chrome ${chromeVersion()}) ${g.answer}.` };
+    if (!diag.remote) return { ok: false, text: `the PC answered${g ? ` (${g.candidateMsgs} candidate messages, ${g.candidateErrors} refused)` : ""} but no usable remote candidate was added.` };
     if (diag.ice === "failed") return { ok: false, text: `relay reached (${relays.join(", ")}) but ICE failed: the relay could not reach the gaming PC.` };
     if (!viaUp && viaOurs) return { ok: false, text: `only our 443 relay is reachable; still checking (${diag.ice}).` };
     return { ok: false, text: `relay reached (${relays.join(", ")}); still checking (${diag.ice})${/701/.test(errs) ? ". Some servers did not answer, see errors" : ""}.` };
   }
   function snapshot() {
     const v = verdict();
-    return { at: stamp(), ms: diag.startedAt ? Date.now() - diag.startedAt : 0, verdict: v.text, ok: v.ok, iceMode: ICE_MODE || "normal", relays443: RELAYS.length, iceGatheringState: diag.gathering, iceConnectionState: diag.ice, connectionState: diag.conn, localCandidates: diag.local, remoteCandidates: diag.remote, selectedPair: diag.pair && { local: diag.pair.local, remote: diag.pair.remote, rttMs: diag.pair.rtt != null ? Math.round(diag.pair.rtt * 1000) : null, inKbps: diag.pair.inKbps }, errors: diag.errors, via: API.base ? "shasta proxy" : "mirror", ua: navigator.userAgent };
+    return { at: stamp(), ms: diag.startedAt ? Date.now() - diag.startedAt : 0, verdict: v.text, ok: v.ok, iceMode: ICE_MODE || "normal", relays443: RELAYS.length, iceGatheringState: diag.gathering, iceConnectionState: diag.ice, connectionState: diag.conn, localCandidates: diag.local, remoteCandidates: diag.remote, signalling: diag.sig, messages: sigLog.lines, messageCounts: sigLog.counts, offerSdp: lastOfferSdp, chrome: chromeVersion(), selectedPair: diag.pair && { local: diag.pair.local, remote: diag.pair.remote, rttMs: diag.pair.rtt != null ? Math.round(diag.pair.rtt * 1000) : null, inKbps: diag.pair.inKbps }, errors: diag.errors, via: API.base ? "shasta proxy" : "mirror", ua: navigator.userAgent };
   }
   function renderDiag() {
     const el = $("diag");
@@ -498,6 +520,10 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
       mk("mode", `${ICE_MODE || "normal"} · 443 relay ${RELAYS.length ? "available" : "not configured"}`),
       mk("local candidates", cand(diag.local)),
       mk("remote candidates", String(diag.remote)),
+      mk("signalling", diag.sig ? `offer ${diag.sig.offer}${diag.sig.offerBytes ? ` (${diag.sig.offerBytes} bytes)` : ""} · answer ${diag.sig.answer}${diag.sig.answerMs ? ` (${diag.sig.answerMs} ms)` : ""} · candidate msgs ${diag.sig.candidateMsgs}${diag.sig.candidateErrors ? `, ${diag.sig.candidateErrors} refused` : ""}` : "not started", !!diag.sig && (diag.sig.answer === "none" || diag.sig.answer.startsWith("rejected"))),
+      mk("browser", `Chrome ${chromeVersion()}`),
+      mk("messages", sigLog.lines.join("  ") || "none"),
+      mk("message counts", Object.entries(sigLog.counts).map(([k, n]) => `${k}:${n}`).join("  ") || "none"),
       mk("gathering / ice / connection", `${diag.gathering} / ${diag.ice} / ${diag.conn}`, diag.ice === "failed" || diag.conn === "failed"),
       mk("selected", p ? `${p.local} to ${p.remote}${p.rtt != null ? ` · ${Math.round(p.rtt * 1000)} ms` : ""}${p.inKbps != null ? ` · ${p.inKbps} kbit/s` : ""}` : "none"),
     );
@@ -537,18 +563,37 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     readyTimer = setTimeout(() => { if (ws === sock && sock.readyState === 1) { try { sock.close(); } catch {} } }, 12000);
     sock.onmessage = async (ev) => {
       if (ws !== sock) return;
-      let m; try { m = JSON.parse(ev.data); } catch { return; }
+      let m; try { m = JSON.parse(ev.data); } catch { logSig("<", { type: "non-json" }, `${String(ev.data).length} bytes`); return; }
+      logSig("<", m);
       if (m.type === "game_ready") { clearTimeout(readyTimer); signalTries = 0; if (!pc) await negotiate(iceServers); }
-      else if (m.type === "rtc_answer") await pc?.setRemoteDescription(m.sdp).catch(() => {});
-      else if (m.type === "rtc_candidate") await pc?.addIceCandidate(m.candidate).catch(() => {});
-      else if (m.type === "ping") { clearTimeout(readyTimer); if (sock.readyState === 1) sock.send(JSON.stringify({ type: "ping" })); }
+      else if (m.type === "rtc_answer") {
+        const g = diag.sig;
+        if (!pc) { if (g) g.answer = "arrived with no peer connection"; return renderDiag(); }
+        try {
+          // the PC sends {type, sdp}; tolerate a bare SDP string too
+          await pc.setRemoteDescription(typeof m.sdp === "string" ? { type: "answer", sdp: m.sdp } : m.sdp);
+          if (g) { g.answer = "accepted"; g.answerMs = Date.now() - diag.startedAt; }
+        } catch (e) {
+          if (g) g.answer = `rejected it: ${String((e && e.message) || e).slice(0, 140)}`;
+          noteErr(`answer rejected: ${String((e && e.name) || "error")}`);
+          showDiag();
+        }
+        renderDiag();
+      }
+      else if (m.type === "rtc_candidate") {
+        if (diag.sig) diag.sig.candidateMsgs++;
+        await pc?.addIceCandidate(m.candidate).catch(() => { if (diag.sig) diag.sig.candidateErrors++; });
+      }
+      else if (m.type === "ping") { clearTimeout(readyTimer); if (sock.readyState === 1) { sock.send(JSON.stringify({ type: "ping" })); logSig(">", { type: "ping" }); } }
       // the cloud's play-time limit for this session, not a loading time
       else if (m.type === "time_left") sub(`Play time left ${clock(m.time_left)}`);
       else if (m.type === "game_cap") end("time is up", m.message);
       else if (m.type === "game_ended") end("session ended", m.message);
     };
+    logSig(">", { type: "socket-open" }, url.replace(/^wss?:\/\//, "").split("/")[0]);
+    sock.onopen = () => logSig("<", { type: "socket-opened" });
     sock.onerror = () => {};
-    sock.onclose = () => { if (ws === sock && !closing && uuid) reconnect(); };
+    sock.onclose = (e) => { logSig("<", { type: "socket-closed" }, `code ${e.code}${e.reason ? " " + String(e.reason).slice(0, 80) : ""}`); if (ws === sock && !closing && uuid) reconnect(); };
   }
 
   /** drop the current socket without it triggering anything (its handlers check `ws === sock`) */
@@ -592,6 +637,7 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     $("pname").textContent = name || key; $("pbar").textContent = name || key;
     $("pcover").src = cover || "";
     $("pcover").style.display = cover ? "" : "none";
+    sigLog.t0 = Date.now(); sigLog.lines = []; sigLog.counts = {};
     closing = false; signalTries = 0; reconnecting = false; if (!again) mediaFails = 0; sub(""); phase("Finding a cloud server…");
     lastStart = [key, name, cover];
     try {
@@ -648,26 +694,39 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
       fail(NO_PICTURE);
       teardownQuiet(); // free the gaming PC; the diagnostics keep their last reading for "Copy"
     }, ICE_GIVE_UP_MS);
-    diag.startedAt = Date.now(); diag.local = {}; diag.remote = 0; diag.pair = null; diag.errors = []; diag.gathering = "new"; diag.ice = "new"; diag.conn = "new"; diag.connectedMs = 0;
+    diag.startedAt = Date.now(); diag.local = {}; diag.remote = 0; diag.pair = null; diag.errors = []; diag.gathering = "new"; diag.ice = "new"; diag.conn = "new"; diag.connectedMs = 0; diag.sig = newSig();
     if (ICE_MODE === "tls" && !(servers || []).length) noteErr("?ice=tls but no 443 relay is configured for this server");
     pc = new RTCPeerConnection({ iceServers: servers || [], bundlePolicy: "max-bundle", rtcpMuxPolicy: "require", iceTransportPolicy: ICE_MODE ? "relay" : "all" });
     // 701 = that server never answered (blocked port), 401 = credentials refused, etc. Kept without addresses.
     const me = pc; // events from a peer connection that was replaced are ignored
     pc.onicecandidateerror = (e) => { if (me !== pc) return; const k = serverKind(e.url); if (k) noteErr(`${k}: ${e.errorCode}${e.errorText ? " " + String(e.errorText).slice(0, 60) : ""}`); renderDiag(); };
-    pc.addTransceiver("audio", { direction: "recvonly" });
+    const a = pc.addTransceiver("audio", { direction: "recvonly" });
     const v = pc.addTransceiver("video", { direction: "recvonly" });
+    // KEEP THE OFFER SMALL. The provider's signalling silently drops an rtc_offer message over ~9 KB (measured
+    // 2026-11-01: 8.3 KB answered, 10 KB and up never answered, no error). Chrome on a Chromebook lists every hardware
+    // decoder profile and went over it: "offer sent, answer none" on a network where every relay worked. The PCs
+    // stream H.264 (answer: 42001f/42e01f, packetization-mode=1), so offer only that family + VP8 as a fallback, and
+    // Opus for audio. RTX/RED/FEC entries are kept so retransmission still works.
     try {
-      const caps = RTCRtpReceiver.getCapabilities("video");
-      if (caps) {
-        const h264 = caps.codecs.filter((c) => /h264/i.test(c.mimeType));
-        const av1 = caps.codecs.filter((c) => /av1/i.test(c.mimeType));
-        const rest = caps.codecs.filter((c) => !/h264|av1/i.test(c.mimeType));
-        v.setCodecPreferences([...h264, ...av1, ...rest]);
-      }
+      const vc = (RTCRtpReceiver.getCapabilities("video") || {}).codecs || [];
+      const h264 = vc.filter((c) => /h264/i.test(c.mimeType) && /packetization-mode=1/.test(c.sdpFmtpLine || "") && /profile-level-id=(42e01f|42001f|4d001f|640c1f|64001f)/i.test(c.sdpFmtpLine || ""));
+      const vp8 = vc.filter((c) => /vp8/i.test(c.mimeType));
+      // RTX only. NEVER red/ulpfec: when a Chromebook's hardware High-profile H.264 takes payload types 112/113, the
+      // FEC entries land on 116-118 and the gaming PC then never answers the offer at all (2026-11-01, proven by
+      // replaying the Chromebook's own offer: as sent = no answer; red/ulpfec removed = answered; same offer with the
+      // FEC entries renumbered to 112-114 = answered). The player only receives, so FEC buys nothing here.
+      const helpers = vc.filter((c) => /rtx/i.test(c.mimeType));
+      const keep = [...h264, ...vp8, ...helpers];
+      if (h264.length || vp8.length) v.setCodecPreferences(keep);
+    } catch {}
+    try {
+      const ac = (RTCRtpReceiver.getCapabilities("audio") || {}).codecs || [];
+      const opus = ac.filter((c) => /opus/i.test(c.mimeType));
+      if (opus.length) a.setCodecPreferences(opus);
     } catch {}
     const stream = new MediaStream();
     pc.ontrack = (e) => { if (me !== pc) return; stream.addTrack(e.track); $("video").srcObject = stream; $("video").play().catch(() => {}); };
-    pc.onicecandidate = (e) => { if (me !== pc) return; if (e.candidate) { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: "rtc_candidate", candidate: e.candidate.toJSON() })); } };
+    pc.onicecandidate = (e) => { if (me !== pc) return; if (e.candidate) { if (ws && ws.readyState === 1) logSig(">", { type: "rtc_candidate" }); if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: "rtc_candidate", candidate: e.candidate.toJSON() })); } };
     pc.onicegatheringstatechange = () => { if (me !== pc) return; diag.gathering = pc.iceGatheringState; renderDiag(); };
     pc.oniceconnectionstatechange = () => { if (me !== pc) return; diag.ice = pc.iceConnectionState; if (pc.iceConnectionState === "failed") { diag.errors.push(`ice failed at ${stamp()}`); showDiag(); } renderDiag(); };
     pc.onsignalingstatechange = () => renderDiag();
@@ -687,10 +746,28 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
 
     dc = pc.createDataChannel("JYSDK", { id: 1, ordered: false, maxRetransmits: 0, priority: "high" });
     dc.onopen = () => bindInput();
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    if (me !== pc || !ws || ws.readyState !== 1) return;
-    ws.send(JSON.stringify({ type: "rtc_offer", sdp: offer.sdp }));
+    let offer;
+    try {
+      offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+    } catch (e) {
+      diag.sig.offer = `not sent: could not create it (${String((e && e.message) || e).slice(0, 120)})`;
+      noteErr("offer creation failed");
+      showDiag();
+      return;
+    }
+    if (me !== pc) return;
+    if (!ws || ws.readyState !== 1) { diag.sig.offer = `not sent: signalling socket ${ws ? "state " + ws.readyState : "gone"}`; noteErr("offer not sent"); renderDiag(); return; }
+    const msg = JSON.stringify({ type: "rtc_offer", sdp: offer.sdp });
+    ws.send(msg);
+    logSig(">", { type: "rtc_offer" }, `${msg.length} bytes, socket buffered ${ws.bufferedAmount}`);
+    setTimeout(() => { if (me === pc && ws) logSig(">", { type: "buffered-check" }, `${ws.bufferedAmount} bytes still unsent after 2 s`); }, 2000);
+    diag.sig.offer = "sent";
+    diag.sig.offerBytes = msg.length;
+    // the exact offer, for "Copy" only (one-time ICE/DTLS keys of this session, no addresses: sent before gathering)
+    // one-time ICE password and DTLS fingerprint masked: the rest is what a replay needs to reproduce a problem
+    lastOfferSdp = offer.sdp.replace(/^(a=ice-pwd:).*$/gm, "$1<redacted>").replace(/^(a=fingerprint:\S+ ).*$/gm, "$1<redacted>");
+    if (msg.length > OFFER_LIMIT) noteErr(`offer is ${msg.length} bytes: the cloud ignores offers over ~${OFFER_LIMIT}`);
   }
 
   function end(reason, msg) { fail(`${reason}${msg ? " — " + msg : ""}`); setTimeout(teardown, 1500); }
