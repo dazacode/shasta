@@ -61,7 +61,12 @@
   #diag .v { color:#e7e9ee; }
   #diag .bad { color:#ff9d9d; }
   #diag .good { color:#9dffb0; }
-  #diag pre { margin:7px 0 0; white-space:pre-wrap; word-break:break-word; color:#aeb6c8; }
+  #diag pre { margin:7px 0 0; white-space:pre-wrap; word-break:break-word; color:#aeb6c8; max-height:180px; overflow:auto; }
+  #diagreport { margin-top:10px; padding-top:10px; border-top:1px solid #2a2f45; font:12px/1.5 system-ui,sans-serif; color:#cfd6e6; display:none; }
+  #diagreport.on { display:block; }
+  #diagreport textarea { width:100%; min-height:52px; margin:6px 0; background:#0d1018; color:#e7e9ee; border:1px solid #2a2f45; border-radius:8px; padding:7px 9px; font:12px system-ui,sans-serif; resize:vertical; }
+  #diagreport .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  #diagreport a { color:#9fb0ff; cursor:pointer; text-decoration:underline; }
 </style>
 </head>
 <body>
@@ -90,7 +95,7 @@
     <button class="btn" id="pfull">Full screen</button>
   </div>
   <div id="hint"></div>
-  <div id="diag"></div>
+  <div id="diag"><div id="diagbody"></div><div id="diagreport"></div></div>
 </div>
 
 <script>
@@ -499,8 +504,9 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     return { at: stamp(), ms: diag.startedAt ? Date.now() - diag.startedAt : 0, verdict: v.text, ok: v.ok, iceMode: ICE_MODE || "normal", relays443: RELAYS.length, iceGatheringState: diag.gathering, iceConnectionState: diag.ice, connectionState: diag.conn, localCandidates: diag.local, remoteCandidates: diag.remote, signalling: diag.sig, messages: sigLog.lines, messageCounts: sigLog.counts, offerSdp: lastOfferSdp, chrome: chromeVersion(), selectedPair: diag.pair && { local: diag.pair.local, remote: diag.pair.remote, rttMs: diag.pair.rtt != null ? Math.round(diag.pair.rtt * 1000) : null, inKbps: diag.pair.inKbps }, errors: diag.errors, via: API.base ? "shasta proxy" : "mirror", ua: navigator.userAgent };
   }
   function renderDiag() {
-    const el = $("diag");
-    if (!el || !el.classList.contains("on")) return;
+    const wrap = $("diag");
+    if (!wrap || !wrap.classList.contains("on")) return;
+    const el = $("diagbody");
     const v = verdict();
     const cand = (o) => Object.entries(o).map(([k, n]) => `${k}:${n}`).join("  ") || "none";
     el.replaceChildren();
@@ -511,8 +517,10 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     const copy = document.createElement("button"); copy.className = "btn"; copy.textContent = "Copy";
     copy.onclick = () => navigator.clipboard?.writeText(JSON.stringify(snapshot(), null, 2)).then(() => { copy.textContent = "Copied"; setTimeout(() => { copy.textContent = "Copy"; }, 1500); }, () => { copy.textContent = "Select & copy"; });
     const hide = document.createElement("button"); hide.className = "btn"; hide.textContent = "Hide";
-    hide.onclick = () => el.classList.remove("on");
-    h.append(sp, copy, hide);
+    hide.onclick = () => wrap.classList.remove("on");
+    const send = document.createElement("button"); send.className = "btn"; send.textContent = "Send report";
+    send.onclick = openReport;
+    h.append(sp, send, copy, hide);
     const mk = (k, val, bad) => { const d = document.createElement("div"); const a = document.createElement("span"); a.className = "k"; a.textContent = k + ": "; const b = document.createElement("span"); b.className = bad ? "bad" : "v"; b.textContent = val; d.append(a, b); return d; };
     const p = diag.pair;
     el.append(
@@ -533,6 +541,73 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
   const showDiag = () => { const el = $("diag"); if (el) { el.classList.add("on"); renderDiag(); } };
   window.__opiumDiag = () => JSON.stringify(snapshot(), null, 2);
 
+  // ---- "Send report": the diagnostics go to Shasta's team in one tap --------------------------------------------
+  // Files an anonymous Store report about this game through /cloud/report (server/src/services/cloudReports.ts), with
+  // the snapshot above attached; the team sees it in Discord. The person sees exactly what is sent first ("See what
+  // is sent"). The server rebuilds the snapshot from a whitelist and masks addresses and one-time keys again.
+  const reportBases = () => [...new Set([API.base, ...PROXY_BASES].filter((b) => b && /\/cloud$/.test(b)))];
+  function openReport() {
+    const box = $("diagreport");
+    const wrap = $("diag");
+    wrap.classList.add("on");
+    renderDiag();
+    if (box.classList.contains("on") && box.dataset.state !== "sent") { box.querySelector("textarea")?.focus(); return; }
+    box.classList.add("on");
+    box.dataset.state = "open";
+    box.replaceChildren();
+    const intro = document.createElement("div");
+    intro.textContent = "Sends this game's connection details to the Shasta team so they can fix it. Anonymous: no name, no account, no IP or network addresses.";
+    const note = document.createElement("textarea");
+    note.maxLength = 500;
+    note.placeholder = "What happened? (optional) e.g. stuck on \"Connecting the picture\" on my school Chromebook";
+    const row = document.createElement("div"); row.className = "row";
+    const go = document.createElement("button"); go.className = "btn"; go.textContent = "Send";
+    const cancel = document.createElement("button"); cancel.className = "btn"; cancel.textContent = "Cancel";
+    const see = document.createElement("a"); see.textContent = "See what is sent";
+    const status = document.createElement("span");
+    const pre = document.createElement("pre"); pre.style.display = "none";
+    see.onclick = () => { const on = pre.style.display === "none"; pre.style.display = on ? "block" : "none"; if (on) pre.textContent = JSON.stringify(reportBody(note.value), null, 2); };
+    cancel.onclick = () => { box.classList.remove("on"); box.dataset.state = ""; };
+    go.onclick = async () => {
+      go.disabled = true; cancel.disabled = true; status.textContent = "Sending…"; status.className = "";
+      const r = await sendReport(note.value);
+      if (r.ok) {
+        box.dataset.state = "sent";
+        box.replaceChildren();
+        const done = document.createElement("div");
+        done.textContent = `Sent. Thank you, the team has it.${r.id ? ` Reference: ${r.id}` : ""}`;
+        done.className = "good";
+        box.append(done);
+      } else {
+        status.textContent = r.error; status.className = "bad";
+        go.disabled = false; cancel.disabled = false;
+      }
+    };
+    row.append(go, cancel, see, status);
+    box.append(intro, note, row, pre);
+    note.focus();
+  }
+  function reportBody(text) {
+    const d = snapshot();
+    return { game: (cfg && cfg.key) || (lastStart && lastStart[0]) || "", note: String(text || "").trim().slice(0, 500), diag: d };
+  }
+  async function sendReport(text) {
+    const body = JSON.stringify(reportBody(text));
+    const bases = reportBases();
+    if (!bases.length) return { ok: false, error: "This copy of the player has no Shasta server to send to. Use Copy and send it to the team instead." };
+    let last = "Couldn't send the report. Try again, or use Copy and send it to the team.";
+    for (const base of bases) {
+      try {
+        const r = await tfetch(`${base}/report`, { method: "POST", headers: { "content-type": "application/json" }, body, credentials: "omit" }, 10000);
+        const j = await r.json().catch(() => ({}));
+        if (r.ok && j.ok) return { ok: true, id: j.id };
+        if (j && j.error) last = j.error;
+        if (r.status === 429 || r.status === 404) break;
+      } catch {}
+    }
+    return { ok: false, error: last };
+  }
+
   const sub = (t) => { $("psub").textContent = t; };
   let lastStart = null;
   // an error always comes with a way out: Retry starts the same game again from a fresh relay pick
@@ -542,7 +617,9 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     const err = document.createElement("span"); err.className = "err"; err.textContent = m;
     const again = document.createElement("button"); again.className = "btn"; again.textContent = "Try again"; again.style.marginTop = "12px";
     again.onclick = () => { if (busy || !lastStart) return; teardownQuiet(); HOST = qs.get("h") || null; start(...lastStart); };
-    box.append(err, document.createElement("br"), again);
+    const report = document.createElement("button"); report.className = "btn"; report.textContent = "Send report"; report.style.margin = "12px 0 0 8px";
+    report.onclick = openReport;
+    box.append(err, document.createElement("br"), again, report);
     $("overlay").classList.remove("gone");
     showDiag();
   };
@@ -766,7 +843,7 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     diag.sig.offerBytes = msg.length;
     // the exact offer, for "Copy" only (one-time ICE/DTLS keys of this session, no addresses: sent before gathering)
     // one-time ICE password and DTLS fingerprint masked: the rest is what a replay needs to reproduce a problem
-    lastOfferSdp = offer.sdp.replace(/^(a=ice-pwd:).*$/gm, "$1<redacted>").replace(/^(a=fingerprint:\S+ ).*$/gm, "$1<redacted>");
+    lastOfferSdp = offer.sdp.replace(/^(a=ice-pwd:).*$/gm, "$1<redacted>").replace(/^(a=ice-ufrag:).*$/gm, "$1<redacted>").replace(/^(a=fingerprint:\S+ ).*$/gm, "$1<redacted>");
     if (msg.length > OFFER_LIMIT) noteErr(`offer is ${msg.length} bytes: the cloud ignores offers over ~${OFFER_LIMIT}`);
   }
 
@@ -798,7 +875,7 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
   // ---- wiring ---------------------------------------------------------
   $("q").addEventListener("input", (e) => render(e.target.value));
   $("pfull").addEventListener("click", () => (document.fullscreenElement ? document.exitFullscreen() : player.requestFullscreen?.().catch(() => {})));
-  $("diagbtn").addEventListener("click", () => { const el = $("diag"); el.classList.toggle("on"); renderDiag(); });
+  $("diagbtn").addEventListener("click", () => { $("diag").classList.toggle("on"); renderDiag(); });
   addEventListener("keydown", (e) => { if (e.key === "Escape" && player.classList.contains("on") && !document.pointerLockElement) { /* let Esc free the pointer first */ } });
   addEventListener("pagehide", () => { if (uuid) teardown(); });
 
