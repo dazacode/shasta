@@ -112,7 +112,7 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
   const MIRRORS = [
     "cdn.vipersfutbol.com", "cdn.northstreetumc.org", "cdn.pcesc.org",
     "cdn.kcchallengevbc.com", "cdn.slcbmooc.org", "cdn.topstargym.net",
-    "cdn.goaplytexas.org", "cdn.clearfieldswimming.org", "cdn.richardacademy.cfd",
+    "cdn.goaplytexas.org", "cdn.clearfieldswimming.com", "cdn.richardacademy.cfd",
   ];
   const $ = (id) => document.getElementById(id);
   const qs = new URLSearchParams(location.search);
@@ -246,6 +246,9 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
   };
   /** an opaque answer = the host is there but will not answer us plainly (a challenge); a rejection = blocked/unreachable */
   const reaches = (h) => fetch(`https://${h}/stratus/status`, { mode: "no-cors", credentials: "include", cache: "no-store", signal: AbortSignal.timeout(5000) }).then(() => true, () => false);
+  /** the mirror's own front page: it answers (404) even while the game service behind /stratus is down, and a
+   *  filter blocks a whole domain, so "front page answers, /stratus does not" = the service is down, not the network */
+  const reachesSite = (h) => fetch(`https://${h}/`, { mode: "no-cors", credentials: "omit", cache: "no-store", signal: AbortSignal.timeout(5000) }).then(() => true, () => false);
   let challengedHost = null;
   // what the server search found, for reports: "" = not checked yet, "ok", "challenge" (a Cloudflare check
   // answered), "unreachable" (every mirror refused/blocked); counts per mirror, no addresses
@@ -263,10 +266,13 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     // nothing answered plainly. Most likely Cloudflare's JS challenge (fetch cannot solve it, and the challenge
     // reply has no CORS so it looks like a dead host). Let the browser solve it in a hidden iframe per relay and
     // wait for one to start answering; a school/datacenter/VPN IP trips this while a normal home network does not.
-    if (CAN_WARM) for (const h of MIRRORS) warm(h);
+    // A challenge answers at once (opaque to no-cors); a hung or blocked /stratus never does. When no mirror answers
+    // at all there is no challenge to wait for: say so now instead of after the challenge wait.
+    let reach = await Promise.all(MIRRORS.map(reaches));
+    if (CAN_WARM && reach.some(Boolean)) for (const h of MIRRORS) warm(h);
     challengeHost = true;
     hostCheck.result = "waiting";
-    const until = Date.now() + CHALLENGE_MS;
+    const until = reach.some(Boolean) ? Date.now() + CHALLENGE_MS : 0;
     while (Date.now() < until) {
       await sleepMs(2500);
       const hit = (await Promise.all(MIRRORS.map(probeStatus))).find((x) => x && !x.down);
@@ -278,11 +284,13 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     }
     // Still nothing. Do NOT carry on with the mirrors anyway: every request would then sit in its own challenge wait
     // and the player looked stuck on "security check" for many minutes. Say which of the two cases it is.
-    const reach = await Promise.all(MIRRORS.map(reaches));
+    if (until) reach = await Promise.all(MIRRORS.map(reaches));
     challengedHost = MIRRORS[reach.indexOf(true)] || null;
     const opaque = reach.filter(Boolean).length;
-    Object.assign(hostCheck, { result: challengedHost ? "challenge" : "unreachable", plain: 0, challenged: opaque, blocked: MIRRORS.length - opaque, total: MIRRORS.length });
-    throw new Error(challengedHost ? "challenge" : "unreachable");
+    const sites = challengedHost ? 0 : (await Promise.all(MIRRORS.map(reachesSite))).filter(Boolean).length;
+    const result = challengedHost ? "challenge" : sites ? "down" : "unreachable";
+    Object.assign(hostCheck, { result, plain: 0, challenged: opaque, blocked: MIRRORS.length - opaque, sites, total: MIRRORS.length });
+    throw new Error(result);
   }
   /** the next relay that answered, after one failed us; false when there is none left */
   function nextHost() {
@@ -293,6 +301,8 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     return true;
   }
   const UNREACHABLE = "Couldn't reach the cloud servers. This network may block them; try another network, or try again in a minute.";
+  const SERVICE_DOWN = "The cloud game service isn't responding right now. Its servers are online but the game service behind them isn't answering, for everyone, not just this network. Try again later.";
+  const hostError = (e) => (e && e.message === "challenge" && challengedHost ? CHALLENGED(challengedHost) : e && e.message === "down" ? SERVICE_DOWN : UNREACHABLE);
   const CHALLENGED = (h) => `The cloud servers want to check this network before they answer, and that check can't run inside a game window. Open https://${h}/stratus/status in a normal Chrome tab (not Incognito), wait until it shows text, then press Try again here. Or try another network (home Wi-Fi or a phone hotspot).`;
 
   // ---- catalogue ------------------------------------------------------
@@ -499,6 +509,7 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
   }
   function verdict() {
     if (!diag.startedAt && hostCheck.result === "challenge") return { ok: false, text: `no cloud server answered plainly: ${hostCheck.challenged} of ${hostCheck.total} answered with a Cloudflare security check this game window cannot pass, ${hostCheck.blocked} were unreachable${hostCheck.proxy === "unavailable" ? ", and Shasta's proxy was unavailable" : ""}. Opening the mirror's /stratus/status in a normal tab may clear it.` };
+    if (!diag.startedAt && hostCheck.result === "down") return { ok: false, text: `the cloud service is down: ${hostCheck.sites} of ${hostCheck.total} cloud server domains answered from this network, but none of their /stratus game services did. Not a filter: wait for the provider.` };
     if (!diag.startedAt && hostCheck.result === "unreachable") return { ok: false, text: `none of the ${hostCheck.total} cloud server domains could be reached from this network (blocked by a filter or down)${hostCheck.proxy === "unavailable" ? ", and Shasta's proxy was unavailable" : ""}.` };
     if (!diag.startedAt) return { ok: false, text: `the video connection has not started yet (${phaseText.replace(/…$/, "") || "not started"}), so nothing is known about this network's ports.` };
     const L = diag.local;
@@ -746,7 +757,7 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
         await ensureApi();
         hostCheck.proxy = API.base ? "answered" : PROXY_BASES.length ? "unavailable" : "none";
         if (!API.base) {
-          try { await pickHost(); } catch (e) { return fail(e && e.message === "challenge" && challengedHost ? CHALLENGED(challengedHost) : UNREACHABLE); }
+          try { await pickHost(); } catch (e) { return fail(hostError(e)); }
         }
       }
       phase("Asking for a gaming PC…");
@@ -904,7 +915,7 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
   addEventListener("keydown", (e) => { if (e.key === "Escape" && player.classList.contains("on") && !document.pointerLockElement) { /* let Esc free the pointer first */ } });
   addEventListener("pagehide", () => { if (uuid) teardown(); });
 
-  loadCatalog().catch((e) => { $("status").textContent = e.message === "unreachable" ? UNREACHABLE : "could not load the catalogue: " + e.message; });
+  loadCatalog().catch((e) => { $("status").textContent = e.message === "unreachable" || e.message === "down" || e.message === "challenge" ? hostError(e) : "could not load the catalogue: " + e.message; });
 })();
 </script>
 </body>

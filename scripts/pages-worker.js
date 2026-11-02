@@ -131,7 +131,7 @@ const CLOUD_HOSTS = [
 	"cdn.slcbmooc.org",
 	"cdn.topstargym.net",
 	"cdn.goaplytexas.org",
-	"cdn.clearfieldswimming.org",
+	"cdn.clearfieldswimming.com",
 	"cdn.richardacademy.cfd",
 ];
 // Mirrors that answered a status probe, best first, cached 60 s, INCLUDING "none answered": the provider's

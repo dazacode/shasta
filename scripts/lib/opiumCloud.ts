@@ -26,7 +26,7 @@ export const MIRRORS = [
 	"cdn.slcbmooc.org",
 	"cdn.topstargym.net",
 	"cdn.goaplytexas.org",
-	"cdn.clearfieldswimming.org",
+	"cdn.clearfieldswimming.com",
 	"cdn.richardacademy.cfd",
 ];
 
