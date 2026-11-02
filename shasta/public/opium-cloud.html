@@ -140,6 +140,11 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
   // `cf-mitigated: challenge` header (or any HTML answer, which is never the JSON API).
   const looksChallenged = (r) => !r.ok && (r.headers.get("cf-mitigated") === "challenge" || /text\/html/i.test(r.headers.get("content-type") || ""));
   const warmed = new Set();
+  // The hidden challenge iframe CANNOT load in a cross-origin isolated page (a Store package sends COEP): Chrome
+  // blocks it with ERR_BLOCKED_BY_RESPONSE because Cloudflare's challenge page has no COEP of its own (tested in
+  // Chrome 156, 2026-11-02). There, waiting minutes for it to "clear" only hangs the player, so give up quickly.
+  const CAN_WARM = !self.crossOriginIsolated;
+  const CHALLENGE_MS = CAN_WARM ? 120000 : 8000;
   /** add a hidden iframe to the relay once, so the browser solves Cloudflare's challenge for that relay */
   function warm(host) {
     if (!host || warmed.has(host)) return;
@@ -162,7 +167,7 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
       throw new Error("no relay");
     }
     warm(HOST); // the browser solves it inside the iframe; keep asking until it lets us through
-    const until = Date.now() + (opt.challengeMs ?? 120000);
+    const until = Date.now() + (opt.challengeMs ?? CHALLENGE_MS);
     while (Date.now() < until) {
       await new Promise((res) => setTimeout(res, 2500));
       r = await attempt();
@@ -231,7 +236,7 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
   const sleepMs = (ms) => new Promise((res) => setTimeout(res, ms));
   const probeStatus = async (h) => {
     try {
-      const r = await fetch(`https://${h}/stratus/status`, { signal: AbortSignal.timeout(5000) });
+      const r = await fetch(`https://${h}/stratus/status`, { signal: AbortSignal.timeout(5000), credentials: "include" });
       if (!r.ok) return null;
       const j = await r.json();
       return j && j.pool ? { h, idle: j?.pool?.idle ?? 0, down: !!j?.pool?.health?.down } : null;
@@ -239,6 +244,9 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
       return null; // a challenge has no CORS headers, so this rejects; so does a black-holed relay
     }
   };
+  /** an opaque answer = the host is there but will not answer us plainly (a challenge); a rejection = blocked/unreachable */
+  const reaches = (h) => fetch(`https://${h}/stratus/status`, { mode: "no-cors", credentials: "include", cache: "no-store", signal: AbortSignal.timeout(5000) }).then(() => true, () => false);
+  let challengedHost = null;
   async function pickHost() {
     if (HOST) return HOST;
     // the relays are independent and churn: prefer one that is up with spare machines
@@ -251,9 +259,9 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     // nothing answered plainly. Most likely Cloudflare's JS challenge (fetch cannot solve it, and the challenge
     // reply has no CORS so it looks like a dead host). Let the browser solve it in a hidden iframe per relay and
     // wait for one to start answering; a school/datacenter/VPN IP trips this while a normal home network does not.
-    for (const h of MIRRORS) warm(h);
+    if (CAN_WARM) for (const h of MIRRORS) warm(h);
     challengeHost = true;
-    const until = Date.now() + 120000;
+    const until = Date.now() + CHALLENGE_MS;
     while (Date.now() < until) {
       await sleepMs(2500);
       const hit = (await Promise.all(MIRRORS.map(probeStatus))).find((x) => x && !x.down);
@@ -262,9 +270,11 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
         return (HOST = hit.h);
       }
     }
-    // still nothing: use them anyway (a black-holed relay fails over via nextHost)
-    HOSTS = [...MIRRORS];
-    return (HOST = HOSTS[0]);
+    // Still nothing. Do NOT carry on with the mirrors anyway: every request would then sit in its own challenge wait
+    // and the player looked stuck on "security check" for many minutes. Say which of the two cases it is.
+    const reach = await Promise.all(MIRRORS.map(reaches));
+    challengedHost = MIRRORS[reach.indexOf(true)] || null;
+    throw new Error(challengedHost ? "challenge" : "unreachable");
   }
   /** the next relay that answered, after one failed us; false when there is none left */
   function nextHost() {
@@ -275,6 +285,7 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     return true;
   }
   const UNREACHABLE = "Couldn't reach the cloud servers. This network may block them; try another network, or try again in a minute.";
+  const CHALLENGED = (h) => `The cloud servers want to check this network before they answer, and that check can't run inside a game window. Open https://${h}/stratus/status in a normal Chrome tab (not Incognito), wait until it shows text, then press Try again here. Or try another network (home Wi-Fi or a phone hotspot).`;
 
   // ---- catalogue ------------------------------------------------------
   let GAMES = [];
@@ -479,6 +490,7 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     renderDiag();
   }
   function verdict() {
+    if (!diag.startedAt) return { ok: false, text: `the video connection has not started yet (${phaseText.replace(/…$/, "") || "not started"}), so nothing is known about this network's ports.` };
     const L = diag.local;
     const keys = Object.keys(L);
     const relays = keys.filter((k) => k.startsWith("relay/"));
@@ -624,7 +636,9 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     showDiag();
   };
   const clock = (s) => `${Math.floor(s / 60)}:${String(Math.max(0, s % 60)).padStart(2, "0")}`;
-  const phase = (m) => { $("pmsg").innerHTML = `<span class="spin"></span><div style="margin-top:8px;color:#9aa0ad;font-size:13px">${m}</div>`; $("overlay").classList.remove("gone"); };
+  let phaseText = "";
+  const phase = (m) => { phaseText = m; return phaseHtml(m); };
+  const phaseHtml = (m) => { $("pmsg").innerHTML = `<span class="spin"></span><div style="margin-top:8px;color:#9aa0ad;font-size:13px">${m}</div>`; $("overlay").classList.remove("gone"); };
 
   // The relay 502s/timeouts while an instance is still attaching, so a socket that dies before
   // game_ready (or after) is retried instead of failing the launch.
@@ -721,7 +735,7 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
       if (!API.base) {
         await ensureApi();
         if (!API.base) {
-          try { await pickHost(); } catch { return fail(UNREACHABLE); }
+          try { await pickHost(); } catch (e) { return fail(e && e.message === "challenge" && challengedHost ? CHALLENGED(challengedHost) : UNREACHABLE); }
         }
       }
       phase("Asking for a gaming PC…");

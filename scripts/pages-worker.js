@@ -134,14 +134,17 @@ const CLOUD_HOSTS = [
 	"cdn.clearfieldswimming.org",
 	"cdn.richardacademy.cfd",
 ];
-let cloudHost = null;
+// Mirrors that answered a status probe, best first, cached 60 s, INCLUDING "none answered": the provider's
+// /stratus/* backend silently ignores datacenter addresses (measured 2026-11-02: Workers in LAX/FRA and the VPS hang
+// until timeout, home networks answer in ~0.2 s). Without the negative cache every request waited ~60 s (8 s per
+// mirror in turn), long after the player had given up on us.
+let cloudAlive = null;
 let cloudAt = 0;
 
 async function probeCloud(host) {
 	try {
 		const r = await fetch(`https://${host}/stratus/status`, { signal: AbortSignal.timeout(3000), headers: { accept: "application/json" } });
-		// a Cloudflare challenge answers with HTML/403: still alive, just not JSON. Take it over nothing.
-		if (!r.ok) return { host, idle: -1 };
+		if (!r.ok) return null; // a Cloudflare challenge (403 HTML) is not usable from a server: nobody here can solve it
 		const j = await r.json();
 		return j && j.pool && !j.pool.health?.down ? { host, idle: j.pool.idle ?? 0 } : null;
 	} catch {
@@ -149,14 +152,17 @@ async function probeCloud(host) {
 	}
 }
 
-async function pickCloud() {
-	if (cloudHost && Date.now() - cloudAt < 60_000) return cloudHost;
+async function aliveClouds() {
+	if (cloudAlive && Date.now() - cloudAt < 60_000) return cloudAlive;
 	const alive = (await Promise.all(CLOUD_HOSTS.map(probeCloud))).filter(Boolean);
 	alive.sort((a, b) => b.idle - a.idle);
-	cloudHost = alive[0]?.host ?? CLOUD_HOSTS[0];
+	cloudAlive = alive.map((x) => x.host);
 	cloudAt = Date.now();
-	return cloudHost;
+	return cloudAlive;
 }
+
+/** a challenge or a 5xx (e.g. 530 from a mirror whose origin is gone): try the next mirror instead of passing it on */
+const cloudUnusable = (r) => r.status >= 500 || r.headers.get("cf-mitigated") === "challenge";
 
 async function cloudProxy(request, env, backend) {
 	const url = new URL(request.url);
@@ -189,24 +195,25 @@ async function cloudProxy(request, env, backend) {
 	const headers = new Headers(request.headers);
 	headers.delete("host");
 
-	const primary = await pickCloud();
-	for (const host of pinned ? [pinned] : [primary, ...CLOUD_HOSTS.filter((h) => h !== primary)]) {
+	const hosts = pinned ? [pinned] : await aliveClouds();
+	for (const [i, host] of hosts.entries()) {
 		try {
 			const r = await fetch(`https://${host}${rest}`, { method: request.method, headers, body, redirect: "manual", signal: upgrade ? undefined : AbortSignal.timeout(8000) });
 			if (upgrade) {
 				if (r.webSocket) return new Response(null, { status: 101, webSocket: r.webSocket });
 				continue; // not a socket: try the next mirror (then the backend)
 			}
+			if (cloudUnusable(r) && i < hosts.length - 1) continue;
 			const out = new Headers(r.headers);
 			for (const [k, v] of Object.entries(cors)) out.set(k, v);
 			out.delete("set-cookie"); // the mirror's Domain= would be wrong on this host
 			out.set("Cache-Control", "no-store");
 			return new Response(r.body, { status: r.status, headers: out });
 		} catch {
-			cloudHost = null; // this one looks down; re-probe on the next call
+			cloudAlive = null; // this one looks down; re-probe on the next call
 		}
 	}
-	return backend ? toBackend(fallback, backend, env) : new Response(JSON.stringify({ error: "no cloud mirror answered" }), { status: 502, headers: { ...cors, "content-type": "application/json", "Cache-Control": "no-store" } });
+	return backend ? toBackend(fallback, backend, env) : new Response(JSON.stringify({ error: "no cloud mirror answered", code: "mirrors-unreachable" }), { status: 502, headers: { ...cors, "content-type": "application/json", "Cache-Control": "no-store" } });
 }
 
 // No SHASTA_BACKEND_URL yet (a frontend-only deployment). The app reads `X-Shasta-Backend: none` and the
