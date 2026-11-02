@@ -40,7 +40,11 @@ sudo install -m 644 /tmp/Caddyfile.turn /etc/caddy/Caddyfile
 sudo systemctl restart caddy   # a binary swap needs a restart, not a reload (~1 s gap on Store content + stats)
 ```
 
-Caddyfile changes (the rest stays exactly as in `scripts/vps/Caddyfile`):
+Caddyfile changes: the final form is kept in `scripts/vps/Caddyfile`. The essential parts are the `layer4` route (with
+the ALPN the layer4 TLS handler) and the two TURN names. **The `connection_policy { alpn ... }` is not optional**: a
+TURN-over-TLS client (Chrome) speaks ALPN `stun.turn` (RFC 7443); without it here the layer4 `tls` handler inherits
+the HTTP servers' ALPN (`h1 h2`) and rejects Chrome with `no_application_protocol`, so no relay candidate is ever
+gathered (this was the actual "443 does not work in Chrome" bug).
 
 ```caddyfile
 {
@@ -49,12 +53,17 @@ Caddyfile changes (the rest stays exactly as in `scripts/vps/Caddyfile`):
 	}
 	servers {
 		protocols h1 h2
-		# cloud games: TURN-over-TLS for turn.edushasta.lol goes to the TURN gate, everything else is HTTP as before
 		listener_wrappers {
 			layer4 {
-				@turn tls sni turn.edushasta.lol
+				# turn.edushasta.lol = the real name (DNS still to add); turn.176-100-37-63.sslip.io = a fallback that
+				# resolves via sslip.io so the relay works before that record exists
+				@turn tls sni turn.edushasta.lol turn.176-100-37-63.sslip.io
 				route @turn {
-					tls
+					tls {
+						connection_policy {
+							alpn stun.turn stun.nat-discovery
+						}
+					}
 					proxy {
 						proxy_protocol v2
 						upstream 127.0.0.1:3479
@@ -66,15 +75,22 @@ Caddyfile changes (the rest stays exactly as in `scripts/vps/Caddyfile`):
 	}
 }
 
-# only so Caddy obtains and renews the certificate (HTTP-01 on :80); TLS on 443 for this name never reaches HTTP
+# only so Caddy obtains and renews a certificate for each name (HTTP-01 on :80); TLS on :443 never reaches HTTP
 turn.edushasta.lol {
+	respond 404
+}
+
+turn.176-100-37-63.sslip.io {
 	respond 404
 }
 ```
 
-Validated locally with the official caddy-l4 build of 2.11.7: `caddy validate` passes, a normal HTTPS site on the same
-port still answers, an HTTP request to the TURN name is dropped by the gate (`not-stun`), and real Chromium streamed
-a game through Caddy → gate → upstream (relay/tls, connected 1.3 s, ~184 ms RTT).
+Caddyfile gotcha found on the VPS: a one-line site/block (`foo { respond 404 }`) is **not** parsed — write it
+multi-line.
+
+Validated and live: `caddy validate` passes, every normal HTTPS site on the same port still answers, `:80` still
+answers, and a raw TLS+STUN probe with ALPN `stun.turn` reaches the provider through Caddy → gate, and real headless
+Chrome streamed a game over it (relay/tls connected in 2.4 s, ~2 Mbit/s).
 
 ## 2. The gate — DONE (unit enabled + active; verified forwarding to the provider's TURN with a raw PROXY-v2 + STUN probe)
 

@@ -377,13 +377,20 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
   // ?ice=relay forces relayed candidates; ?ice=tls uses ONLY our 443 relay (what a UDP/8632-blocked network sees).
   const ICE_MODE = qs.get("ice") || "";
   let RELAYS = [];
+  // The relay config lives on OUR host, so fetch it from our /cloud proxy even when the API itself is watching a
+  // mirror: the picture is not proxyable, so the relay must be known no matter which way the control plane went.
   async function loadRelays() {
-    if (!API.base || !/\/cloud$/.test(API.base)) return [];
-    try {
-      const r = await tfetch(`${API.base}/relay`, { cache: "no-store", credentials: "include" }, 4000);
-      const j = r.ok ? await r.json() : null;
-      return Array.isArray(j && j.relays) ? j.relays.filter((x) => x && Array.isArray(x.urls) && x.upstream) : [];
-    } catch { return []; }
+    const bases = [...new Set([API.base, ...PROXY_BASES].filter((b) => b && /\/cloud$/.test(b)))];
+    for (const base of bases) {
+      try {
+        const r = await tfetch(`${base}/relay`, { cache: "no-store", credentials: "include" }, 4000);
+        if (!r.ok) continue;
+        const j = await r.json();
+        const relays = Array.isArray(j && j.relays) ? j.relays.filter((x) => x && Array.isArray(x.urls) && x.upstream) : [];
+        if (relays.length) return relays;
+      } catch {}
+    }
+    return [];
   }
   const hostPort = (u) => { const m = /^(?:turns?|stuns?):([^?]+)/i.exec(String(u)); return m ? m[1].toLowerCase() : ""; };
   /** the provider's servers, then our relay for each TURN server it fronts (same username/credential) */

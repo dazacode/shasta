@@ -1,4 +1,7 @@
-# Copy of /etc/caddy/Caddyfile on the VPS (installed by hand; `sudo systemctl reload caddy` after editing).
+# Copy of /etc/caddy/Caddyfile on the VPS (installed by hand; `sudo systemctl reload caddy` after editing, or
+# `sudo systemctl restart caddy` after a binary swap). This copy includes the cloud-games TURN-over-TLS front
+# (scripts/vps/turn-gate.md): the layer4 listener wrapper routes TLS for the TURN names to the gate on 127.0.0.1:3479
+# and everything else falls through to Caddy's HTTP servers exactly as before.
 # `encode zstd gzip` is NOT decoration: a Store app can ship its game data as plain JSON (see the OMORI section in
 # CLAUDE.md) and without it ~60 MB of map data travels incompressible. content.ts must also send a compressible
 # content type for those extensions - Caddy skips application/octet-stream.
@@ -12,6 +15,32 @@
 	}
 	servers {
 		protocols h1 h2
+		# cloud games: a TLS connection to a TURN name is a TURN-over-TLS stream, not HTTP. The layer4 listener
+		# wrapper takes it before Caddy's TLS, terminates it, and hands the raw bytes to the TURN gate
+		# (127.0.0.1:3479, turn-gate.service) with a PROXY v2 header. Everything else falls through to `tls` and
+		# behaves exactly as before. The gate forwards only to the provider's TURN server.
+		# turn.edushasta.lol = the real name (needs its DNS record). turn.176-100-37-63.sslip.io = a fallback that
+		# resolves via sslip.io, so the relay works even before that record exists.
+		listener_wrappers {
+			layer4 {
+				@turn tls sni turn.edushasta.lol turn.176-100-37-63.sslip.io
+				route @turn {
+					# Chrome speaks TURN-over-TLS with ALPN "stun.turn" (RFC 7443). Without it here the l4 TLS
+					# handler inherits the HTTP servers' ALPN (h1 h2) and rejects Chrome with no_application_protocol.
+					tls {
+						connection_policy {
+							alpn stun.turn stun.nat-discovery
+							default_alpn stun.turn
+						}
+					}
+					proxy {
+						proxy_protocol v2
+						upstream 127.0.0.1:3479
+					}
+				}
+			}
+			tls
+		}
 	}
 }
 
@@ -39,4 +68,14 @@ https:// {
 
 http:// {
 	redir https://{host}{uri} 308
+}
+
+# Only here so Caddy obtains and renews a certificate for each TURN name (HTTP-01 on :80, which the layer4 wrapper
+# does not touch). On :443 these sites' own HTTP servers are never reached: the layer4 wrapper matches the SNI first.
+turn.edushasta.lol {
+	respond 404
+}
+
+turn.176-100-37-63.sslip.io {
+	respond 404
 }
