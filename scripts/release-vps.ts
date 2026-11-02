@@ -36,7 +36,7 @@ const id = `${stamp}-${out(['git', 'rev-parse', '--short', 'HEAD'])}${dirty}`
 console.log(`release ${id} -> ${HOST}  (dist built ${statSync(path.join(root, 'shasta/dist/index.html')).mtime.toISOString()})`)
 
 const rsync = ['rsync', '-a', '--delete', '--relative', '--exclude', 'node_modules', '--exclude', '.DS_Store', ...(dry ? ['--dry-run', '--stats'] : [])]
-run([...rsync, 'Dockerfile', 'server/package.json', 'server/bun.lock', 'server/server.mjs', 'server/src', 'wisp/package.json', 'wisp/LICENSE', 'wisp/src', 'apps', 'shasta/dist', `${HOST}:${BUILD}/`])
+run([...rsync, 'Dockerfile', 'server/package.json', 'server/bun.lock', 'server/server.mjs', 'server/turn-gate.ts', 'server/src', 'wisp/package.json', 'wisp/LICENSE', 'wisp/src', 'apps', 'shasta/dist', `${HOST}:${BUILD}/`])
 if (dry) process.exit(0)
 run(['ssh', HOST, `shasta-ctl build ${id} && shasta-ctl activate ${id} && shasta-ctl prune 5`])
 console.log(`\n\x1b[32mlive: ${id}\x1b[0m  (rollback: ssh ${HOST} shasta-ctl rollback)`)

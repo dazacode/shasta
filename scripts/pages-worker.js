@@ -173,6 +173,11 @@ async function cloudProxy(request, env, backend) {
 		cors["Access-Control-Max-Age"] = "600";
 	}
 	if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { ...cors, "Cache-Control": "no-store" } });
+	// our TURN-over-TLS fronts are backend config (CLOUD_TURN_RELAYS, services/cloudProxy.ts); none without one
+	if (url.pathname === "/cloud/relay") {
+		if (backend) return toBackend(request, backend, env);
+		return new Response('{"relays":[]}', { headers: { ...cors, "content-type": "application/json", "Cache-Control": "no-store" } });
+	}
 
 	const upgrade = (request.headers.get("Upgrade") || "").toLowerCase() === "websocket";
 	const fallback = upgrade ? request : request.clone();

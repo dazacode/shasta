@@ -1,0 +1,34 @@
+# /etc/systemd/system/turn-gate.service (source: scripts/vps/turn-gate.service) — NOT INSTALLED YET, see turn-gate.md
+# The cloud games' TURN-over-TLS front (server/src/services/turnGate.ts): Caddy terminates TLS for turn.edushasta.lol on
+# :443 (caddy-l4 listener wrapper) and hands the raw TCP to this gate on 127.0.0.1:3479 with a PROXY v2 header; the gate
+# forwards it to the stream provider's TURN-over-TCP port and nowhere else. A separate unit from shasta.service on
+# purpose: it has its own settings, limits and lifecycle, and stopping it only takes away the 443 fallback.
+# Host network: it must listen on loopback for Caddy (a published port would push every video byte through
+# docker-proxy) and it only ever dials the one TURN_GATE_UPSTREAM address, so the SSRF firewall has nothing to add.
+[Unit]
+Description=Shasta TURN gate (cloud games picture over TLS 443)
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+[Service]
+Type=simple
+ExecStartPre=-/usr/bin/docker rm -f turn-gate
+ExecStart=/usr/bin/docker run --rm --name turn-gate --init --network host \
+	-e TURN_GATE_UPSTREAM=123.108.72.31:8632 \
+	-e TURN_GATE_HOST=127.0.0.1 -e TURN_GATE_PORT=3479 -e TURN_GATE_PROXY_PROTOCOL=1 \
+	-e TURN_GATE_MAX_TOTAL=60 -e TURN_GATE_MAX_PER_NET=20 -e TURN_GATE_MAX_SESSION_MIN=30 \
+	-e TURN_GATE_IDLE_S=60 -e TURN_GATE_MAX_MBPS=60 -e TURN_GATE_STATS_PORT=9479 \
+	--read-only --cap-drop ALL --security-opt no-new-privileges \
+	--pids-limit 256 --memory 1g --cpus 2 --ulimit nofile=8192:8192 \
+	--log-opt max-size=10m --log-opt max-file=3 \
+	--workdir /app/server \
+	shasta:current bun turn-gate.ts
+ExecStop=/usr/bin/docker stop -t 5 turn-gate
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

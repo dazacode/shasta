@@ -10,7 +10,9 @@
   - Baked into a Store package per game (window.__OPIUM__ set) -> auto-plays that game.
   - Linked apps open /opium-cloud.html?g=<key>.
 
-  Talks straight to the public "stratus" API on the mirror hosts (CORS reflects our origin).
+  Control plane: Shasta's /cloud proxy when one answers, else the public "stratus" mirrors (CORS reflects our origin).
+  Picture: WebRTC via the provider's TURN server, plus Shasta's TURN-over-TLS 443 front when /cloud/relay names one.
+  Details button = media-path diagnostics; ?ice=relay forces relayed candidates, ?ice=tls tests ONLY the 443 relay.
   Protocol recovered by REA from opium.best's own main.js; see ../opium-recon/README.md.
 -->
 <style>
@@ -51,6 +53,15 @@
   @keyframes sp { to { transform:rotate(360deg); } }
   .err { color:#ff9d9d; }
   #hint { position:absolute; bottom:12px; left:0; right:0; text-align:center; color:#ffffff88; font-size:12px; }
+  /* media-path diagnostics: the one screen a locked-down Chromebook (no devtools) can copy from */
+  #diag { position:absolute; left:0; right:0; bottom:0; max-height:52%; overflow:auto; display:none; background:#05070ce6; color:#cfe0ff; font:11px/1.5 ui-monospace,Menlo,monospace; padding:10px 12px 16px; border-top:1px solid #2a2f45; }
+  #diag.on { display:block; }
+  #diag h4 { margin:0 0 7px; font:600 12px system-ui,sans-serif; color:#fff; display:flex; gap:8px; align-items:center; }
+  #diag .k { color:#8b93a7; }
+  #diag .v { color:#e7e9ee; }
+  #diag .bad { color:#ff9d9d; }
+  #diag .good { color:#9dffb0; }
+  #diag pre { margin:7px 0 0; white-space:pre-wrap; word-break:break-word; color:#aeb6c8; }
 </style>
 </head>
 <body>
@@ -75,9 +86,11 @@
   <div class="bar">
     <span class="t" id="pbar"></span>
     <span class="sp"></span>
+    <button class="btn" id="diagbtn">Details</button>
     <button class="btn" id="pfull">Full screen</button>
   </div>
   <div id="hint"></div>
+  <div id="diag"></div>
 </div>
 
 <script>
@@ -351,7 +364,142 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
   // ---- session + webrtc ----------------------------------------------
   const player = $("player");
   let ws = null, pc = null, uuid = null, busy = false;
-  let iceServers = [], closing = false, signalTries = 0, readyTimer = null, iceTimer = null, SIG = null;
+  let iceServers = [], closing = false, signalTries = 0, readyTimer = null, iceTimer = null, iceGiveUp = null, SIG = null;
+  const ICE_GIVE_UP_MS = 45000;
+  const NO_PICTURE = "Unable to establish the game video connection. This network may restrict the required streaming ports.";
+  // ---- our 443 relay -----------------------------------------------------------------
+  // The picture is WebRTC through the provider's TURN server on port 8632 (UDP and TCP), the one part the /cloud
+  // proxy cannot carry. A network that only allows 443 stalls on "Connecting the picture". Shasta's backend can run a
+  // TURN-over-TLS front on 443 that forwards to that same TURN server (server/src/services/turnGate.ts); /cloud/relay
+  // names it and which upstream it reaches. It is added as ONE MORE ICE server with the session's own per-session
+  // credentials, after the provider's: ICE ranks a UDP relay above a TLS one, so a network where 8632 works keeps its
+  // normal path and only a locked-down one ends up on 443. No relay configured = exactly the old behaviour.
+  // ?ice=relay forces relayed candidates; ?ice=tls uses ONLY our 443 relay (what a UDP/8632-blocked network sees).
+  const ICE_MODE = qs.get("ice") || "";
+  let RELAYS = [];
+  async function loadRelays() {
+    if (!API.base || !/\/cloud$/.test(API.base)) return [];
+    try {
+      const r = await tfetch(`${API.base}/relay`, { cache: "no-store", credentials: "include" }, 4000);
+      const j = r.ok ? await r.json() : null;
+      return Array.isArray(j && j.relays) ? j.relays.filter((x) => x && Array.isArray(x.urls) && x.upstream) : [];
+    } catch { return []; }
+  }
+  const hostPort = (u) => { const m = /^(?:turns?|stuns?):([^?]+)/i.exec(String(u)); return m ? m[1].toLowerCase() : ""; };
+  /** the provider's servers, then our relay for each TURN server it fronts (same username/credential) */
+  function withRelays(servers, relays) {
+    const out = servers.slice();
+    const ours = [];
+    for (const s of servers) {
+      if (!s || !s.username) continue;
+      const fronts = new Set([].concat(s.urls || []).map(hostPort));
+      for (const r of relays) if (fronts.has(String(r.upstream).toLowerCase())) ours.push({ urls: r.urls, username: s.username, credential: s.credential });
+    }
+    if (ICE_MODE === "tls") return ours;
+    return out.concat(ours);
+  }
+  const ourRelayHosts = () => new Set(RELAYS.flatMap((r) => r.urls.map(hostPort)));
+  /** which server a candidate/error came from, without addresses: "443 relay", "upstream TURN", "STUN" */
+  function serverKind(url) {
+    const hp = hostPort(url);
+    if (!hp) return "";
+    if (ourRelayHosts().has(hp)) return "443 relay";
+    return /^stuns?:/i.test(url) ? "STUN" : "upstream TURN";
+  }
+
+  // ---- media-path diagnostics --------------------------------------------------------
+  // A school Chromebook cannot open devtools inside Shasta, so the page reports where the WebRTC media leg fails:
+  // which candidates it gathered (and over which transport it reached each TURN server), ICE errors per server, the
+  // ICE/gathering/connection states, the selected pair, and a plain verdict. Read-only: it never changes the path.
+  // No addresses, ports of the visitor, credentials or session ids are kept: only counts, states and server kinds.
+  const diag = { startedAt: 0, gathering: "new", ice: "new", conn: "new", local: {}, remote: 0, pair: null, errors: [], connectedMs: 0 };
+  const bump = (o, k) => { o[k] = (o[k] || 0) + 1; };
+  const stamp = () => new Date().toISOString().replace("T", " ").slice(0, 19);
+  const noteErr = (t) => { if (!diag.errors.includes(t) && diag.errors.length < 12) diag.errors.push(t); };
+  let diagStats = null;
+  const candKey = (type, relayProtocol, url) => (type === "relay" ? `relay/${relayProtocol || "?"}${url ? ` (${serverKind(url)})` : ""}` : type || "unknown");
+  async function pollStats() {
+    if (!pc || pc.signalingState === "closed") return;
+    let rep; try { rep = await pc.getStats(); } catch { return; }
+    const byId = new Map();
+    let pairId = null;
+    const local = {};
+    let remote = 0;
+    rep.forEach((s) => {
+      byId.set(s.id, s);
+      if (s.type === "transport" && s.selectedCandidatePairId) pairId = s.selectedCandidatePairId;
+      if (s.type === "local-candidate") bump(local, candKey(s.candidateType, s.relayProtocol, s.url));
+      if (s.type === "remote-candidate") remote++;
+    });
+    // tallied fresh from each full report, so the numbers never grow by themselves
+    if (Object.keys(local).length) diag.local = local;
+    diag.remote = remote;
+    let pair = pairId && byId.get(pairId);
+    if (!pair) rep.forEach((s) => { if (s.type === "candidate-pair" && s.state === "succeeded" && (s.selected || s.nominated)) pair = s; });
+    if (pair && pair.state === "succeeded") {
+      const l = byId.get(pair.localCandidateId), r = byId.get(pair.remoteCandidateId);
+      diag.pair = {
+        local: l ? candKey(l.candidateType, l.relayProtocol, l.url) : "?",
+        remote: (r && r.candidateType) || "?",
+        rtt: pair.currentRoundTripTime,
+        inKbps: diag.pair && pair.bytesReceived != null && diag.pair.bytes != null ? Math.round(((pair.bytesReceived - diag.pair.bytes) * 8) / 2000) : null,
+        bytes: pair.bytesReceived,
+      };
+    }
+    renderDiag();
+  }
+  function verdict() {
+    const L = diag.local;
+    const keys = Object.keys(L);
+    const relays = keys.filter((k) => k.startsWith("relay/"));
+    const srflx = L.srflx || 0;
+    const errs = diag.errors.join(" ");
+    if (diag.conn === "connected" || diag.ice === "connected" || diag.ice === "completed")
+      return { ok: true, text: `media path up${diag.pair ? ` via ${diag.pair.local}` : ""}${diag.connectedMs ? ` after ${(diag.connectedMs / 1000).toFixed(1)} s` : ""}` };
+    const viaOurs = relays.some((k) => k.includes("443 relay"));
+    const viaUp = relays.some((k) => k.includes("upstream"));
+    if (!relays.length && !srflx) return { ok: false, text: `no STUN or TURN server answered: this network blocks outbound UDP and the game's TURN port (8632)${RELAYS.length ? ", and our 443 relay did not answer either" : ""}.` };
+    if (!relays.length) return { ok: false, text: `STUN answered but no TURN server did: the game's TURN server (port 8632) is blocked here${RELAYS.length ? " and our 443 relay did not answer" : " and no 443 relay is configured"}.` };
+    if (!diag.remote) return { ok: false, text: "a relay was reached but the gaming PC's candidates never arrived (signalling)." };
+    if (diag.ice === "failed") return { ok: false, text: `relay reached (${relays.join(", ")}) but ICE failed: the relay could not reach the gaming PC.` };
+    if (!viaUp && viaOurs) return { ok: false, text: `only our 443 relay is reachable; still checking (${diag.ice}).` };
+    return { ok: false, text: `relay reached (${relays.join(", ")}); still checking (${diag.ice})${/701/.test(errs) ? ". Some servers did not answer, see errors" : ""}.` };
+  }
+  function snapshot() {
+    const v = verdict();
+    return { at: stamp(), ms: diag.startedAt ? Date.now() - diag.startedAt : 0, verdict: v.text, ok: v.ok, iceMode: ICE_MODE || "normal", relays443: RELAYS.length, iceGatheringState: diag.gathering, iceConnectionState: diag.ice, connectionState: diag.conn, localCandidates: diag.local, remoteCandidates: diag.remote, selectedPair: diag.pair && { local: diag.pair.local, remote: diag.pair.remote, rttMs: diag.pair.rtt != null ? Math.round(diag.pair.rtt * 1000) : null, inKbps: diag.pair.inKbps }, errors: diag.errors, via: API.base ? "shasta proxy" : "mirror", ua: navigator.userAgent };
+  }
+  function renderDiag() {
+    const el = $("diag");
+    if (!el || !el.classList.contains("on")) return;
+    const v = verdict();
+    const cand = (o) => Object.entries(o).map(([k, n]) => `${k}:${n}`).join("  ") || "none";
+    el.replaceChildren();
+    const h = document.createElement("h4");
+    h.className = v.ok ? "good" : "bad";
+    h.textContent = "Media path";
+    const sp = document.createElement("span"); sp.style.flex = "1";
+    const copy = document.createElement("button"); copy.className = "btn"; copy.textContent = "Copy";
+    copy.onclick = () => navigator.clipboard?.writeText(JSON.stringify(snapshot(), null, 2)).then(() => { copy.textContent = "Copied"; setTimeout(() => { copy.textContent = "Copy"; }, 1500); }, () => { copy.textContent = "Select & copy"; });
+    const hide = document.createElement("button"); hide.className = "btn"; hide.textContent = "Hide";
+    hide.onclick = () => el.classList.remove("on");
+    h.append(sp, copy, hide);
+    const mk = (k, val, bad) => { const d = document.createElement("div"); const a = document.createElement("span"); a.className = "k"; a.textContent = k + ": "; const b = document.createElement("span"); b.className = bad ? "bad" : "v"; b.textContent = val; d.append(a, b); return d; };
+    const p = diag.pair;
+    el.append(
+      h,
+      mk("mode", `${ICE_MODE || "normal"} · 443 relay ${RELAYS.length ? "available" : "not configured"}`),
+      mk("local candidates", cand(diag.local)),
+      mk("remote candidates", String(diag.remote)),
+      mk("gathering / ice / connection", `${diag.gathering} / ${diag.ice} / ${diag.conn}`, diag.ice === "failed" || diag.conn === "failed"),
+      mk("selected", p ? `${p.local} to ${p.remote}${p.rtt != null ? ` · ${Math.round(p.rtt * 1000)} ms` : ""}${p.inKbps != null ? ` · ${p.inKbps} kbit/s` : ""}` : "none"),
+    );
+    if (diag.errors.length) el.append(mk("errors", diag.errors.join(" | "), true));
+    el.append(mk("verdict", v.text, !v.ok));
+  }
+  const showDiag = () => { const el = $("diag"); if (el) { el.classList.add("on"); renderDiag(); } };
+  window.__opiumDiag = () => JSON.stringify(snapshot(), null, 2);
+
   const sub = (t) => { $("psub").textContent = t; };
   let lastStart = null;
   // an error always comes with a way out: Retry starts the same game again from a fresh relay pick
@@ -363,51 +511,81 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     again.onclick = () => { if (busy || !lastStart) return; teardownQuiet(); HOST = qs.get("h") || null; start(...lastStart); };
     box.append(err, document.createElement("br"), again);
     $("overlay").classList.remove("gone");
+    showDiag();
   };
   const clock = (s) => `${Math.floor(s / 60)}:${String(Math.max(0, s % 60)).padStart(2, "0")}`;
   const phase = (m) => { $("pmsg").innerHTML = `<span class="spin"></span><div style="margin-top:8px;color:#9aa0ad;font-size:13px">${m}</div>`; $("overlay").classList.remove("gone"); };
 
   // The relay 502s/timeouts while an instance is still attaching, so a socket that dies before
   // game_ready (or after) is retried instead of failing the launch.
+  // The provider keeps ONE signalling socket per session: opening a new one kicks the old one (close 1006). So every
+  // handler is bound to its own socket and ignores events once it is no longer the current one; otherwise the kicked
+  // socket's onclose started yet another reconnect, which kicked the new socket, forever (seen 2026-11-01 when the
+  // media path dropped: a new socket every ~1.2 s, the counter reset by each game_ready, never recovering).
   function openSignal() {
     const url = SIG || `${apiBase().replace(/^http/, "ws")}/${V1 ? "cloud/v1" : "stratus"}/signal/${uuid}`;
-    ws = new WebSocket(url);
+    const sock = new WebSocket(url);
+    ws = sock;
     clearTimeout(readyTimer);
-    readyTimer = setTimeout(() => { if (ws && ws.readyState === 1) { try { ws.close(); } catch {} } }, 12000);
-    ws.onmessage = async (ev) => {
+    readyTimer = setTimeout(() => { if (ws === sock && sock.readyState === 1) { try { sock.close(); } catch {} } }, 12000);
+    sock.onmessage = async (ev) => {
+      if (ws !== sock) return;
       let m; try { m = JSON.parse(ev.data); } catch { return; }
       if (m.type === "game_ready") { clearTimeout(readyTimer); signalTries = 0; if (!pc) await negotiate(iceServers); }
       else if (m.type === "rtc_answer") await pc?.setRemoteDescription(m.sdp).catch(() => {});
       else if (m.type === "rtc_candidate") await pc?.addIceCandidate(m.candidate).catch(() => {});
-      else if (m.type === "ping") { clearTimeout(readyTimer); if (ws.readyState === 1) ws.send(JSON.stringify({ type: "ping" })); }
+      else if (m.type === "ping") { clearTimeout(readyTimer); if (sock.readyState === 1) sock.send(JSON.stringify({ type: "ping" })); }
       // the cloud's play-time limit for this session, not a loading time
       else if (m.type === "time_left") sub(`Play time left ${clock(m.time_left)}`);
       else if (m.type === "game_cap") end("time is up", m.message);
       else if (m.type === "game_ended") end("session ended", m.message);
     };
-    ws.onerror = () => {};
-    ws.onclose = () => { if (!closing && uuid) reconnect(); };
+    sock.onerror = () => {};
+    sock.onclose = () => { if (ws === sock && !closing && uuid) reconnect(); };
   }
 
+  /** drop the current socket without it triggering anything (its handlers check `ws === sock`) */
+  function dropSignal() {
+    const old = ws;
+    ws = null;
+    if (old) { old.onclose = old.onmessage = null; try { old.close(); } catch {} }
+  }
+
+  let reconnecting = false, mediaFails = 0;
+  const mediaUp = () => !!pc && ["connected", "completed"].includes(pc.iceConnectionState);
+  // A session negotiates its picture ONCE: the gaming PC never answers a second rtc_offer (measured 2026-11-01, also on
+  // a fresh socket). So a lost signalling socket is reopened without touching a working picture, while a picture that
+  // failed (or an offer that went unanswered) needs a fresh session: quit, then start the same game again.
   async function reconnect() {
-    if (closing || !uuid || busy) return;
+    if (closing || !uuid || busy || reconnecting) return;
+    if (pc && !mediaUp()) return restartSession();
+    // signalTries counts sockets that die (before game_ready, or under a running picture)
     if (signalTries++ > 10) return fail("lost the connection to the cloud server");
-    phase(`reconnecting… (${signalTries})`);
+    reconnecting = true;
+    if (!pc) phase(`reconnecting… (${signalTries})`);
+    dropSignal();
     await new Promise((r) => setTimeout(r, Math.min(800 * signalTries, 4000)));
+    reconnecting = false;
     if (closing) return;
-    try { pc?.close(); } catch {}
-    pc = null;
     openSignal();
   }
+  /** the picture is gone for good in this session: start a new one, twice at most, then say so */
+  function restartSession() {
+    if (!lastStart) return;
+    if (++mediaFails > 2) { fail(NO_PICTURE); teardownQuiet(); return; }
+    teardownQuiet();
+    start(lastStart[0], lastStart[1], lastStart[2], true);
+    sub("the picture dropped, starting again…");
+  }
 
-  async function start(key, name, cover) {
+  async function start(key, name, cover, again = false) {
     if (busy || !key) return;
     busy = true;
     player.classList.add("on", "showbar");
     $("pname").textContent = name || key; $("pbar").textContent = name || key;
     $("pcover").src = cover || "";
     $("pcover").style.display = cover ? "" : "none";
-    closing = false; signalTries = 0; sub(""); phase("Finding a cloud server…");
+    closing = false; signalTries = 0; reconnecting = false; if (!again) mediaFails = 0; sub(""); phase("Finding a cloud server…");
     lastStart = [key, name, cover];
     try {
       if (!API.base) {
@@ -440,7 +618,8 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
         if (!st || st.error) await new Promise((r) => setTimeout(r, 1500));
       }
       if (!st || st.error) return fail((st && st.error) || "The gaming PC did not start. Try again.");
-      iceServers = st.ice_servers || [];
+      RELAYS = await loadRelays();
+      iceServers = withRelays(st.ice_servers || [], RELAYS);
       SIG = signalUrl(uuid, st);
       openSignal();
     } catch (e) { fail(/timeout|abort/i.test(String(e && e.name)) ? UNREACHABLE : String(e.message || e)); }
@@ -448,12 +627,26 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
   }
 
   async function negotiate(servers) {
+    if (pc) return;
     phase("Connecting the picture…");
     // the picture is plain WebRTC, which the /cloud proxy cannot carry: this is where a network that allows
     // our host but blocks the game's TURN server (port 8632) stalls. Say so instead of "connecting…" forever.
     clearTimeout(iceTimer);
-    iceTimer = setTimeout(() => sub("the picture is taking a while — this network may block the video stream"), 12000);
-    pc = new RTCPeerConnection({ iceServers: servers || [], bundlePolicy: "max-bundle", rtcpMuxPolicy: "require" });
+    iceTimer = setTimeout(() => { sub("the picture is taking a while — this network may block the video stream"); showDiag(); }, 12000);
+    // a hard limit so a blocked network ends in an answer and a way out instead of a spinner
+    clearTimeout(iceGiveUp);
+    iceGiveUp = setTimeout(() => {
+      if (!pc || ["connected", "completed"].includes(pc.iceConnectionState)) return;
+      noteErr(`no media path after ${ICE_GIVE_UP_MS / 1000} s`);
+      fail(NO_PICTURE);
+      teardownQuiet(); // free the gaming PC; the diagnostics keep their last reading for "Copy"
+    }, ICE_GIVE_UP_MS);
+    diag.startedAt = Date.now(); diag.local = {}; diag.remote = 0; diag.pair = null; diag.errors = []; diag.gathering = "new"; diag.ice = "new"; diag.conn = "new"; diag.connectedMs = 0;
+    if (ICE_MODE === "tls" && !(servers || []).length) noteErr("?ice=tls but no 443 relay is configured for this server");
+    pc = new RTCPeerConnection({ iceServers: servers || [], bundlePolicy: "max-bundle", rtcpMuxPolicy: "require", iceTransportPolicy: ICE_MODE ? "relay" : "all" });
+    // 701 = that server never answered (blocked port), 401 = credentials refused, etc. Kept without addresses.
+    const me = pc; // events from a peer connection that was replaced are ignored
+    pc.onicecandidateerror = (e) => { if (me !== pc) return; const k = serverKind(e.url); if (k) noteErr(`${k}: ${e.errorCode}${e.errorText ? " " + String(e.errorText).slice(0, 60) : ""}`); renderDiag(); };
     pc.addTransceiver("audio", { direction: "recvonly" });
     const v = pc.addTransceiver("video", { direction: "recvonly" });
     try {
@@ -466,36 +659,53 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
       }
     } catch {}
     const stream = new MediaStream();
-    pc.ontrack = (e) => { stream.addTrack(e.track); $("video").srcObject = stream; $("video").play().catch(() => {}); };
-    pc.onicecandidate = (e) => e.candidate && ws.readyState === 1 && ws.send(JSON.stringify({ type: "rtc_candidate", candidate: e.candidate.toJSON() }));
-    pc.onconnectionstatechange = () => { if (pc && ["connected", "completed"].includes(pc.iceConnectionState)) { clearTimeout(iceTimer); sub(""); $("overlay").classList.add("gone"); $("hint").textContent = "click for pointer lock · Esc to release"; } if (pc && pc.connectionState === "failed") reconnect(); };
+    pc.ontrack = (e) => { if (me !== pc) return; stream.addTrack(e.track); $("video").srcObject = stream; $("video").play().catch(() => {}); };
+    pc.onicecandidate = (e) => { if (me !== pc) return; if (e.candidate) { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: "rtc_candidate", candidate: e.candidate.toJSON() })); } };
+    pc.onicegatheringstatechange = () => { if (me !== pc) return; diag.gathering = pc.iceGatheringState; renderDiag(); };
+    pc.oniceconnectionstatechange = () => { if (me !== pc) return; diag.ice = pc.iceConnectionState; if (pc.iceConnectionState === "failed") { diag.errors.push(`ice failed at ${stamp()}`); showDiag(); } renderDiag(); };
+    pc.onsignalingstatechange = () => renderDiag();
+    pc.onconnectionstatechange = () => {
+      if (me !== pc) return;
+      diag.conn = pc.connectionState;
+      if (pc && ["connected", "completed"].includes(pc.iceConnectionState)) { if (!diag.connectedMs) diag.connectedMs = Date.now() - diag.startedAt; clearTimeout(iceTimer); clearTimeout(iceGiveUp); mediaFails = 0; signalTries = 0; sub(""); $("overlay").classList.add("gone"); $("hint").textContent = "click for pointer lock · Esc to release"; }
+      if (pc && pc.connectionState === "failed") {
+        noteErr(`connection failed at ${stamp()}`);
+        restartSession();
+      }
+      renderDiag();
+    };
+    clearInterval(diagStats);
+    diagStats = setInterval(pollStats, 2000);
+    pollStats();
 
     dc = pc.createDataChannel("JYSDK", { id: 1, ordered: false, maxRetransmits: 0, priority: "high" });
     dc.onopen = () => bindInput();
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
+    if (me !== pc || !ws || ws.readyState !== 1) return;
     ws.send(JSON.stringify({ type: "rtc_offer", sdp: offer.sdp }));
   }
 
   function end(reason, msg) { fail(`${reason}${msg ? " — " + msg : ""}`); setTimeout(teardown, 1500); }
   /** ends the current attempt (session, socket, stream) but keeps the player on screen, for "Try again" */
   function teardownQuiet() {
-    closing = true; clearTimeout(readyTimer); clearTimeout(iceTimer);
+    closing = true; clearTimeout(readyTimer); clearTimeout(iceTimer); clearTimeout(iceGiveUp); clearInterval(diagStats);
     try { dc?.close(); } catch {}
     try { pc?.close(); } catch {}
-    try { ws?.close(); } catch {}
+    dropSignal();
     if (uuid) quitSession(uuid);
     dc = pc = ws = uuid = null; SIG = null;
   }
   function teardown() {
-    closing = true; clearTimeout(readyTimer); clearTimeout(iceTimer);
+    closing = true; clearTimeout(readyTimer); clearTimeout(iceTimer); clearTimeout(iceGiveUp); clearInterval(diagStats);
     try { dc?.close(); } catch {}
     try { pc?.close(); } catch {}
-    try { ws?.close(); } catch {}
+    dropSignal();
     if (uuid) quitSession(uuid);
     dc = pc = ws = uuid = null; SIG = null;
     document.exitPointerLock?.();
     player.classList.remove("on");
+    $("diag").classList.remove("on");
     if (!cfg) phase("");
     else phase("starting…");
     $("overlay").classList.remove("gone");
@@ -504,6 +714,7 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
   // ---- wiring ---------------------------------------------------------
   $("q").addEventListener("input", (e) => render(e.target.value));
   $("pfull").addEventListener("click", () => (document.fullscreenElement ? document.exitFullscreen() : player.requestFullscreen?.().catch(() => {})));
+  $("diagbtn").addEventListener("click", () => { const el = $("diag"); el.classList.toggle("on"); renderDiag(); });
   addEventListener("keydown", (e) => { if (e.key === "Escape" && player.classList.contains("on") && !document.pointerLockElement) { /* let Esc free the pointer first */ } });
   addEventListener("pagehide", () => { if (uuid) teardown(); });
 
