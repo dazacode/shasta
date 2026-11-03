@@ -172,8 +172,9 @@ function resetIdentity() {
 }
 
 /* ---- request layer ---- */
+let blockedTimer = 0;   // the once-a-minute retry while now.gg/its relay is unreachable (offerBlocked)
 const state = { pc: null, dc: null, playUserToken: null, sessionId: null, stopping: false, keys: true, showTouches: false, kb: false,
-  sent: 0, drops: 0, vpn: false, hunt: false, tries: 0, failSince: 0, handoffs: 0, lastHandoff: null, playedMs: 0, playingSince: 0, calls: 0 };
+  sent: 0, drops: 0, vpn: false, relayDown: false, hunt: false, tries: 0, failSince: 0, handoffs: 0, lastHandoff: null, playedMs: 0, playingSince: 0, calls: 0 };
 function headers(json) {
   const h = { "x-ngg-fe-version": FE, lang: "en", accept: "application/json, text/plain, */*",
     "x-location": JSON.stringify({ location: "game_sdk", versionName: "10001", countryCode: "US", platform: "cloud", deviceType: "desktop" }) };
@@ -196,9 +197,28 @@ async function call(path, { method = "GET", body } = {}) {
   // its VPN page on getSessionStatus is expected (our own proxy may reach now.gg through a flagged egress),
   // so only a critical call failing that way means the whole flow is blocked.
   const critical = !/getSessionStatus/.test(path);
-  if (critical && r.headers.get("x-nowgg-proxy-error")) state.vpn = true;   // now.gg served its "Proxy/VPN detected" HTML page
+  // Our proxy tags the response with the upstream it came from, whether every upstream answered now.gg's
+  // static VPN page (`X-Nowgg-Proxy-Error`), and whether the answer is the public relay's own outage marker
+  // (`X-Nowgg-Broken`). Blame the VPN only when now.gg itself is the one refusing; a failure that came back
+  // through a FALLBACK upstream is the relay being down, whatever shape it is (its canned
+  // {"status":"FailureInvalidPlayUser","extrainfo":"…broke again…"}, the VPN page it relays, or an HTML
+  // blip). now.gg itself never sends `extrainfo`, so that also names the relay on an older proxy.
+  const flagged = critical && !!r.headers.get("x-nowgg-proxy-error");
+  const broken = critical && !!r.headers.get("x-nowgg-broken");
+  const via = r.headers.get("x-nowgg-via") || "";
+  const fromFallback = critical && !!via && via !== "now.gg";
   const t = await r.text();
-  try { return { ...JSON.parse(t), _http: r.status }; } catch { if (critical && /^\s*<(?:!doctype|html)/i.test(t)) state.vpn = true; return { _raw: t.slice(0, 120), _http: r.status }; }
+  const relayish = (j) => broken || (fromFallback && typeof j?.extrainfo === "string");
+  try {
+    const j = JSON.parse(t);
+    if (flagged) state.vpn = true;
+    else if (relayish(j)) state.relayDown = true;
+    return { ...j, _via: via, _http: r.status };
+  } catch {
+    if (flagged || (critical && !fromFallback && /^\s*<(?:!doctype|html)/i.test(t))) state.vpn = true;
+    else if (broken || fromFallback) state.relayDown = true;
+    return { _raw: t.slice(0, 120), _via: via, _http: r.status };
+  }
 }
 
 /* ---- /oapi/<n> is PER APP and rotates; wrong prefix => empty 205. Remember the good one. ----
@@ -224,8 +244,8 @@ const munge = (sdp) => String(sdp)
 
 const START_POLICY = { WaitingInQueue: 3000, WaitingInPriorityQueue: 3000, FailureTryAgain: 1500, FailureRetryStartSessionLater: 3000,
   FailureAnotherSessionActive: 2000, FailureSessionMigrated: 1500, FailureNoResource: 5000, FailureInsufficientInstanceCapacity: 5000,
-  FailureUserStorageBusy: 1000, FailureNotReady: 3000 };
-const START_MAX = 60, NOT_READY_MAX = 21;
+  FailureUserStorageBusy: 1000, FailureNotReady: 3000, FailureProxyUserLimitExceeded: 5000 };
+const START_MAX = 60, NOT_READY_MAX = 21, FLAP_MAX = 6;
 const AUTH_FAIL = ["FailureUnauthorized", "FailureInvalidPlayUser", "FailureTokenExpired", "FailureInvalidToken"];
 
 /* now.gg picks a machine for the session and sometimes ends it right away because that machine serves
@@ -245,6 +265,7 @@ async function doAuth(force = false) {
     }
     log("<b>createPlayUser</b>");
     const pu = await call(oapiPrefix + "/play/v1/createPlayUser", { method: "POST", body: { uaId: id.uaId } });
+    if (state.relayDown) throw new Error("relay down");
     if (pu._http === 205) { oapiPrefix = PREFIXES[(PREFIXES.indexOf(oapiPrefix) + 1) % PREFIXES.length]; log("  prefix -> " + oapiPrefix); continue; }
     if (pu.status === "FailureUaIdRevoked") { log("  uaId revoked -> new identity"); resetIdentity(); continue; }
     const retryable = pu._http === 401 || AUTH_FAIL.includes(pu.status);
@@ -256,15 +277,27 @@ async function doAuth(force = false) {
 
 const startMsg = (st) => st === "FailureUserStorageBusy" ? "now.gg is moving the game to a new machine…"
   : st === "FailureNotReady" ? "Machine is booting…"
+  : st === "FailureProxyUserLimitExceeded" ? "now.gg is limiting this address for now…"
   : (st === "FailureNoResource" || st === "FailureInsufficientInstanceCapacity") ? "Waiting for a free machine…" : "In the queue…";
 
 async function beginSession() {
-  let notReady = 0, reauths = 0, wrong = 0, tryAgain = 0, s;
+  let notReady = 0, reauths = 0, wrong = 0, tryAgain = 0, flaps = 0, s;
   log("<b>startSession</b> " + oapiPrefix);
   for (let i = 0; i < START_MAX; i++) {
     if (state.stopping) throw new Error("stopped");
     s = await call(oapiPrefix + "/play/v1/startSession?" + new URLSearchParams(sessionParams()));
     if (s.status === "Success") break;
+    // The relay path flaps: one startSession gets a real now.gg answer (FailureNoResource), the next the
+    // VPN page or the relay's "broken" JSON. Give it ~1 min before calling it, instead of failing at once.
+    if (state.vpn || state.relayDown) {
+      if (++flaps > FLAP_MAX) break;
+      log("  " + (state.relayDown ? "relay down" : "VPN page") + " -> retry " + flaps + "/" + FLAP_MAX);
+      status("now.gg isn't answering right now — retrying…");
+      await sleep(Math.min(4000 * flaps, 15000));
+      state.vpn = false; state.relayDown = false;
+      continue;
+    }
+    flaps = 0;   // a real now.gg answer: only flaps in a row count
     // wrong prefix for this app right now: now.gg answers an empty 205; through the nowgg.fun fallback it is
     // FailureTryAgain and then an HTML page instead. Rotate at once on a 205 or a non-JSON answer, and after two
     // FailureTryAgain in a row on the same prefix.
@@ -347,7 +380,7 @@ const clearTimers = () => { timers.forEach(clearInterval); timers = []; };
 const TAB = nanoid(8);
 const bc = typeof BroadcastChannel === "function" ? new BroadcastChannel("nowgg-session:" + APP) : null;
 function stopPlaying() { pausePlayClock(); state.stopping = true; reconnecting = false; reconnectQueued = false; clearTimers(); releaseAll(); try { state.pc?.close(); } catch {} state.pc = state.dc = null; releaseWake(); }
-function park(html) { stopPlaying(); unfreeze(); offerRetry(html); log("<b>parked</b>"); }
+function park(html) { clearTimeout(blockedTimer); stopPlaying(); unfreeze(); offerRetry(html); log("<b>parked</b>"); }
 if (bc) bc.onmessage = (e) => { if (e.data?.type === "claim" && e.data.tab !== TAB && !state.stopping && (state.pc || reconnecting)) park("<b>Playing in another tab</b><br>Retry to play here instead."); };
 const claim = () => { try { bc?.postMessage({ type: "claim", tab: TAB }); } catch {} };
 
@@ -499,7 +532,7 @@ function scheduleReconnect(reason = "?", minDelay = 0, hunt = false) {
     } catch (e) {
       log("<b>ERR</b> " + esc(e.message));
       if (Date.now() - state.failSince < GIVE_UP_MS) reconnectQueued = true;
-      else { stopPlaying(); unfreeze(); offerRetry(state.vpn ? vpnMsg : "Couldn't reconnect: " + esc(e.message)); }
+      else { stopPlaying(); unfreeze(); if (state.vpn || state.relayDown) offerBlocked(); else offerRetry("Couldn't reconnect: " + esc(e.message)); }
     } finally {
       reconnecting = false;
       if (reconnectQueued && !state.stopping) { reconnectQueued = false; scheduleReconnect("retry", 0, state.hunt); }
@@ -571,18 +604,29 @@ window.addEventListener("online", () => { log("  back online"); resumePending();
 window.addEventListener("offline", () => { log("  offline"); if (hadPicture) status("No internet connection — waiting…"); });
 window.addEventListener("pagehide", () => { releaseAll(); });
 
-const vpnMsg = "<b>now.gg thinks this is a VPN</b><br>Its play API answered its <i>Proxy/VPN detected</i> page to every route we tried.<br><span style='opacity:.6'>Press Retry in a moment.</span>";
+const vpnMsg = "<b>now.gg isn't letting us in right now</b><br>It answered its <i>Proxy/VPN detected</i> page to every route we tried.<br><span style='opacity:.6'>Trying again by itself every minute, or press Retry.</span>";
+const relayMsg = "<b>now.gg games are down right now</b><br>The backup route Shasta reaches now.gg through isn't answering.<br><span style='opacity:.6'>Trying again by itself every minute, or press Retry.</span>";
+// blocked/outage: retry quietly once a minute while the card is up and the tab is in view
+function offerBlocked() {
+  offerRetry(state.relayDown ? relayMsg : vpnMsg);
+  clearTimeout(blockedTimer);
+  blockedTimer = setTimeout(function again() {
+    if (state.pc || reconnecting) return;   // already playing again (Retry pressed)
+    if (document.hidden || !navigator.onLine) { blockedTimer = setTimeout(again, 10000); return; }
+    log("  auto-retry"); play();
+  }, 60000);
+}
 async function play() {
   if (!APP) APP = qs.get("g");
   if (!APP) return card("No game selected.");
-  state.stopping = false; state.tries = 0; state.failSince = 0; lastTakeover = 0; state.vpn = false; state.hunt = false; pendingWhileHidden = null; claim();
+  state.stopping = false; state.tries = 0; state.failSince = 0; lastTakeover = 0; state.vpn = false; state.relayDown = false; state.hunt = false; pendingWhileHidden = null; claim(); clearTimeout(blockedTimer);
   $("ovname").textContent = (cfg && cfg.name) || ("app " + APP);
   document.title = (cfg && cfg.name) ? cfg.name : "now.gg";
   if (cfg && cfg.cover && !hadPicture) $("bg").style.backgroundImage = `url("${String(cfg.cover).replace(/["\\]/g, "")}")`;
   status("Starting…"); holdWake();
   if (API === BAKED_API) { const own = await askShellForProxy(); if (own && own !== API) { API = own; log("  proxy " + esc(API) + " (this domain)"); } }
   try { await doAuth(); await establish(); }
-  catch (e) { log("<b>ERR</b> " + esc(e.message)); if (e.message === "stopped") return; if (state.vpn) offerRetry(vpnMsg); else scheduleReconnect("start-failed"); }
+  catch (e) { log("<b>ERR</b> " + esc(e.message)); if (e.message === "stopped") return; if (state.vpn || state.relayDown) offerBlocked(); else scheduleReconnect("start-failed"); }
 }
 
 $("ovretry").onclick = () => { state.stopping = false; play(); };

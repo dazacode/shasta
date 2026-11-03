@@ -41,6 +41,14 @@ const LITE_BUILD = "__SHASTA_LITE__" === "yes";
 // addresses with index.html as a real page (with the isolation headers).
 const CDN_BASE = "__SHASTA_CDN_BASE__";
 const CDN = LITE_BUILD && !CDN_BASE.startsWith("__");
+// jsDelivr keeps an unversioned file (and which commit is "newest") for up to 12 h, so right after a deploy it could
+// serve last build's index.html, or 404 this build's new chunks. Every deploy therefore publishes a pointer to its own
+// commit (latest.json, read from GitHub's raw host, ~5 min cache; stamped by scripts/deploy-jsdelivr.ts) and this
+// worker serves the app's files from `/gh/<repo>@<commit>/`: jsDelivr never caches a commit address stale, and every
+// file comes from the same build. Without the pointer (raw host blocked) the last known commit, else the plain folder.
+const CDN_POINTER = "__SHASTA_CDN_POINTER__";
+const PIN_CACHE = "shasta-cdn-pin";
+let pinned = null;
 const ISOLATION = {
 	"Cross-Origin-Opener-Policy": "same-origin",
 	"Cross-Origin-Embedder-Policy": "credentialless",
@@ -64,6 +72,10 @@ addEventListener("fetch", (e) => {
 	}
 	if (LITE_BUILD && e.request.mode === "navigate" && new URL(e.request.url).origin === location.origin) {
 		e.respondWith(CDN && isCdnEntry(new URL(e.request.url)) ? cdnApp() : isolated(e.request));
+		return;
+	}
+	if (CDN && cdnStatic(e.request)) {
+		e.respondWith(fromPinned(e.request));
 		return;
 	}
 	if (!SHELL_ON) return;
@@ -103,10 +115,54 @@ function isCdnEntry(url) {
 	return url.pathname.startsWith(CDN_BASE) && (rest === "" || rest === "index.svg" || rest === "index.html");
 }
 
+/** The pinned build's folder (`/gh/<repo>@<commit>/`), or null: from the pointer when `fresh`, else the last known. */
+async function cdnPin(fresh) {
+	if (CDN_POINTER.startsWith("__")) return null;
+	if (!fresh && pinned) return pinned;
+	const cache = await caches.open(PIN_CACHE).catch(() => null);
+	if (fresh) {
+		try {
+			const r = await fetch(CDN_POINTER + "?t=" + Date.now(), { cache: "no-store", credentials: "omit", signal: AbortSignal.timeout(4000) });
+			const sha = (await r.json()).sha;
+			if (/^[0-9a-f]{40}$/.test(sha)) {
+				pinned = CDN_BASE.replace(/\/$/, "@" + sha + "/");
+				await cache?.put("/__shasta/cdn-pin", new Response(pinned)).catch(() => {});
+				return pinned;
+			}
+		} catch {
+			/* raw host blocked or slow: the last known build */
+		}
+	}
+	if (!pinned) pinned = (await (await cache?.match("/__shasta/cdn-pin"))?.text().catch(() => null)) || null;
+	return pinned;
+}
+
+/** A file of the app itself under the jsDelivr folder (not an entry, not this worker, not the engine's prefix). */
+function cdnStatic(request) {
+	if (request.method !== "GET") return false;
+	const url = new URL(request.url);
+	if (url.origin !== location.origin || !url.pathname.startsWith(CDN_BASE)) return false;
+	const rest = url.pathname.slice(CDN_BASE.length);
+	return rest !== "" && rest !== "sw.js" && rest !== "index.svg" && rest !== "index.html" && !rest.startsWith("~");
+}
+
+async function fromPinned(request) {
+	const pin = await cdnPin(false);
+	if (pin) {
+		const url = new URL(request.url);
+		const r = await fetch(pin + url.pathname.slice(CDN_BASE.length) + url.search, { credentials: "omit" }).catch(() => null);
+		if (r?.ok) return r;
+	}
+	return fetch(request);
+}
+
 /** Lite on jsDelivr: index.html (served by the CDN as text/plain) as the page it is. */
 async function cdnApp() {
+	// the newest build by its commit; the plain folder only when no pointer was ever reached
+	const pin = await cdnPin(true);
+	let response = pin ? await fetch(pin + "index.html", { credentials: "omit" }).catch(() => null) : null;
 	// revalidated: the CDN lets browsers keep a file for a week
-	const response = await fetch(CDN_BASE + "index.html", { cache: "no-cache" });
+	if (!response?.ok) response = await fetch(CDN_BASE + "index.html", { cache: "no-cache" });
 	if (!response.ok) return response;
 	const headers = new Headers({ "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" });
 	for (const [k, v] of Object.entries(ISOLATION)) headers.set(k, v);

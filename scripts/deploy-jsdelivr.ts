@@ -33,7 +33,10 @@ buildLite(BUILD, "32359927-bca9-4b7e-82fe-d41315829b1a", BASE, { VITE_SHARED_ORI
 const swPath = join(BUILD, "sw.js");
 const sw = readFileSync(swPath, "utf8");
 if (!sw.includes('"__SHASTA_CDN_BASE__"')) fail("sw.js has no __SHASTA_CDN_BASE__ marker");
-writeFileSync(swPath, sw.replace('"__SHASTA_CDN_BASE__"', JSON.stringify(BASE)));
+// ...and loads the app from the newest build's commit address, found through latest.json (pushed below)
+const POINTER = `https://raw.githubusercontent.com/${REPO}/main/latest.json`;
+if (!sw.includes('"__SHASTA_CDN_POINTER__"')) fail("sw.js has no __SHASTA_CDN_POINTER__ marker");
+writeFileSync(swPath, sw.replace('"__SHASTA_CDN_BASE__"', JSON.stringify(BASE)).replace('"__SHASTA_CDN_POINTER__"', JSON.stringify(POINTER)));
 
 // every file Shasta's page names must be inside the folder: a root address would be someone else's (or nothing)
 const html = readFileSync(join(BUILD, "index.html"), "utf8");
@@ -96,7 +99,7 @@ const ownSet = new Set(own);
 const kept = new Map<string, Uint8Array>();
 for (const f of new Set(history.slice(0, KEEP).flat())) {
 	if (ownSet.has(f)) continue;
-	for (let i = 0; i < KEEP && hasHead; i++) {
+	for (let i = 0; i < KEEP * 2 + 1 && hasHead; i++) {
 		const r = git(["show", `HEAD~${i}:${f}`]);
 		if (r.exitCode === 0) {
 			kept.set(f, r.stdout);
@@ -117,6 +120,19 @@ if (changed) {
 	run(["git", "commit", "-q", "-m", `Shasta Lite (built from ${source})`], CLONE);
 	run(["git", "push", "-q", "origin", "main"], CLONE);
 } else console.log("nothing changed since the last deploy");
+// the pointer the service worker follows (public/sw.js cdnPin): this build's own commit, which jsDelivr serves fresh
+const buildSha = git(["rev-parse", "HEAD"]).stdout.toString().trim();
+const pointerPath = join(CLONE, "latest.json");
+const prev = existsSync(pointerPath) ? JSON.parse(readFileSync(pointerPath, "utf8")).sha : null;
+if (changed || prev !== buildSha) {
+	writeFileSync(pointerPath, JSON.stringify({ sha: buildSha, at: new Date().toISOString() }) + "\n");
+	run(["git", "add", "latest.json"], CLONE);
+	run(["git", "commit", "-q", "-m", `latest -> ${buildSha.slice(0, 7)}`], CLONE);
+	run(["git", "push", "-q", "origin", "main"], CLONE);
+}
+// warm jsDelivr for this commit (the first request of a commit address fetches it from GitHub)
+await fetch(`${CDN}/gh/${REPO}@${buildSha}/index.html`).catch(() => null);
+console.log(`pinned build: ${CDN}/gh/${REPO}@${buildSha.slice(0, 7)}/`);
 
 // jsDelivr's edge keeps files 12 h: purge every file whose name does not change with its contents
 const purge = files.filter((f) => !f.startsWith("assets/"));

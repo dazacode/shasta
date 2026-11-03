@@ -27,3 +27,8 @@ shasta/public/adblock/
 
 # self-hosted stratus-api + malq (scripts/stratus-api.ts)
 vendor/
+
+# throw-away debug scripts (kept out of the public source snapshot)
+shasta/tmp-*.mjs
+shasta/.cloud.mjs
+*.tmp.mjs

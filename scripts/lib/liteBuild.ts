@@ -31,7 +31,12 @@ export function buildLite(out: string, statsId: string, base = "/", extraEnv: Re
 		// does not stop browsing on a Lite mirror. A static host cannot hold a websocket itself (Vercel rewrites,
 		// Base44, jsDelivr), so a Lite mirror can never have its own /wisp/; these are the full site's.
 		VITE_WISP_URL: "",
-		VITE_WISP_URLS: [`wss://${new URL(FULL).host}/wisp/`, "wss://edushasta.lol/wisp/"].join(","),
+		// + our Vercel relay last (scripts/vercel-wisp: it pays per byte, so only when both above are blocked); a host
+		// that runs no code (jsDelivr) then depends on no single domain
+		VITE_WISP_URLS: [`wss://${new URL(FULL).host}/wisp/`, "wss://edushasta.lol/wisp/", "wss://shasta-lite.vercel.app/wisp/"].join(","),
+		// every now.gg proxy a Lite mirror may hand its games, tried in this order when its own is missing or blocked
+		// (store/AppLauncher.tsx nowggBase -> lib/nowggProxy.ts pickNowggBase)
+		VITE_NOWGG_BASES: [`${FULL.replace(/\/$/, "")}/nowgg`, "https://edushasta.lol/nowgg", "https://shasta-lite.vercel.app/nowgg", "https://shasta-lte.base44.app/functions/nowgg?p="].join(","),
 		// share links name the full site, where a shared Store link actually opens; the canonical address is the
 		// public domain, so search engines index edushasta.lol and treat the Lite mirrors as copies of it
 		VITE_SHARE_ORIGIN: FULL,

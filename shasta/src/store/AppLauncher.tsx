@@ -13,7 +13,7 @@ import { AI_APP_SLUG, attachBridge } from '@/ai/bridge'
 import type { RuntimeTarget } from './types'
 import { openReport, type ReportTarget } from './ReportDialog'
 import { GameSplash } from '@/components/game/GameSplash'
-import { nowggProxyBase } from '@/lib/nowggProxy'
+import { nowggCandidates, nowggProxyBase, pickNowggBase } from '@/lib/nowggProxy'
 import { NOWGG_PATH, NOWGG_SELF } from '@/lib/edition'
 import { APP_API_ORIGIN } from '@/lib/appApi'
 
@@ -52,6 +52,20 @@ function Fail({ title, message, recover, onRetry, onReport }: { title: string; m
 }
 
 /** `appKey` is the app's name from its address (game://click-quest -> click-quest); older tabs carry the id instead. */
+
+// The now.gg proxy for this window's games: one fixed answer on a domain with its own, otherwise the first of the
+// Shasta domains that is not blocked (lib/nowggProxy.ts), probed once per 10 minutes and started early (the game
+// waits only ~600 ms for the answer before it uses the address baked into it).
+const NOWGG_EXTRA = String(import.meta.env.VITE_NOWGG_BASES ?? '').split(/[\s,]+/).filter(Boolean)
+let nowggPick: { at: number; base: Promise<string | null> } | null = null
+function nowggBase(): Promise<string | null> {
+  const cands = nowggCandidates(nowggProxyBase(location, NOWGG_SELF, APP_API_ORIGIN, NOWGG_PATH), NOWGG_EXTRA)
+  if (cands.length <= 1) return Promise.resolve(cands[0] ?? null)
+  if (!nowggPick || Date.now() - nowggPick.at > 10 * 60_000) nowggPick = { at: Date.now(), base: pickNowggBase(cands) }
+  return nowggPick.base
+}
+if (NOWGG_EXTRA.length) void nowggBase()
+
 export function AppRuntime({ tabId, appKey, active, isGame = false }: { tabId: string; appKey: string; active: boolean; /** a game:// address: the launcher splash instead of the plain loading screen */ isGame?: boolean }) {
   useStoreBoot()
   const [phase, setPhase] = useState<Phase>({ kind: 'starting' })
@@ -148,8 +162,9 @@ export function AppRuntime({ tabId, appKey, active, isGame = false }: { tabId: s
     const onMsg = (e: MessageEvent) => {
       const el = frame.current
       if (!el || e.source !== el.contentWindow || (e.data as { type?: unknown } | null)?.type !== 'nowgg:proxy?') return
-      const base = nowggProxyBase(location, NOWGG_SELF, APP_API_ORIGIN, NOWGG_PATH)
-      if (base) el.contentWindow?.postMessage({ type: 'nowgg:proxy', base }, e.origin)
+      void nowggBase().then((base) => {
+        if (base) el.contentWindow?.postMessage({ type: 'nowgg:proxy', base }, e.origin)
+      })
     }
     window.addEventListener('message', onMsg)
     return () => {

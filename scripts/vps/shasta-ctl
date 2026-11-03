@@ -71,8 +71,9 @@ case "${1:-}" in
 	health) health && echo ok ;;
 	backup) backup ;;
 	prune) keep=${2:-5}; cur=$(tag_of current); p=$(tag_of previous)
+		docker container prune -f >/dev/null 2>&1 || true   # a stopped container would otherwise pin its old image
 		docker image ls shasta --format '{{.Tag}}' | grep -vE '^(current|previous|<none>)$' | tail -n +$((keep + 1)) | while read -r t; do
-			[ "$t" = "$cur" ] || [ "$t" = "$p" ] || { docker rmi "shasta:$t" >/dev/null && echo "removed $t"; }
+			[ "$t" = "$cur" ] || [ "$t" = "$p" ] || { docker rmi "shasta:$t" >/dev/null 2>&1 && echo "removed $t" || echo "kept $t (in use)"; }
 		done
 		docker image prune -f >/dev/null ;;
 	*) sed -n '2,15p' "$0"; exit 1 ;;
