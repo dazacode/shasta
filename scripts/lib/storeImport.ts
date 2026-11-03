@@ -35,6 +35,8 @@ export interface ImportItem {
 	/** the wide image used as the banner screenshot */
 	bannerUrl?: string;
 	notes?: string;
+	/** keep the description's paragraph breaks (the Store shows it with white-space: pre-line); default flattens it */
+	paragraphs?: boolean;
 	/** a tag that marks this app as ours, so re-runs update it and other sources' duplicates are skipped */
 	source: string;
 }
@@ -232,7 +234,9 @@ const normUrl = (u: string) => u.trim().replace(/\/+$/, "").toLowerCase();
 const devAppFields = (a: any): Existing => ({ tags: a.tags ?? [], versions: (a.versions ?? []).map((v: any) => v.version), draft: (a.versions ?? []).find((v: any) => v.state === "draft")?.version, live: (a.versions ?? []).some((v: any) => v.state === "live"), screenshots: (a.screenshots ?? []).length, urls: (a.versions ?? []).map((v: any) => v.linkedUrl).filter(Boolean).map(normUrl) });
 
 export function appPayload(item: ImportItem, name: string) {
-	let description = (item.description || "").replace(/\s+/g, " ").trim();
+	let description = item.paragraphs
+		? (item.description || "").replace(/[ \t]+/g, " ").replace(/ *\n */g, "\n").replace(/\n{3,}/g, "\n\n").trim()
+		: (item.description || "").replace(/\s+/g, " ").trim();
 	if (description.length < 20) description = `${name}${description ? `: ${description}` : ""} — a web app from ${item.host.name}.`;
 	let summary = (item.summary || "").replace(/\s+/g, " ").trim() || description.slice(0, 120);
 	return {
@@ -281,7 +285,12 @@ export async function runImport(items: ImportItem[], opts: RunOptions = {}) {
 	if (!opts.dry) {
 		await connect();
 		const { apps } = await api<{ apps: any[] }>("GET", "/api/dev/apps?all=1&brief=1");
+		const removed = new Set<string>();
 		for (const a of apps) {
+			// a removed row never shadows a live one with the same name (a removed duplicate would make the PATCH fail)
+			if (existing.has(norm(a.name)) && a.status === "removed" && !removed.has(norm(a.name))) continue;
+			if (a.status === "removed") removed.add(norm(a.name));
+			else removed.delete(norm(a.name));
 			const fields = devAppFields(a);
 			existing.set(norm(a.name), fields);
 			idCache.set(norm(a.name), a.id);

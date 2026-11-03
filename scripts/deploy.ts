@@ -126,7 +126,7 @@ if (target === "vercel") {
 			{ source: "/assets/(.*)", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },
 			{ source: "/sw.js", headers: [{ key: "Service-Worker-Allowed", value: "/" }] },
 		],
-		rewrites: [...(backend ? [{ source: "/api/:path*", destination: `${backend}/api/:path*` }, { source: "/ai-models/:path*", destination: `${backend}/ai-models/:path*` }] : []), { source: "/cloud/:path*", destination: `${PUBLIC_SITE}/cloud/:path*` }],
+		rewrites: [...(backend ? [{ source: "/api/:path*", destination: `${backend}/api/:path*` }, { source: "/ai-models/:path*", destination: `${backend}/ai-models/:path*` }] : []), { source: "/cloud/:path*", destination: `${PUBLIC_SITE}/cloud/:path*` }, { source: "/nowgg/:path*", destination: `${PUBLIC_SITE}/nowgg/:path*` }],
 	};
 	writeFileSync(join(stage, "vercel.json"), JSON.stringify(config, null, 2));
 	const scope = process.env.VERCEL_SCOPE ?? "dazaseals-projects";
@@ -159,7 +159,7 @@ if (target === "vercel") {
 		.replace('"__SHASTA_BACKEND__"', JSON.stringify(backend ?? ""))
 		.replace('JSON.parse("__SHASTA_OVERSIZE__")', JSON.stringify(oversize));
 	writeFileSync(join(stage, "_worker.js"), worker);
-	const include = ["/api/*", "/wisp/*", "/ai-models/*", "/cloud/*", "/healthz", ...Object.keys(oversize)];
+	const include = ["/api/*", "/wisp/*", "/ai-models/*", "/cloud/*", "/nowgg/*", "/healthz", ...Object.keys(oversize)];
 	writeFileSync(join(stage, "_routes.json"), JSON.stringify({ version: 1, include, exclude: [] }, null, 2));
 	if (process.env.SHASTA_DRY_RUN === "1") {
 		console.log(`staged in ${stage} (SHASTA_DRY_RUN=1: not uploaded)`);

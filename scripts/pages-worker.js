@@ -26,6 +26,8 @@ export default {
 		// backend is fine from the US but stalls from the VPS's Frankfurt colo, so fetching it here (in the
 		// visitor's own colo) is what actually works. Falls back to the backend if every mirror fails.
 		if (path.startsWith("/cloud/")) return cloudProxy(request, env, backend);
+		// now.gg cloud games: its /oapi has no usable browser CORS, so the player uses the VPS proxy
+		if (path.startsWith("/nowgg/")) return backend ? toBackend(request, backend, env) : noBackend(path);
 		if (path.startsWith("/ai-models/")) return backend ? toBackend(request, backend, env) : fromHuggingFace(request, path);
 		if (path.startsWith("/api/") || path.startsWith("/wisp/") || path === "/healthz") {
 			if (backend && EDGE_CACHED.test(path) && isAnonymousRead(request, url)) return cachedBackend(request, backend, env, ctx);
