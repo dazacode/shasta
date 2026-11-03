@@ -9,7 +9,10 @@ describe('nowggProxyBase: each domain hands its now.gg games its own proxy', () 
   it('Lite on Vercel routes /nowgg itself', () => {
     expect(nowggProxyBase({ protocol: 'https:', origin: 'https://shasta-lite.vercel.app' }, true, 'https://shasta-dtg.pages.dev')).toBe('https://shasta-lite.vercel.app/nowgg')
   })
-  it('a static Lite host (Base44) offers the full site it talks to', () => {
+  it('Lite on Base44 offers its own backend function (path in the query)', () => {
+    expect(nowggProxyBase({ protocol: 'https:', origin: 'https://shasta-lte.base44.app' }, true, 'https://shasta-dtg.pages.dev', '/functions/nowgg?p=')).toBe('https://shasta-lte.base44.app/functions/nowgg?p=')
+  })
+  it('a static Lite host with no proxy offers the full site it talks to', () => {
     expect(nowggProxyBase({ protocol: 'https:', origin: 'https://shasta-lte.base44.app' }, false, 'https://shasta-dtg.pages.dev')).toBe('https://shasta-dtg.pages.dev/nowgg')
   })
   it('the installed app offers its backend, never its own isolated-app origin', () => {

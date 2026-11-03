@@ -8,7 +8,7 @@
 // `APP_API_ORIGIN` (lib/appApi.ts).
 
 /** `<origin>/nowgg` for this window, or null when it has none to offer (the game keeps its baked address). */
-export function nowggProxyBase(loc: Pick<Location, 'protocol' | 'origin'>, self: boolean, backend: string): string | null {
-  if (loc.protocol !== 'isolated-app:' && self) return loc.origin + '/nowgg'
+export function nowggProxyBase(loc: Pick<Location, 'protocol' | 'origin'>, self: boolean, backend: string, path = '/nowgg'): string | null {
+  if (loc.protocol !== 'isolated-app:' && self) return loc.origin + path
   return backend ? backend + '/nowgg' : null
 }

@@ -20,6 +20,12 @@ export const BASE = import.meta.env.BASE_URL || '/'
  */
 export const NOWGG_SELF = !LITE || import.meta.env.VITE_NOWGG_SELF === '1'
 
+/**
+ * Where this host's own now.gg proxy lives when it is not `/nowgg`: Base44 serves it as a backend function, which
+ * cannot take sub-paths, so the path goes in a query (`/functions/nowgg?p=`, scripts/base44-nowgg/entry.ts).
+ */
+export const NOWGG_PATH = String(import.meta.env.VITE_NOWGG_PATH || '/nowgg')
+
 /** Where the whole of Shasta lives, and the backend Shasta Lite talks to. */
 export const FULL_SITE = 'https://shasta-dtg.pages.dev/'
 

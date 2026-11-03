@@ -85,7 +85,12 @@ const cfg = window.__NOWGG__ || (qs.get("g") ? { appId: qs.get("g"), name: qs.ge
 const BAKED_API = (window.__NOWGG_PROXY__ || "/nowgg").replace(/\/+$/, "");
 let API = BAKED_API;
 const OUR_HOSTS = /^(https:\/\/((www\.)?edushasta\.lol|([a-z0-9-]+\.)?shasta-dtg\.pages\.dev|shasta-lite\.vercel\.app|shasta-lte\.base44\.app|shasta-lite-395c5527\.base44\.app)|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?)$/;
-const ourBase = (b) => { try { const u = new URL(b); return OUR_HOSTS.test(u.origin) && /^\/nowgg\/?$/.test(u.pathname) ? u.origin + "/nowgg" : null; } catch { return null; } };
+// a proxy is `<origin>/nowgg` (path appended) or, on Base44, `<origin>/functions/nowgg?p=` (path as the query)
+const ourBase = (b) => { try { const u = new URL(b); if (!OUR_HOSTS.test(u.origin)) return null;
+  if (/^\/nowgg\/?$/.test(u.pathname) && !u.search) return u.origin + "/nowgg";
+  if (u.pathname === "/functions/nowgg" && u.search === "?p=") return u.origin + "/functions/nowgg?p=";
+  return null; } catch { return null; } };
+const apiUrl = (path) => API.endsWith("?p=") ? API + encodeURIComponent(path) : API + path;
 function askShellForProxy() {
   if (window.parent === window) return Promise.resolve(null);
   return new Promise((done) => {
@@ -181,12 +186,12 @@ async function call(path, { method = "GET", body } = {}) {
   state.calls++;
   const init = () => ({ method, headers: headers(body !== undefined), body: body !== undefined ? JSON.stringify(body) : undefined, credentials: "omit", signal: AbortSignal.timeout?.(50000) });
   let r;
-  try { r = await fetch(API + path, init()); }
+  try { r = await fetch(apiUrl(path), init()); }
   catch (e) {
     // this domain's proxy is unreachable (blocked, or the host has none): fall back to the baked one for good
     if (API === BAKED_API) throw e;
     log("  proxy " + esc(API) + " unreachable -> " + esc(BAKED_API)); API = BAKED_API;
-    r = await fetch(API + path, init());
+    r = await fetch(apiUrl(path), init());
   }
   // its VPN page on getSessionStatus is expected (our own proxy may reach now.gg through a flagged egress),
   // so only a critical call failing that way means the whole flow is blocked.
@@ -199,7 +204,9 @@ async function call(path, { method = "GET", body } = {}) {
 /* ---- /oapi/<n> is PER APP and rotates; wrong prefix => empty 205. Remember the good one. ----
  * No page fetch to guess it (that was ~190 KB through the proxy per first play): a 205 is cheap,
  * so we just try the next prefix at once. */
-const PREFIXES = ["/oapi/2", "/oapi/1", "/oapi/3"];
+// /oapi/1 first: it is what now.gg's own client uses, and through the nowgg.fun fallback a WRONG prefix does not
+// answer the cheap 205 (it answers FailureTryAgain, then an HTML page), so a bad first guess costs a lot there.
+const PREFIXES = ["/oapi/1", "/oapi/2", "/oapi/3"];
 const prefixCache = (() => { try { return JSON.parse(localStorage.getItem("ng-prefix") || "{}"); } catch { return {}; } })();
 let oapiPrefix = (APP && prefixCache[APP]) || PREFIXES[0];
 function rememberPrefix(p) { if (prefixCache[APP] === p) return; prefixCache[APP] = p; try { localStorage.setItem("ng-prefix", JSON.stringify(prefixCache)); } catch {} }
@@ -252,14 +259,19 @@ const startMsg = (st) => st === "FailureUserStorageBusy" ? "now.gg is moving the
   : (st === "FailureNoResource" || st === "FailureInsufficientInstanceCapacity") ? "Waiting for a free machine…" : "In the queue…";
 
 async function beginSession() {
-  let notReady = 0, reauths = 0, wrong = 0, s;
+  let notReady = 0, reauths = 0, wrong = 0, tryAgain = 0, s;
   log("<b>startSession</b> " + oapiPrefix);
   for (let i = 0; i < START_MAX; i++) {
     if (state.stopping) throw new Error("stopped");
     s = await call(oapiPrefix + "/play/v1/startSession?" + new URLSearchParams(sessionParams()));
     if (s.status === "Success") break;
-    if (s._http === 205) {     // wrong prefix for this app right now: rotate at once (a 205 costs nothing)
-      oapiPrefix = PREFIXES[(PREFIXES.indexOf(oapiPrefix) + 1) % PREFIXES.length]; log("  205 -> prefix " + oapiPrefix);
+    // wrong prefix for this app right now: now.gg answers an empty 205; through the nowgg.fun fallback it is
+    // FailureTryAgain and then an HTML page instead. Rotate at once on a 205 or a non-JSON answer, and after two
+    // FailureTryAgain in a row on the same prefix.
+    const wrongPrefix = s._http === 205 || (s._raw !== undefined && !state.vpn) || (s.status === "FailureTryAgain" && ++tryAgain >= 2);
+    if (wrongPrefix) {
+      tryAgain = 0;
+      oapiPrefix = PREFIXES[(PREFIXES.indexOf(oapiPrefix) + 1) % PREFIXES.length]; log("  " + (s.status || "http " + s._http) + " -> prefix " + oapiPrefix);
       if (++wrong % PREFIXES.length === 0) await sleep(1500);
       continue;
     }

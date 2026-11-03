@@ -2,7 +2,7 @@
 // Base44 serves static files only (no headers of our own, no proxy, 50 MB / 1000 files per upload); the build itself
 // is scripts/lib/liteBuild.ts. Cross-origin isolation comes from the service worker (first visit reloads once).
 // Base44 project: .deploy/base44/base44/{config.jsonc,.app.jsonc} (`npx base44 create` / `link` once; gitignored).
-import { existsSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { adEnv } from "./lib/adCodes";
 import { buildLite, ROOT, run } from "./lib/liteBuild";
@@ -20,7 +20,7 @@ if (!existsSync(join(PROJECT, "base44/.app.jsonc"))) {
 
 // Umami website "Shasta Lite (Base44)"
 // Ads: this host's own Adsterra codes (scripts/lib/adCodes.ts)
-const { bytes, files } = buildLite(OUT, "ade53419-c9b4-4690-83e5-c232bab531e3", "/", adEnv("base44"));
+const { bytes, files } = buildLite(OUT, "ade53419-c9b4-4690-83e5-c232bab531e3", "/", { ...adEnv("base44"), VITE_NOWGG_SELF: "1", VITE_NOWGG_PATH: "/functions/nowgg?p=" });
 if (bytes > MAX_BYTES || files > MAX_FILES) {
 	console.error(`over Base44's limits (${MAX_BYTES / 1024 / 1024} MB, ${MAX_FILES} files): not uploaded`);
 	process.exit(1);
@@ -29,5 +29,10 @@ if (dry) {
 	console.log(`built in ${OUT} (--dry-run: not uploaded)`);
 	process.exit(0);
 }
+// now.gg proxy on Base44's own domain (scripts/base44-nowgg/entry.ts): a backend function, /functions/nowgg?p=<path>.
+// Base44 cannot hold a WebSocket (functions answer 1008), so Wisp stays on the full site's two tunnels.
+mkdirSync(join(PROJECT, "base44/functions/nowgg"), { recursive: true });
+copyFileSync(join(ROOT, "scripts/base44-nowgg/entry.ts"), join(PROJECT, "base44/functions/nowgg/entry.ts"));
+run(["npx", "-y", "base44@latest", "functions", "deploy", "nowgg"], join(PROJECT, "base44"));
 run(["npx", "-y", "base44@latest", "site", "deploy", "-y", "--no-build"], PROJECT);
 console.log("\x1b[33mpublic source must match what is hosted: run `bun run publish:source` (AGPL section 13)\x1b[0m");

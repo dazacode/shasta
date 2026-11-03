@@ -14,7 +14,7 @@ import type { RuntimeTarget } from './types'
 import { openReport, type ReportTarget } from './ReportDialog'
 import { GameSplash } from '@/components/game/GameSplash'
 import { nowggProxyBase } from '@/lib/nowggProxy'
-import { NOWGG_SELF } from '@/lib/edition'
+import { NOWGG_PATH, NOWGG_SELF } from '@/lib/edition'
 import { APP_API_ORIGIN } from '@/lib/appApi'
 
 /** No allow-popups / allow-top-navigation / allow-downloads-without-gesture: the app cannot open windows or leave its frame. */
@@ -148,7 +148,7 @@ export function AppRuntime({ tabId, appKey, active, isGame = false }: { tabId: s
     const onMsg = (e: MessageEvent) => {
       const el = frame.current
       if (!el || e.source !== el.contentWindow || (e.data as { type?: unknown } | null)?.type !== 'nowgg:proxy?') return
-      const base = nowggProxyBase(location, NOWGG_SELF, APP_API_ORIGIN)
+      const base = nowggProxyBase(location, NOWGG_SELF, APP_API_ORIGIN, NOWGG_PATH)
       if (base) el.contentWindow?.postMessage({ type: 'nowgg:proxy', base }, e.origin)
     }
     window.addEventListener('message', onMsg)
