@@ -20,8 +20,8 @@ buildLite(OUT, "a3d45710-11bc-4ba5-a59f-8985ae3a3a92", "/", { ...adEnv("vercel")
 
 // Wisp on this domain: a Vercel Function relays /wisp/ to the full site's Wisp server (scripts/vercel-wisp/wisp.mjs),
 // so browsing keeps working when a filter blocks the full site's domains. Vercel builds it from package.json here.
-// maxDuration = how long one tunnel lives before the client reconnects (Hobby allows 300 s; Pro up to 800).
-const WISP_MAX = Number(process.env.VERCEL_WISP_MAX_DURATION || 300);
+// maxDuration = how long one tunnel lives before the client reconnects (team on Pro since 2026-11-03: up to 800; Hobby allowed 300).
+const WISP_MAX = Number(process.env.VERCEL_WISP_MAX_DURATION || 800);
 mkdirSync(join(OUT, "api"), { recursive: true });
 copyFileSync(join(ROOT, "scripts/vercel-wisp/wisp.mjs"), join(OUT, "api/wisp.mjs"));
 writeFileSync(join(OUT, "package.json"), JSON.stringify({ name: "shasta-lite", private: true, type: "module", dependencies: { "@vercel/functions": "3.10.6", ws: "8.18.3" } }, null, 2));

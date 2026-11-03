@@ -301,7 +301,11 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     return true;
   }
   const UNREACHABLE = "Couldn't reach the cloud servers. This network may block them; try another network, or try again in a minute.";
-  const SERVICE_DOWN = "The cloud game service isn't responding right now. Its servers are online but the game service behind them isn't answering, for everyone, not just this network. Try again later.";
+  // "Front page answers, /stratus does not" is EITHER the provider's game service being down OR this network being
+  // kept from it (a filter that reads full addresses, a VPN or hosting IP the provider refuses, like it refuses
+  // datacenters). From inside the browser the two look the same: on 2026-11-03 a report said "down" while the
+  // service was up and busy from a home network. So never claim which one it is; another network tells.
+  const SERVICE_DOWN = "The cloud game service isn't answering from this network. Its servers are online, but the game service behind them isn't replying. Either the service is down right now, or this network (some school filters, VPNs) keeps it out. Try again in a few minutes, or on another network (home Wi-Fi or a phone hotspot).";
   const hostError = (e) => (e && e.message === "challenge" && challengedHost ? CHALLENGED(challengedHost) : e && e.message === "down" ? SERVICE_DOWN : UNREACHABLE);
   const CHALLENGED = (h) => `The cloud servers want to check this network before they answer, and that check can't run inside a game window. Open https://${h}/stratus/status in a normal Chrome tab (not Incognito), wait until it shows text, then press Try again here. Or try another network (home Wi-Fi or a phone hotspot).`;
 
@@ -525,7 +529,7 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
   }
   function verdict() {
     if (!diag.startedAt && hostCheck.result === "challenge") return { ok: false, text: `no cloud server answered plainly: ${hostCheck.challenged} of ${hostCheck.total} answered with a Cloudflare security check this game window cannot pass, ${hostCheck.blocked} were unreachable${hostCheck.proxy === "unavailable" ? ", and Shasta's proxy was unavailable" : ""}. Opening the mirror's /stratus/status in a normal tab may clear it.` };
-    if (!diag.startedAt && hostCheck.result === "down") return { ok: false, text: `the cloud service is down: ${hostCheck.sites} of ${hostCheck.total} cloud server domains answered from this network, but none of their /stratus game services did. Not a filter: wait for the provider.` };
+    if (!diag.startedAt && hostCheck.result === "down") return { ok: false, text: `the cloud game service did not answer from this network: ${hostCheck.sites} of ${hostCheck.total} cloud server domains answered, but none of their /stratus game services did. Either the provider is down or this network (a filter reading full addresses, a VPN or hosting IP) is kept from it; trying another network tells which.` };
     if (!diag.startedAt && hostCheck.result === "unreachable") return { ok: false, text: `none of the ${hostCheck.total} cloud server domains could be reached from this network (blocked by a filter or down)${hostCheck.proxy === "unavailable" ? ", and Shasta's proxy was unavailable" : ""}.` };
     if (!diag.startedAt) return { ok: false, text: `the video connection has not started yet (${phaseText.replace(/…$/, "") || "not started"}), so nothing is known about this network's ports.` };
     const L = diag.local;

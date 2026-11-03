@@ -73,10 +73,13 @@ for (const name of ["VITE_APP_BUNDLE_URL", "VITE_APP_UPDATE_MANIFEST_URL"]) {
 	}
 }
 // Preview deployments (staging) have no SHASTA_BACKEND_URL in the Pages settings, so without a baked backend
-// staging loads with browsing and the Store dead. Ask the VPS for its current quick tunnel instead.
+// staging loads with browsing and the Store dead. Use the VPS's named tunnel (no request cap); the quick tunnel
+// is only a last resort, it refuses everything past ~200 in-flight requests (2026-11-03 outage).
+const NAMED_BACKEND = "https://origin.edushasta.lol";
 if (!backend && target === "cloudflare" && !prod) {
-	backend = vpsTunnel();
-	if (backend) console.log(`backend: ${backend} (the VPS's current tunnel)`);
+	const named = await fetch(`${NAMED_BACKEND}/healthz`, { signal: AbortSignal.timeout(10_000) }).then((r) => r.ok, () => false);
+	backend = named ? NAMED_BACKEND : vpsTunnel();
+	if (backend) console.log(`backend: ${backend} (${named ? "the VPS's named tunnel" : "the VPS's quick tunnel: the named one did not answer"})`);
 	else if (process.env.SHASTA_DRY_RUN !== "1") {
 		console.error("staging needs a backend: set SHASTA_BACKEND_URL (could not read the tunnel with `ssh shasta`)");
 		process.exit(1);
@@ -126,8 +129,22 @@ if (target === "vercel") {
 			{ source: "/assets/(.*)", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },
 			{ source: "/sw.js", headers: [{ key: "Service-Worker-Allowed", value: "/" }] },
 		],
-		rewrites: [...(backend ? [{ source: "/api/:path*", destination: `${backend}/api/:path*` }, { source: "/ai-models/:path*", destination: `${backend}/ai-models/:path*` }] : []), { source: "/cloud/:path*", destination: `${PUBLIC_SITE}/cloud/:path*` }, { source: "/nowgg/:path*", destination: `${PUBLIC_SITE}/nowgg/:path*` }],
+		// The backend refuses requests without X-Shasta-Backend-Key and a Vercel rewrite cannot add a header, so
+		// /api and /ai-models go through the public site (its Pages worker adds the key), like /cloud and /nowgg.
+		// Wisp: a Vercel Function relays /wisp/ to the public site's Wisp (scripts/vercel-wisp, same as Lite).
+		functions: { "api/wisp.mjs": { maxDuration: Number(process.env.VERCEL_WISP_MAX_DURATION ?? 800) } },
+		rewrites: [
+			{ source: "/api/:path*", destination: `${PUBLIC_SITE}/api/:path*` },
+			{ source: "/ai-models/:path*", destination: `${PUBLIC_SITE}/ai-models/:path*` },
+			{ source: "/cloud/:path*", destination: `${PUBLIC_SITE}/cloud/:path*` },
+			{ source: "/nowgg/:path*", destination: `${PUBLIC_SITE}/nowgg/:path*` },
+			{ source: "/wisp/", destination: "/api/wisp" },
+			{ source: "/wisp", destination: "/api/wisp" },
+		],
 	};
+	mkdirSync(join(stage, "api"), { recursive: true });
+	cpSync(join(ROOT, "scripts/vercel-wisp/wisp.mjs"), join(stage, "api/wisp.mjs"));
+	writeFileSync(join(stage, "package.json"), JSON.stringify({ name: "shasta", private: true, type: "module", dependencies: { "@vercel/functions": "3.10.6", ws: "8.18.3" } }, null, 2));
 	writeFileSync(join(stage, "vercel.json"), JSON.stringify(config, null, 2));
 	const scope = process.env.VERCEL_SCOPE ?? "dazaseals-projects";
 	run(["vercel", "link", "--yes", "--project", project, "--scope", scope]);
