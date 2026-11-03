@@ -79,6 +79,7 @@ export function judge({ proxyConnected, seen, live }: Facts): FrameCheck {
   if ('error' in live) return { ...base, verdict: 'site', summary: `${cap(reached)}; the site does not answer through the proxy (${live.error.slice(0, 120)}).` }
   if (live.status >= 400) return { ...base, verdict: 'site', summary: `${cap(reached)}; the site answers HTTP ${live.status} through the proxy.` }
   if (!reachedProxy) {
+    // server/src/discord/reports.ts `filteredOnDevice` matches this wording: keep "never reached Shasta's proxy, while the site answers"
     return { ...base, verdict: 'filtered', summary: `The page never reached Shasta's proxy, while the site answers through it (HTTP ${live.status}). Likely blocked on this device or network (a school filter or device policy).` }
   }
   return { ...base, verdict: 'refused', summary: `${cap(reached)} and the site answers (HTTP ${live.status}), but the browser would not show the page. Possibly a filter on this device, or the page's own security headers.` }
