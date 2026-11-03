@@ -13,6 +13,13 @@ export const SHARED_ORIGIN = LITE && import.meta.env.VITE_SHARED_ORIGIN === '1'
 /** The folder Shasta is served from: '/' everywhere except on jsDelivr ('/gh/<owner>/<repo>/'). */
 export const BASE = import.meta.env.BASE_URL || '/'
 
+/**
+ * Does this host answer `/nowgg/*` itself (the now.gg control-plane proxy)? Every full build does (the Pages worker,
+ * the bun server, Vite dev). A Lite host only when its deploy routes it (`VITE_NOWGG_SELF=1`: Vercel rewrites it at
+ * its edge); Base44 and jsDelivr serve static files only, so they use the full site's.
+ */
+export const NOWGG_SELF = !LITE || import.meta.env.VITE_NOWGG_SELF === '1'
+
 /** Where the whole of Shasta lives, and the backend Shasta Lite talks to. */
 export const FULL_SITE = 'https://shasta-dtg.pages.dev/'
 

@@ -13,6 +13,9 @@ import { AI_APP_SLUG, attachBridge } from '@/ai/bridge'
 import type { RuntimeTarget } from './types'
 import { openReport, type ReportTarget } from './ReportDialog'
 import { GameSplash } from '@/components/game/GameSplash'
+import { nowggProxyBase } from '@/lib/nowggProxy'
+import { NOWGG_SELF } from '@/lib/edition'
+import { APP_API_ORIGIN } from '@/lib/appApi'
 
 /** No allow-popups / allow-top-navigation / allow-downloads-without-gesture: the app cannot open windows or leave its frame. */
 const SANDBOX = 'allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-modals allow-downloads'
@@ -139,6 +142,20 @@ export function AppRuntime({ tabId, appKey, active, isGame = false }: { tabId: s
     if (!officialAi || !el || !frameUrl) return
     return attachBridge(el, new URL(frameUrl).origin)
   }, [officialAi, frameUrl, nonce, reloads])
+
+  // a now.gg game asks which /nowgg proxy to use: answer with this domain's own (lib/nowggProxy.ts)
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      const el = frame.current
+      if (!el || e.source !== el.contentWindow || (e.data as { type?: unknown } | null)?.type !== 'nowgg:proxy?') return
+      const base = nowggProxyBase(location, NOWGG_SELF, APP_API_ORIGIN)
+      if (base) el.contentWindow?.postMessage({ type: 'nowgg:proxy', base }, e.origin)
+    }
+    window.addEventListener('message', onMsg)
+    return () => {
+      window.removeEventListener('message', onMsg)
+    }
+  }, [])
 
   return (
     <div ref={box} className="flex h-full flex-col bg-shasta-bg text-shasta-fg">

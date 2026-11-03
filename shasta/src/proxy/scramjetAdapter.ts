@@ -176,6 +176,9 @@ const sameOriginWisp = () => `${location.protocol === 'https:' ? 'wss' : 'ws'}:/
 export function defaultWispUrls(): string[] {
   const list = String(import.meta.env.VITE_WISP_URLS ?? '').split(/[\s,]+/)
   list.push(String(import.meta.env.VITE_WISP_URL ?? ''), sameOriginWisp())
+  // a host whose own /wisp/ relays to the backend (Lite on Vercel, scripts/vercel-wisp) tries its own domain first,
+  // so a filter that blocks the full site's domains does not stop browsing there
+  if (import.meta.env.VITE_WISP_SELF === '1') list.unshift(sameOriginWisp())
   return wispEndpoints(list)
 }
 

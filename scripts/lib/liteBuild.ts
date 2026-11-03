@@ -27,8 +27,11 @@ export function buildLite(out: string, statsId: string, base = "/", extraEnv: Re
 	const env: Record<string, string | undefined> = {
 		...process.env,
 		VITE_EDITION: "lite",
-		VITE_WISP_URL: `wss://${new URL(FULL).host}/wisp/`,
-		VITE_WISP_URLS: "",
+		// Two tunnels on two domains, tried in order (scramjetAdapter selectWisp/rotateWisp): a filter that blocks one
+		// does not stop browsing on a Lite mirror. A static host cannot hold a websocket itself (Vercel rewrites,
+		// Base44, jsDelivr), so a Lite mirror can never have its own /wisp/; these are the full site's.
+		VITE_WISP_URL: "",
+		VITE_WISP_URLS: [`wss://${new URL(FULL).host}/wisp/`, "wss://edushasta.lol/wisp/"].join(","),
 		// share links name the full site, where a shared Store link actually opens; the canonical address is the
 		// public domain, so search engines index edushasta.lol and treat the Lite mirrors as copies of it
 		VITE_SHARE_ORIGIN: FULL,

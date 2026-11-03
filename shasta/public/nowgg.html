@@ -10,40 +10,60 @@
   Also works standalone: /nowgg.html?g=<appId>&n=<name>.
   Control plane goes to `window.__NOWGG_PROXY__` (baked: the site's /nowgg proxy) or same-origin /nowgg.
   Protocol recovered from now.gg's own bundle; see ../nowgg-recon/README.md and docs/nowgg.md.
-  Minimal by design: no picker, no chrome — video, a Fullscreen button and a Details log.
+
+  Staying in the game (docs/nowgg.md "Long sessions"): a box is reclaimed every few minutes, so a
+  handoff is the normal case, not an error. During one the last picture stays on screen (#freeze)
+  with a small status pill; the full card only shows before the first picture or when it needs you.
 -->
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: #000; color: #e7e7ef; font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; overflow: hidden; }
-  #v { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; touch-action: none; }
+  #v, #freeze { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; touch-action: none; }
+  #freeze { pointer-events: none; z-index: 1; }
+  #freeze[hidden] { display: none; }
+  #bg { position: fixed; inset: -40px; background: #000 center / cover no-repeat; filter: blur(28px) brightness(.45); z-index: 2; pointer-events: none; transition: opacity .4s; }
+  #bg.gone { opacity: 0; }
   #hud { position: fixed; top: 8px; left: 8px; z-index: 5; pointer-events: none; white-space: pre; font: 11px/1.4 ui-monospace, monospace; color: #9fe8ff; background: rgba(0, 0, 0, .55); padding: 3px 7px; border-radius: 6px; opacity: 0; transition: opacity .2s; }
-  #hud.on, body:hover #hud { opacity: 1; }
-  #overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; pointer-events: none; }
+  #hud.on { opacity: 1; }
+  #overlay { position: fixed; inset: 0; z-index: 4; display: flex; align-items: center; justify-content: center; text-align: center; pointer-events: none; }
   #overlay.hidden { display: none; }
-  #overlay .box { pointer-events: auto; background: rgba(8, 9, 14, .86); border: 1px solid #23263a; border-radius: 14px; padding: 18px 22px; max-width: 460px; box-shadow: 0 18px 60px #000a; }
+  #overlay .box { pointer-events: auto; background: rgba(8, 9, 14, .86); border: 1px solid #23263a; border-radius: 14px; padding: 18px 22px; max-width: 460px; margin: 0 16px; box-shadow: 0 18px 60px #000a; }
   #overlay .name { font-size: 17px; font-weight: 600; }
   #overlay .msg { color: #a9aec0; margin-top: 6px; min-height: 1.4em; }
-  #overlay .spin { display: inline-block; width: 18px; height: 18px; margin-right: 8px; border: 2px solid #fff3; border-top-color: #fff; border-radius: 50%; vertical-align: -3px; animation: sp .8s linear infinite; }
+  .spin { display: inline-block; width: 14px; height: 14px; margin-right: 8px; border: 2px solid #fff3; border-top-color: #fff; border-radius: 50%; vertical-align: -2px; animation: sp .8s linear infinite; }
+  #overlay .spin { width: 18px; height: 18px; vertical-align: -3px; }
   @keyframes sp { to { transform: rotate(360deg); } }
-  button { pointer-events: auto; margin-top: 12px; padding: 8px 14px; background: #1b1b26; color: #e7e7ef; border: 1px solid #2c2c3e; border-radius: 9px; font-weight: 600; cursor: pointer; }
+  button { pointer-events: auto; margin-top: 12px; padding: 8px 14px; background: #1b1b26; color: #e7e7ef; border: 1px solid #2c2c3e; border-radius: 9px; font: 600 13px system-ui, sans-serif; cursor: pointer; }
   button:hover { background: #24243a; }
-  button:disabled { opacity: .5; cursor: default; }
+  button.primary { background: #e7e7ef; color: #0b0b12; border-color: #e7e7ef; }
+  button.primary:hover { background: #fff; }
+  #ovbtns { display: flex; gap: 8px; justify-content: center; }
+  #ovbtns button[hidden] { display: none; }
+  #pill { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 5; max-width: calc(100% - 32px); pointer-events: none; padding: 7px 13px; border-radius: 999px; background: rgba(8, 9, 14, .82); border: 1px solid #23263a; font-size: 12.5px; color: #d8dbe8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity .25s; }
+  #pill.hidden { opacity: 0; }
   #bar { position: fixed; top: 8px; right: 8px; z-index: 6; display: flex; gap: 6px; opacity: 0; transition: opacity .2s; }
-  body:hover #bar, #bar.on { opacity: 1; }
+  #bar.on { opacity: 1; }
   #bar button { margin: 0; padding: 6px 11px; font-size: 12px; background: rgba(16, 17, 26, .8); }
-  #log { position: fixed; left: 0; right: 0; bottom: 0; max-height: 40%; margin: 0; overflow: auto; padding: 8px 12px; font: 11px/1.45 ui-monospace, monospace; color: #9a9ab8; background: rgba(4, 5, 10, .92); border-top: 1px solid #1b1b26; white-space: pre-wrap; }
+  #sound { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); z-index: 6; margin: 0; padding: 7px 14px; font-size: 12.5px; background: rgba(16, 17, 26, .9); }
+  #sound[hidden] { display: none; }
+  #log { position: fixed; left: 0; right: 0; bottom: 0; z-index: 7; max-height: 40%; margin: 0; overflow: auto; padding: 8px 12px; font: 11px/1.45 ui-monospace, monospace; color: #9a9ab8; background: rgba(4, 5, 10, .92); border-top: 1px solid #1b1b26; white-space: pre-wrap; }
   #log[hidden] { display: none; }
+  @media (prefers-reduced-motion: reduce) { .spin { animation-duration: 2.4s; } }
 </style>
 </head>
 <body>
 <video id="v" autoplay playsinline></video>
+<canvas id="freeze" hidden></canvas>
+<div id="bg"></div>
 <div id="hud"></div>
-<div id="bar"><button id="fs">Fullscreen</button><button id="det">Details</button></div>
+<div id="bar"><button id="mute">Mute</button><button id="fs">Fullscreen</button><button id="det">Details</button></div>
+<button id="sound" hidden>Click for sound</button>
+<div id="pill" class="hidden"></div>
 <div id="overlay"><div class="box">
   <div class="name" id="ovname">now.gg</div>
   <div class="msg" id="ovtext"><span class="spin"></span>Starting…</div>
-  <button id="ovretry" hidden>Retry</button>
+  <div id="ovbtns"><button id="ovkeep" class="primary" hidden>Keep playing</button><button id="ovretry" hidden>Retry</button></div>
 </div></div>
 <pre id="log" hidden></pre>
 
@@ -59,7 +79,25 @@ window.__NOWGG_PROXY__ = /*__PROXY__*/null;
 /* ---- config ---- */
 const qs = new URLSearchParams(location.search);
 const cfg = window.__NOWGG__ || (qs.get("g") ? { appId: qs.get("g"), name: qs.get("n") || "", cover: qs.get("c") || "" } : null);
-const API = (window.__NOWGG_PROXY__ || "/nowgg").replace(/\/+$/, "");
+// The proxy: the baked one (the main site's, set at import) unless the Shasta window that opened this game names
+// its own domain's (store/AppLauncher.tsx answers `nowgg:proxy?`), so a filter blocking the main domain does not
+// break games for someone on pages.dev or a Lite mirror. Only our own domains are accepted (the guest token goes there).
+const BAKED_API = (window.__NOWGG_PROXY__ || "/nowgg").replace(/\/+$/, "");
+let API = BAKED_API;
+const OUR_HOSTS = /^(https:\/\/((www\.)?edushasta\.lol|([a-z0-9-]+\.)?shasta-dtg\.pages\.dev|shasta-lite\.vercel\.app|shasta-lte\.base44\.app|shasta-lite-395c5527\.base44\.app)|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?)$/;
+const ourBase = (b) => { try { const u = new URL(b); return OUR_HOSTS.test(u.origin) && /^\/nowgg\/?$/.test(u.pathname) ? u.origin + "/nowgg" : null; } catch { return null; } };
+function askShellForProxy() {
+  if (window.parent === window) return Promise.resolve(null);
+  return new Promise((done) => {
+    const t = setTimeout(() => { removeEventListener("message", on); done(null); }, 600);
+    function on(e) {
+      if (e.source !== window.parent || e.data?.type !== "nowgg:proxy" || !OUR_HOSTS.test(e.origin)) return;
+      clearTimeout(t); removeEventListener("message", on); done(ourBase(e.data.base));
+    }
+    addEventListener("message", on);
+    try { window.parent.postMessage({ type: "nowgg:proxy?" }, "*"); } catch { clearTimeout(t); done(null); }
+  });
+}
 const FE = "berlin-v1.54.400-arm.5";
 const ALPHA = "useandom26T198340PX75pxJACKVERYMINDBUSHWOLFxGQZbfghjklqvwyzrict"; // no "_" (405s server-side)
 
@@ -67,32 +105,70 @@ let APP = cfg ? String(cfg.appId) : null;
 
 /* ---- tiny dom/helpers ---- */
 const $ = (id) => document.getElementById(id);
-const video = $("v");
+const video = $("v"), freezeCv = $("freeze");
 const ts = () => new Date().toISOString().slice(11, 23);
-const log = (s) => { const l = $("log"); l.innerHTML += `\n<span style="color:#5a5a78">${ts()}</span> ` + s; if (l.innerHTML.split("\n").length > 500) l.innerHTML = l.innerHTML.split("\n").slice(-500).join("\n"); l.scrollTop = 1e9; };
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const log = (s) => { const l = $("log"); l.innerHTML += `\n<span style="color:#5a5a78">${ts()}</span> ` + s; if (l.childNodes.length > 1500) l.innerHTML = l.innerHTML.split("\n").slice(-500).join("\n"); if (!l.hidden) l.scrollTop = 1e9; };
 const hud = (t) => { $("hud").textContent = t; };
-const say = (t) => { $("ovtext").innerHTML = t; $("overlay").classList.remove("hidden"); };
-const saySpin = (t) => say(`<span class="spin"></span>${t}`);
-const hide = () => { $("overlay").classList.add("hidden"); $("ovretry").hidden = true; };
-const offerRetry = () => { $("ovretry").hidden = false; };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const mmss = (s) => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
+
+/* ---- what the person sees ----
+ * card(): the centred card — before the first picture, and whenever the person has to act.
+ * status(): during play (a picture has been shown), a small pill over the frozen last frame, so a
+ * box handoff reads as a short pause instead of a reload. */
+let hadPicture = false;
+const card = (html, { spin = false, retry = false, keep = false } = {}) => {
+  $("ovtext").innerHTML = (spin ? '<span class="spin"></span>' : "") + html;
+  $("ovretry").hidden = !retry; $("ovkeep").hidden = !keep;
+  $("overlay").classList.remove("hidden"); $("pill").classList.add("hidden");
+};
+const hideCard = () => { $("overlay").classList.add("hidden"); $("ovretry").hidden = true; $("ovkeep").hidden = true; };
+const status = (html) => {
+  if (!hadPicture) return card(html, { spin: true });
+  $("pill").innerHTML = '<span class="spin"></span>' + html; $("pill").classList.remove("hidden");
+};
+const clearStatus = () => { $("pill").classList.add("hidden"); };
+const offerRetry = (html) => card(html, { retry: true });
+
+/* Keep the last picture on screen while the stream is swapped. */
+let frozenAt = 0;
+function freeze() {
+  if (!freezeCv.hidden) return;
+  const w = video.videoWidth, h = video.videoHeight;
+  if (!w || !h) return;
+  try { freezeCv.width = w; freezeCv.height = h; freezeCv.getContext("2d").drawImage(video, 0, 0, w, h); freezeCv.hidden = false; frozenAt = Date.now(); } catch {}
+}
+function unfreeze() {
+  if (freezeCv.hidden) return;
+  freezeCv.hidden = true;
+  if (frozenAt) { const s = (Date.now() - frozenAt) / 1000; state.lastHandoff = s; log("  picture back after " + s.toFixed(1) + "s"); frozenAt = 0; }
+}
+// The first decoded frame of a new stream ends the freeze and the status pill.
+function onFirstFrame() {
+  const done = () => { hadPicture = true; unfreeze(); clearStatus(); hideCard(); $("bg").classList.add("gone"); };
+  if (typeof video.requestVideoFrameCallback === "function") video.requestVideoFrameCallback(done);
+  else video.addEventListener("playing", done, { once: true });
+}
 
 /* ---- identity + guest token, kept on this device so we reattach to the same box ----
  * The session is keyed to the now.gg account (the guest token), NOT the uaId, so the token
  * must persist per origin. Bearer-only: no cookies are needed (verified against the live API). */
 function load(key, make) { try { const s = localStorage.getItem(key); if (s) return JSON.parse(s); } catch {} const v = make(); try { localStorage.setItem(key, JSON.stringify(v)); } catch {} return v; }
-const id = load("ng-id", () => ({ uaId: "ua-" + nanoid(), uaSessionId: "uasess-" + nanoid(), feSessionId: "fesess-" + nanoid(), visitId: "visitid-" + nanoid() }));
 function nanoid(n = 21) { const b = crypto.getRandomValues(new Uint8Array(n)); return [...b].map((x) => ALPHA[x % ALPHA.length]).join(""); }
+const freshId = () => ({ uaId: "ua-" + nanoid(), uaSessionId: "uasess-" + nanoid(), feSessionId: "fesess-" + nanoid(), visitId: "visitid-" + nanoid() });
+const id = load("ng-id", freshId);
 let token = (() => { try { return localStorage.getItem("ng-token") || null; } catch { return null; } })();
 const setToken = (t) => { token = t; try { t ? localStorage.setItem("ng-token", t) : localStorage.removeItem("ng-token"); } catch {} };
 function resetIdentity() {
   try { localStorage.removeItem("ng-id"); localStorage.removeItem("ng-token"); } catch {}
-  Object.assign(id, load("ng-id", () => ({ uaId: "ua-" + nanoid(), uaSessionId: "uasess-" + nanoid(), feSessionId: "fesess-" + nanoid(), visitId: "visitid-" + nanoid() })));
-  setToken(null); playUserToken = null;
+  Object.assign(id, load("ng-id", freshId));
+  setToken(null); state.playUserToken = null;
 }
 
 /* ---- request layer ---- */
-const state = { pc: null, dc: null, ck: null, playUserToken: null, sessionId: null, stopping: false, keys: true, showTouches: false, kb: false, migratedSeen: 0, sent: 0, drops: 0, vpn: false, hunt: false };
+const state = { pc: null, dc: null, playUserToken: null, sessionId: null, stopping: false, keys: true, showTouches: false, kb: false,
+  sent: 0, drops: 0, vpn: false, hunt: false, tries: 0, failSince: 0, handoffs: 0, lastHandoff: null, playedMs: 0, playingSince: 0, calls: 0 };
 function headers(json) {
   const h = { "x-ngg-fe-version": FE, lang: "en", accept: "application/json, text/plain, */*",
     "x-location": JSON.stringify({ location: "game_sdk", versionName: "10001", countryCode: "US", platform: "cloud", deviceType: "desktop" }) };
@@ -102,7 +178,16 @@ function headers(json) {
   return h;
 }
 async function call(path, { method = "GET", body } = {}) {
-  const r = await fetch(API + path, { method, headers: headers(body !== undefined), body: body !== undefined ? JSON.stringify(body) : undefined, credentials: "omit" });
+  state.calls++;
+  const init = () => ({ method, headers: headers(body !== undefined), body: body !== undefined ? JSON.stringify(body) : undefined, credentials: "omit", signal: AbortSignal.timeout?.(50000) });
+  let r;
+  try { r = await fetch(API + path, init()); }
+  catch (e) {
+    // this domain's proxy is unreachable (blocked, or the host has none): fall back to the baked one for good
+    if (API === BAKED_API) throw e;
+    log("  proxy " + esc(API) + " unreachable -> " + esc(BAKED_API)); API = BAKED_API;
+    r = await fetch(API + path, init());
+  }
   // its VPN page on getSessionStatus is expected (our own proxy may reach now.gg through a flagged egress),
   // so only a critical call failing that way means the whole flow is blocked.
   const critical = !/getSessionStatus/.test(path);
@@ -111,15 +196,13 @@ async function call(path, { method = "GET", body } = {}) {
   try { return { ...JSON.parse(t), _http: r.status }; } catch { if (critical && /^\s*<(?:!doctype|html)/i.test(t)) state.vpn = true; return { _raw: t.slice(0, 120), _http: r.status }; }
 }
 
-/* ---- /oapi/<n> is PER APP and rotates; wrong prefix => 205. Remember the good one. ---- */
-let oapiPrefix = "/oapi/1";
-const PREFIXES = ["/oapi/1", "/oapi/2", "/oapi/3"];
+/* ---- /oapi/<n> is PER APP and rotates; wrong prefix => empty 205. Remember the good one. ----
+ * No page fetch to guess it (that was ~190 KB through the proxy per first play): a 205 is cheap,
+ * so we just try the next prefix at once. */
+const PREFIXES = ["/oapi/2", "/oapi/1", "/oapi/3"];
 const prefixCache = (() => { try { return JSON.parse(localStorage.getItem("ng-prefix") || "{}"); } catch { return {}; } })();
-function rememberPrefix(p) { prefixCache[APP] = p; try { localStorage.setItem("ng-prefix", JSON.stringify(prefixCache)); } catch {} }
-async function resolvePrefix(appId) {
-  if (prefixCache[appId]) { oapiPrefix = prefixCache[appId]; return; }
-  try { const html = await (await fetch(API + "/apps/" + appId)).text(); const m = html.match(/"assetPrefix":"\/(\d)\/play/); if (m) oapiPrefix = "/oapi/" + m[1]; } catch {}
-}
+let oapiPrefix = (APP && prefixCache[APP]) || PREFIXES[0];
+function rememberPrefix(p) { if (prefixCache[APP] === p) return; prefixCache[APP] = p; try { localStorage.setItem("ng-prefix", JSON.stringify(prefixCache)); } catch {} }
 
 function sessionParams(extra = {}) {
   return { appId: APP, uaId: id.uaId, uaSessionId: id.uaSessionId, feSessionId: id.feSessionId, visitId: id.visitId,
@@ -134,9 +217,9 @@ const munge = (sdp) => String(sdp)
 
 const START_POLICY = { WaitingInQueue: 3000, WaitingInPriorityQueue: 3000, FailureTryAgain: 1500, FailureRetryStartSessionLater: 3000,
   FailureAnotherSessionActive: 2000, FailureSessionMigrated: 1500, FailureNoResource: 5000, FailureInsufficientInstanceCapacity: 5000,
-  FailureUserStorageBusy: 3000, FailureNotReady: 3000 };
-const START_MAX = 40, NOT_READY_MAX = 21;
-const REWARM_ON = new Set(["FailureTryAgain", "FailureInvalidToken", "FailureExpiredCustomToken", "FailureInvalidPlayUser", "FailureUnauthorized"]);
+  FailureUserStorageBusy: 1000, FailureNotReady: 3000 };
+const START_MAX = 60, NOT_READY_MAX = 21;
+const AUTH_FAIL = ["FailureUnauthorized", "FailureInvalidPlayUser", "FailureTokenExpired", "FailureInvalidToken"];
 
 /* now.gg picks a machine for the session and sometimes ends it right away because that machine serves
  * another region (FailureServiceNotInRegion) — the client just starts another. Nothing is wrong here, it
@@ -148,35 +231,43 @@ async function doAuth(force = false) {
   if (!force && token && state.playUserToken) return;
   for (let attempt = 0; attempt < 3; attempt++) {
     if (!token || force) {
-      saySpin("Connecting…"); log("<b>guest token</b>" + (attempt ? " (re-auth)" : ""));
+      status("Connecting…"); log("<b>guest token</b>" + (attempt ? " (re-auth)" : ""));
       const tok = await call("/accounts/auth/v2/access-token?implicitGuestLogin=true");
       if (!tok.access_token) throw new Error("no token: " + JSON.stringify(tok).slice(0, 160));
       setToken(tok.access_token); force = false;
     }
-    saySpin("Creating play user…"); log("<b>createPlayUser</b>");
+    log("<b>createPlayUser</b>");
     const pu = await call(oapiPrefix + "/play/v1/createPlayUser", { method: "POST", body: { uaId: id.uaId } });
+    if (pu._http === 205) { oapiPrefix = PREFIXES[(PREFIXES.indexOf(oapiPrefix) + 1) % PREFIXES.length]; log("  prefix -> " + oapiPrefix); continue; }
     if (pu.status === "FailureUaIdRevoked") { log("  uaId revoked -> new identity"); resetIdentity(); continue; }
-    const retryable = pu._http === 401 || ["FailureUnauthorized", "FailureInvalidPlayUser", "FailureTokenExpired", "FailureInvalidToken"].includes(pu.status);
+    const retryable = pu._http === 401 || AUTH_FAIL.includes(pu.status);
     if (retryable && attempt < 2) { setToken(null); await sleep(400); continue; }
     if (pu.playUserToken) state.playUserToken = pu.playUserToken;
     return;
   }
 }
 
+const startMsg = (st) => st === "FailureUserStorageBusy" ? "now.gg is moving the game to a new machine…"
+  : st === "FailureNotReady" ? "Machine is booting…"
+  : (st === "FailureNoResource" || st === "FailureInsufficientInstanceCapacity") ? "Waiting for a free machine…" : "In the queue…";
+
 async function beginSession() {
-  const alt = PREFIXES.filter((p) => p !== oapiPrefix);
-  let notReady = 0, reauths = 0, s;
-  saySpin("Starting session…"); log("<b>startSession</b> " + oapiPrefix);
+  let notReady = 0, reauths = 0, wrong = 0, s;
+  log("<b>startSession</b> " + oapiPrefix);
   for (let i = 0; i < START_MAX; i++) {
+    if (state.stopping) throw new Error("stopped");
     s = await call(oapiPrefix + "/play/v1/startSession?" + new URLSearchParams(sessionParams()));
     if (s.status === "Success") break;
-    if (s._http === 205) { if (i >= 1 && alt.length) { oapiPrefix = alt.shift(); log("  prefix -> " + oapiPrefix); } continue; }
-    if ((s._http === 401 || ["FailureUnauthorized", "FailureInvalidPlayUser", "FailureTokenExpired", "FailureInvalidToken"].includes(s.status)) && reauths++ < 3) { await doAuth(true); continue; }
+    if (s._http === 205) {     // wrong prefix for this app right now: rotate at once (a 205 costs nothing)
+      oapiPrefix = PREFIXES[(PREFIXES.indexOf(oapiPrefix) + 1) % PREFIXES.length]; log("  205 -> prefix " + oapiPrefix);
+      if (++wrong % PREFIXES.length === 0) await sleep(1500);
+      continue;
+    }
+    if ((s._http === 401 || AUTH_FAIL.includes(s.status)) && reauths++ < 3) { await doAuth(true); continue; }
     if (s.status === "FailureUaIdRevoked") { resetIdentity(); await doAuth(true); continue; }
     if (!(s.status in START_POLICY)) break;
     if (s.status === "FailureNotReady" && ++notReady > NOT_READY_MAX) break;
-    const msg = s.status === "FailureUserStorageBusy" ? "Previous session still saving…" : s.status === "FailureNotReady" ? "Instance booting…" : (s.status === "FailureNoResource" || s.status === "FailureInsufficientInstanceCapacity") ? "Waiting for a free instance…" : "Queued…";
-    log("  " + s.status); saySpin(msg); await sleep(START_POLICY[s.status]);
+    log("  " + s.status); status(startMsg(s.status)); await sleep(START_POLICY[s.status]);
   }
   if (!s || s.status !== "Success") throw new Error("startSession: " + JSON.stringify(s || {}).slice(0, 200));
   state.sessionId = s.playSessionId || state.sessionId;
@@ -185,6 +276,8 @@ async function beginSession() {
 }
 
 /* ---- input: touch frames [type, slot, x, y] in CSS px of the displayed video ---- */
+let lastLocalInput = Date.now();   // last time the person did anything here (incl. hovering, which is not sent)
+const touchActivity = () => { lastLocalInput = Date.now(); };
 function videoBox() { const r = video.getBoundingClientRect(); const vw = video.videoWidth || r.width, vh = video.videoHeight || r.height; const sc = Math.min(r.width / vw, r.height / vh); const w = vw * sc, h = vh * sc; return { left: r.left + (r.width - w) / 2, top: r.top + (r.height - h) / 2, w, h }; }
 function sendFrame(type, args) {
   if (!state.dc || state.dc.readyState !== "open") { state.drops++; return; }
@@ -198,30 +291,40 @@ function sendScreenSize() {
   const key = w + "x" + h; if (key === state.sizeSent) return; state.sizeSent = key;
   state.dc.send("screen::size::" + w + "::" + h); log("  screen::size::" + w + "::" + h);
 }
+const KEY = { DOWN: 101, UP: 102, NATIVE_DOWN: 91, NATIVE_UP: 92, TEXT: 103 }, MOD = { SHIFT: 1, ALT: 2, CTRL: 4, META: 8, CAPS: 16 }, SKIP = new Set([27]);
+const heldKeys = new Map();   // code -> was the soft keyboard open (so the matching "up" uses the same frame type)
+const sendBytes = (a) => { if (state.dc?.readyState === "open") { try { state.dc.send(new Uint8Array(a).buffer); } catch {} } };
+// release everything still held when focus leaves (else the game keeps running/jumping on its own)
+function releaseAll() { for (const [code, open] of heldKeys) sendBytes([open ? KEY.UP : KEY.NATIVE_UP, 1, code & 0xff, 0]); heldKeys.clear(); if (pointerDown) { pointerDown = false; sendFrame(2, [0, ...lastPos]); } }
+let pointerDown = false, lastPos = [0, 0];
 function wireInput() {
-  let down = false;
-  const pos = (e) => { const b = videoBox(); return [Math.ceil(Math.max(0, Math.min(b.w, e.clientX - b.left))), Math.ceil(Math.max(0, Math.min(b.h, e.clientY - b.top)))]; };
-  video.addEventListener("pointermove", (e) => { if (down) sendFrame(3, [0, ...pos(e)]); });
-  video.addEventListener("pointerdown", (e) => { if (e.button !== 0) return; sendScreenSize(); down = true; try { video.setPointerCapture(e.pointerId); } catch {} sendFrame(1, [0, ...pos(e)]); });
-  const up = (e) => { if (!down) return; down = false; sendFrame(2, [0, ...pos(e)]); };
+  const pos = (e) => { const b = videoBox(); return (lastPos = [Math.ceil(Math.max(0, Math.min(b.w, e.clientX - b.left))), Math.ceil(Math.max(0, Math.min(b.h, e.clientY - b.top)))]); };
+  video.addEventListener("pointermove", (e) => { touchActivity(); if (pointerDown) sendFrame(3, [0, ...pos(e)]); });
+  video.addEventListener("pointerdown", (e) => { touchActivity(); if (e.button !== 0) return; sendScreenSize(); pointerDown = true; try { video.setPointerCapture(e.pointerId); } catch {} sendFrame(1, [0, ...pos(e)]); });
+  const up = (e) => { if (!pointerDown) return; pointerDown = false; sendFrame(2, [0, ...pos(e)]); };
   video.addEventListener("pointerup", up); video.addEventListener("pointercancel", up);
-  video.addEventListener("wheel", (e) => { e.preventDefault(); sendFrame(11, [0, 0, 0, (Math.sign(e.deltaY) * 120) & 0xffff]); });
+  video.addEventListener("wheel", (e) => { e.preventDefault(); touchActivity(); sendFrame(11, [0, 0, 0, (Math.sign(e.deltaY) * 120) & 0xffff]); }, { passive: false });
+  video.addEventListener("contextmenu", (e) => e.preventDefault());
   new ResizeObserver(sendScreenSize).observe(video); window.addEventListener("resize", sendScreenSize); video.addEventListener("resize", sendScreenSize);
-  const KEY = { DOWN: 101, UP: 102, NATIVE_DOWN: 91, NATIVE_UP: 92, TEXT: 103 }, MOD = { SHIFT: 1, ALT: 2, CTRL: 4, META: 8, CAPS: 16, SCROLL: 32, NUM: 64 }, SKIP = new Set([27]);
   const mods = (e) => (e.shiftKey ? MOD.SHIFT : 0) | (e.altKey ? MOD.ALT : 0) | (e.ctrlKey ? MOD.CTRL : 0) | (e.metaKey ? MOD.META : 0) | (e.getModifierState?.("CapsLock") ? MOD.CAPS : 0);
-  const sendBytes = (a) => { if (state.dc?.readyState === "open") { try { state.dc.send(new Uint8Array(a).buffer); } catch {} } };
   const typing = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
   const onKey = (e, down) => {
+    touchActivity();
     if (!state.keys || state.dc?.readyState !== "open" || e.keyCode === 229 || typing(document.activeElement)) return;
     const code = e.which || e.keyCode, k = e.key; if (!code || !k || k === "Unidentified") return;
     if (!e.ctrlKey && !e.metaKey) e.preventDefault();
     const open = !!state.kb, m = mods(e);
+    if (!down && heldKeys.has(code)) { const was = heldKeys.get(code); heldKeys.delete(code); if (!was) return sendBytes([KEY.NATIVE_UP, 1, code & 0xff, m]); }
     if (!open) sendBytes([down ? KEY.NATIVE_DOWN : KEY.NATIVE_UP, 1, code & 0xff, m]);
     else if (k.length > 1) { if (!SKIP.has(code)) sendBytes([down ? KEY.DOWN : KEY.UP, 1, code & 0xff, m]); }
     else if (m && /^[a-zA-Z ]$/.test(k)) sendBytes([down ? KEY.DOWN : KEY.UP, 1, code & 0xff, m]);
     else if (down) { const cp = k.codePointAt(0) || 0; sendBytes([KEY.TEXT, 0, 0, 0, cp & 0xff, (cp >> 8) & 0xff]); }
+    if (down) heldKeys.set(code, open);
   };
   window.addEventListener("keydown", (e) => onKey(e, true)); window.addEventListener("keyup", (e) => onKey(e, false));
+  window.addEventListener("blur", releaseAll);
+  // hovering counts as being here (moves without a button are not sent to the machine)
+  document.addEventListener("pointermove", touchActivity, { passive: true });
 }
 
 /* ---- establish (re-runnable) ---- */
@@ -231,7 +334,8 @@ const clearTimers = () => { timers.forEach(clearInterval); timers = []; };
 // one owner per account: a second tab of the same game shares the token -> same box. Park it.
 const TAB = nanoid(8);
 const bc = typeof BroadcastChannel === "function" ? new BroadcastChannel("nowgg-session:" + APP) : null;
-function park(html) { state.stopping = true; reconnecting = false; reconnectQueued = false; clearTimers(); try { state.pc?.close(); } catch {} state.pc = state.dc = null; say(html); offerRetry(); log("<b>parked</b>"); }
+function stopPlaying() { pausePlayClock(); state.stopping = true; reconnecting = false; reconnectQueued = false; clearTimers(); releaseAll(); try { state.pc?.close(); } catch {} state.pc = state.dc = null; releaseWake(); }
+function park(html) { stopPlaying(); unfreeze(); offerRetry(html); log("<b>parked</b>"); }
 if (bc) bc.onmessage = (e) => { if (e.data?.type === "claim" && e.data.tab !== TAB && !state.stopping && (state.pc || reconnecting)) park("<b>Playing in another tab</b><br>Retry to play here instead."); };
 const claim = () => { try { bc?.postMessage({ type: "claim", tab: TAB }); } catch {} };
 
@@ -244,144 +348,238 @@ function onTakeover(reason) {
 
 async function establish() {
   clearTimers();
-  const wasReconnect = state.sessionId !== null;
-  try { state.pc?.close(); } catch {} state.pc = state.dc = null; state.lastSession = null;
-  await resolvePrefix(APP);
+  try { state.pc?.close(); } catch {} state.pc = state.dc = null;
   const s = await beginSession();
   if (state.stopping) return;
 
-  saySpin("Connecting the picture…"); log("<b>webrtc</b>");
+  status(hadPicture ? "Reconnecting the picture…" : "Connecting the picture…"); log("<b>webrtc</b>");
   const pc = new RTCPeerConnection({ iceServers: (s.iceServers || s.iceServersList || []).map((x) => ({ urls: x.urls || x.url, username: x.username, credential: x.credential })) });
   state.pc = pc;
   const remote = new MediaStream();
-  pc.ontrack = (e) => { remote.addTrack(e.track); if (video.srcObject !== remote) video.srcObject = remote; video.play().catch(() => {}); log("<b>track</b> " + e.track.kind); hide(); };
-  pc.onconnectionstatechange = () => { if (pc !== state.pc) return; log("  pc=" + pc.connectionState); if (pc.connectionState === "failed") scheduleReconnect("pc-failed"); if (pc.connectionState === "connected") reconnecting = false; };
+  pc.ontrack = (e) => {
+    if (pc !== state.pc) return;
+    remote.addTrack(e.track);
+    if (video.srcObject !== remote) { video.srcObject = remote; onFirstFrame(); }
+    playVideo(); log("<b>track</b> " + e.track.kind);
+  };
+  pc.onconnectionstatechange = () => {
+    if (pc !== state.pc) return; log("  pc=" + pc.connectionState);
+    if (pc.connectionState === "failed") scheduleReconnect("pc-failed");
+    if (pc.connectionState === "connected") { reconnecting = false; resumePlayClock(); }
+  };
   pc.ondatachannel = (e) => {
     const ch = e.channel; if (/file/i.test(ch.label)) return;
     ch.binaryType = "arraybuffer"; state.dc = ch; log("<b>datachannel</b> " + ch.label);
     ch.onopen = () => { state.sizeSent = null; sendScreenSize(); sendFrame(1, [0, 0, 0]); setTimeout(() => sendFrame(2, [0, 0, 0]), 50); };
     ch.onmessage = (ev) => {
+      if (ch !== state.dc) return;
       const str = typeof ev.data === "string" ? ev.data : new TextDecoder().decode(ev.data);
       const m = {}; for (const p of str.split(":::")) { const i = p.indexOf("="); if (i > 0) m[p.slice(0, i)] = p.slice(i + 1); }
-      const t = m.msgType || "?";
-      if (ch !== state.dc) return;
-      if (t === "androidReady") {
-        state.stream = { w: +m.streamingWidth || 0, h: +m.streamingHeight || 0 };
-        ch.send("osd::0"); ch.send("showtouches::" + (state.showTouches ? "1" : "0")); ch.send("screen::orientation::" + (screen.orientation?.type || "landscape-primary"));
-        if (document.visibilityState !== "visible") dcSend("tabstatus::inactive");
-        state.sizeSent = null; sendScreenSize(); log("<b>androidReady</b> " + state.stream.w + "x" + state.stream.h);
-      }
-      if (t === "sessionComplete") onSessionComplete(m);
-      if (t === "sessionMigrated" || m.sessionMigrated) setTimeout(() => { if (!(state.dc?.readyState === "open" && pc.connectionState === "connected")) onTakeover("Migrated"); }, 900);
-      if (t === "keyboardStatus") state.kb = m.enabled === "true" || m.enabled === true;
-      if (t === "showDisconnectTimer") say(`<b>Disconnecting in ${+m.graceIntervalSecs || 59}s</b>`);
-      if (t === "discardDisconnectTimer" && state.dc?.readyState === "open") hide();
+      onMessage(m.msgType || "?", m, ch, pc);
     };
   };
-  if (!wired) { wireInput(); wired = true; video.addEventListener("pointerdown", () => { if (video.muted) video.muted = false; }, { once: true }); }
+  if (!wired) { wireInput(); wired = true; }
 
   await pc.setRemoteDescription({ type: "offer", sdp: s.offerSdp });
   for (const c of s.iceCandidates || []) await pc.addIceCandidate({ candidate: c.candidate || c, sdpMid: c.sdpMid, sdpMLineIndex: c.sdpMLineIndex }).catch(() => {});
   const ans = await pc.createAnswer(); await pc.setLocalDescription(ans);
-  await sleep(1500);
+  // now.gg's own client answers straight away (the remote side learns our candidates from its
+  // connectivity checks), so no ICE-gathering wait: that alone took 1.5 s off every handoff.
   if (state.stopping || pc !== state.pc) { try { pc.close(); } catch {} return; }
   const set = await call(oapiPrefix + "/play/v1/setAnswerSdp", { method: "POST", body: { ...sessionParams(), answerSdp: munge(pc.localDescription?.sdp || ans.sdp) } });
   log("  setAnswerSdp=" + (set.status || ("http " + set._http)));
   pc.__answeredAt = Date.now(); pc.__answerOk = set.status === "Success";
-  if (set.status !== "Success") { pc.__answeredAt = 0; scheduleReconnect("answer-" + (set.status || set._http), set.status === "FailureRetryStartSessionLater" ? 10000 : 1500); }
-  else if (!wasReconnect) hide();
+  if (set.status === "FailureSessionMigrated") { pc.__answeredAt = 0; onTakeover("Migrated"); }
+  else if (set.status !== "Success") { pc.__answeredAt = 0; scheduleReconnect("answer-" + (set.status || set._http), set.status === "FailureRetryStartSessionLater" ? 10000 : 1500); }
 
-  timers.push(setInterval(() => { if (state.dc?.readyState === "open") state.dc.send("osd::0"); }, 10000));
-  timers.push(setInterval(async () => {
-    const st = await call(oapiPrefix + "/play/v1/getSessionStatus?" + new URLSearchParams(sessionParams())).catch(() => ({}));
-    if (st.sessionStatus === "Migrated") { if (++state.migratedSeen >= 2) { state.migratedSeen = 0; onTakeover("Migrated"); } } else state.migratedSeen = 0;
-    if (st.sessionStatus === "BcpuSpotInterrupted" && !pc.__interrupted) { pc.__interrupted = true; scheduleReconnect("BcpuSpotInterruption"); }
-  }, 15000));
+  // tiny keepalive on the data channel (never touches our server)
+  timers.push(setInterval(() => dcSend("osd::0"), 10000));
   startHud(pc); startWatchdog(pc);
 }
 
-function startHud(pc) {
-  pc.__t0 = Date.now();
-  let bytes = 0, last = performance.now();
-  timers.push(setInterval(async () => {
-    if (pc !== state.pc) return;
-    const up = Math.floor((Date.now() - pc.__t0) / 1000);
-    let fps = "?", inb = null; try { (await pc.getStats()).forEach((r) => { if (r.type === "inbound-rtp" && (r.kind === "video" || r.mediaType === "video")) inb = r; }); } catch {}
-    const now = performance.now(), kbps = now > last ? (((inb?.bytesReceived ?? 0) - bytes) * 8) / (now - last) : 0; bytes = inb?.bytesReceived ?? 0; last = now; if (inb) fps = inb.framesPerSecond ?? "?";
-    hud(`pc=${pc.connectionState} ${state.stream ? state.stream.w + "x" + state.stream.h : "-"} box ${Math.floor(up / 60)}:${String(up % 60).padStart(2, "0")}\nfps=${fps} kbps=${kbps.toFixed(0)} frames=${inb?.framesDecoded ?? 0} lost=${inb?.packetsLost ?? 0} sent=${state.sent}`);
-  }, 1000));
+/* ---- messages from the machine ---- */
+let idleAsk = null;
+function onMessage(t, m, ch, pc) {
+  if (t === "androidReady") {
+    state.stream = { w: +m.streamingWidth || 0, h: +m.streamingHeight || 0 };
+    ch.send("osd::0"); ch.send("showtouches::" + (state.showTouches ? "1" : "0")); ch.send("screen::orientation::" + (screen.orientation?.type || "landscape-primary"));
+    ch.send("tabstatus::" + (document.visibilityState === "visible" ? "active" : "inactive"));
+    state.sizeSent = null; sendScreenSize(); log("<b>androidReady</b> " + state.stream.w + "x" + state.stream.h);
+  }
+  else if (t === "sessionComplete") onSessionComplete(m);
+  else if (t === "sessionMigrated" || m.sessionMigrated) setTimeout(() => { if (pc === state.pc && !(state.dc?.readyState === "open" && pc.connectionState === "connected")) onTakeover("Migrated"); }, 900);
+  else if (t === "keyboardStatus") state.kb = m.enabled === "true" || m.enabled === true;
+  else if (t === "noUserActivity") onIdle(null);
+  else if (t === "showDisconnectTimer") onIdle(+m.graceIntervalSecs || 59, m.reason);
+  else if (t === "discardDisconnectTimer") endIdleAsk();
+  else if (t === "appcrash_fatal") { log("<b>app crashed</b> on the machine"); scheduleReconnect("appcrash"); }
+  // The GAME asked for an ad (its own "watch an ad for coins"). We show none, so tell it the ad
+  // could not load, exactly like now.gg's client does when no ad is available — otherwise the game
+  // sits waiting for an ad that never comes.
+  else if (t === "ADS::showRewardedVideoAd") { dcSend("ADS::rewardedAdLoad::fail" + (m["sdk-type"] ? "::" + m["sdk-type"] : "")); log("  game asked for a rewarded ad -> none available"); }
+  else if (t === "ADS::showInterstitialAd") { dcSend("ADS::interstitialAdLoad::fail" + (m["sdk-type"] ? "::" + m["sdk-type"] : "")); log("  game asked for an ad -> none available"); }
 }
+
+/* Idle: the machine only sees clicks and keys, so someone watching a cutscene or steering with
+ * the mouse hovering looks idle to it. If the person did anything here in the last 2 minutes
+ * and the tab is in view, they are here: answer for them. Otherwise ask, with the countdown. */
+const PRESENT_MS = 120000;
+function onIdle(secs, reason) {
+  const present = document.visibilityState === "visible" && Date.now() - lastLocalInput < PRESENT_MS;
+  log("<b>" + (secs ? "disconnect timer " + secs + "s" : "noUserActivity") + "</b>" + (reason ? " " + esc(reason) : "") + (present ? " -> still here, continuing" : ""));
+  if (present) return keepPlaying();
+  if (idleAsk) return;
+  const until = Date.now() + (secs || 60) * 1000;
+  const draw = () => {
+    const left = Math.max(0, Math.round((until - Date.now()) / 1000));
+    card("<b>Still playing?</b><br>The game stops in " + left + "s if nothing happens.", { keep: true });
+  };
+  draw(); idleAsk = setInterval(draw, 1000);
+  const back = () => { if (idleAsk) keepPlaying(); };
+  window.addEventListener("keydown", back, { once: true }); video.addEventListener("pointerdown", back, { once: true });
+}
+function keepPlaying() { dcSend("backtogame"); dcSend("tabstatus::active"); endIdleAsk(); }
+function endIdleAsk() { if (!idleAsk) return; clearInterval(idleAsk); idleAsk = null; hideCard(); }
 
 function onSessionComplete(m) {
   const r = m.reason || "Unknown";
-  log("<b>sessionComplete</b> reason=" + r);
+  log("<b>sessionComplete</b> reason=" + esc(r));
+  freeze(); endIdleAsk();
   state.dc = null; try { state.pc?.close(); } catch {}
   if (r === "Migrated" || r === "OtherSessionInitiated") return onTakeover(r);
   const hunt = HUNT.test(r);   // now.gg is picking a host near the player, not dropping us
-  const auto = hunt || ["Unknown", "BcpuSpotInterruption", "BgpuSpotInterruption", "TabHiddenTimeout", "NonPlayAppSessionTimeout"].includes(r);
-  if (auto) scheduleReconnect(r, 0, hunt);
-  else { say(`<b>Session ended</b><br>reason=${r}`); offerRetry(); }
+  if (r === "UserIdleTimeout") { pausePlayClock(); unfreeze(); return offerRetry("<b>Stopped while you were away</b><br>Your progress is saved."); }
+  if (r === "ProxyPlaytimeExceeded" || r === "SessionTimeLimitExceeded") { pausePlayClock(); unfreeze(); return offerRetry("<b>now.gg ended this session</b><br>Its playtime limit was reached. Retry starts a new one."); }
+  if (r === "AppUnderMaintenance") { pausePlayClock(); unfreeze(); return offerRetry("<b>This game is under maintenance</b><br>Try again later."); }
+  // everything else is the box going away under us (its lease ran out, it was pre-empted or crashed): a handoff
+  state.handoffs++;
+  scheduleReconnect(r, 0, hunt);
 }
 
+/* ---- reconnect: unlimited while it keeps moving, with backoff; gives up after 5 minutes of nothing ---- */
+const GIVE_UP_MS = 5 * 60000;
 function scheduleReconnect(reason = "?", minDelay = 0, hunt = false) {
   if (state.stopping) return;
-  if (reconnecting) { reconnectQueued = true; if (hunt) state.hunt = true; return; }
-  reconnecting = true;
   if (hunt) state.hunt = true;
-  state.tries = (state.tries || 0) + 1;
+  if (reconnecting) { reconnectQueued = true; return; }
+  freeze(); pausePlayClock();
+  // a hidden tab would be stopped by now.gg anyway (TabHiddenTimeout): reconnect when it is back in view
+  if (document.hidden || !navigator.onLine) {
+    if (!pendingWhileHidden) log("  " + (document.hidden ? "tab hidden" : "offline") + " -> reconnect when back (" + esc(reason) + ")");
+    if (!navigator.onLine) status("No internet connection — waiting…");
+    pendingWhileHidden = reason; return;
+  }
+  reconnecting = true;
+  state.tries++;
+  if (!state.failSince) state.failSince = Date.now();
   const tryNo = state.tries;
-  const delay = Math.max(minDelay, Math.min(1000 * tryNo, 4000));
-  const why = " <span style='opacity:.6'>(" + reason + " · try " + tryNo + ")</span>";
-  saySpin(hunt ? "Looking for a host near you…" + why + "<br><span style='opacity:.66;font-size:12px'>now.gg is picking a machine for this game. It starts on its own as soon as one is ready — a few tries is normal.</span>" : "Reconnecting…" + why);
-  log("<b>" + (hunt ? "looking for a host" : "reconnecting") + "</b> try " + tryNo + " " + reason);
+  const delay = Math.max(minDelay, tryNo === 1 ? 0 : Math.min(500 * 2 ** (tryNo - 2), 8000));
+  status(state.hunt ? "Finding a machine near you…" : "Reconnecting…" + (tryNo > 2 ? " (try " + tryNo + ")" : ""));
+  log("<b>" + (state.hunt ? "looking for a host" : "reconnecting") + "</b> try " + tryNo + " " + esc(reason) + " in " + delay + "ms");
   setTimeout(async () => {
     if (state.stopping) { reconnecting = false; return; }
     try {
       if (!token || !state.playUserToken) await doAuth();
       await establish();
       const pc = state.pc, ok = pc && pc.__answerOk && pc.connectionState !== "failed" && pc.connectionState !== "closed";
-      if (ok) { reconnectQueued = false; state.tries = 0; state.hunt = false; log("<b>reconnected</b>"); }
+      if (ok) { reconnectQueued = false; state.tries = 0; state.failSince = 0; state.hunt = false; log("<b>reconnected</b>"); }
       else reconnectQueued = true;
-    } catch (e) { log("<b>ERR</b> " + e.message); if ((state.tries || 0) <= 30) reconnectQueued = true; else { say("Couldn't reconnect: " + e.message); offerRetry(); } }
-    finally { reconnecting = false; if (reconnectQueued && !state.stopping) { reconnectQueued = false; scheduleReconnect("retry", 0, state.hunt); } }
+    } catch (e) {
+      log("<b>ERR</b> " + esc(e.message));
+      if (Date.now() - state.failSince < GIVE_UP_MS) reconnectQueued = true;
+      else { stopPlaying(); unfreeze(); offerRetry(state.vpn ? vpnMsg : "Couldn't reconnect: " + esc(e.message)); }
+    } finally {
+      reconnecting = false;
+      if (reconnectQueued && !state.stopping) { reconnectQueued = false; scheduleReconnect("retry", 0, state.hunt); }
+    }
   }, delay);
 }
+let pendingWhileHidden = null;
+function resumePending() { if (!pendingWhileHidden || state.stopping || document.hidden || !navigator.onLine) return; const r = pendingWhileHidden; pendingWhileHidden = null; scheduleReconnect(r); }
 
 function startWatchdog(pc) {
   timers.push(setInterval(async () => {
-    if (state.stopping || pc !== state.pc) return;
+    if (state.stopping || pc !== state.pc || reconnecting || pendingWhileHidden) return;
     const cs = pc.connectionState;
     if (cs === "failed" || cs === "closed") return scheduleReconnect("watchdog-" + cs);
     if (pc.iceConnectionState === "disconnected") { pc.__disc = pc.__disc || Date.now(); if (Date.now() - pc.__disc > 6000) return scheduleReconnect("watchdog-ice"); } else pc.__disc = 0;
-    if (cs === "connected") {
-      let frames = null; try { (await pc.getStats()).forEach((r) => { if (r.type === "inbound-rtp" && (r.kind === "video" || r.mediaType === "video")) frames = r.framesDecoded ?? 0; }); } catch {}
-      if (frames !== null) { if (frames === pc.__frames) { pc.__stall = pc.__stall || Date.now(); if (Date.now() - pc.__stall > 18000) return scheduleReconnect("watchdog-stall"); } else pc.__stall = 0; pc.__frames = frames; }
+    if (cs === "connected" && !document.hidden) {
+      const frames = pc.__lastFrames;
+      if (frames != null) { if (frames === pc.__frames) { pc.__stall = pc.__stall || Date.now(); if (Date.now() - pc.__stall > 18000) return scheduleReconnect("watchdog-stall"); } else pc.__stall = 0; pc.__frames = frames; }
     }
     if (!state.dc && pc.__answeredAt && Date.now() - pc.__answeredAt > 15000) return scheduleReconnect("watchdog-no-dc");
   }, 2000));
 }
 
-/* ---- lifecycle / ui ---- */
-const dcSend = (s) => { if (state.dc?.readyState === "open") { try { state.dc.send(s); } catch {} } };
-let tabActive = null;
-window.addEventListener("focus", () => { if (tabActive !== true) { tabActive = true; dcSend("tabstatus::active"); } });
-window.addEventListener("blur", () => { if (tabActive !== false) { tabActive = false; dcSend("tabstatus::inactive"); } });
-document.addEventListener("visibilitychange", () => { if (document.hidden) { tabActive = false; dcSend("tabstatus::inactive"); } else if (tabActive !== true) { tabActive = true; dcSend("tabstatus::active"); } });
-
-async function play() {
-  if (!APP) APP = qs.get("g");
-  state.stopping = false; state.tries = 0; lastTakeover = 0; state.vpn = false; state.hunt = false; claim();
-  $("ovname").textContent = (cfg && cfg.name) || ("app " + APP);
-  document.title = (cfg && cfg.name) ? cfg.name : "now.gg";
-  saySpin("Starting…");
-  try { await doAuth(); await establish(); }
-  catch (e) { log("<b>ERR</b> " + e.message); offerRetry(); if (state.vpn) say("<b>now.gg thinks this is a VPN</b><br>Its play API answered its <i>Proxy/VPN detected</i> page to every route we tried.<br><span style='opacity:.6'>Press Retry in a moment.</span>"); else say("Error: " + e.message); }
+/* ---- HUD (Details) + play clock ---- */
+function resumePlayClock() { if (!state.playingSince) state.playingSince = Date.now(); }
+function pausePlayClock() { if (state.playingSince) { state.playedMs += Date.now() - state.playingSince; state.playingSince = 0; } }
+const playedS = () => (state.playedMs + (state.playingSince ? Date.now() - state.playingSince : 0)) / 1000;
+function startHud(pc) {
+  pc.__t0 = Date.now();
+  let bytes = 0, last = performance.now();
+  timers.push(setInterval(async () => {
+    if (pc !== state.pc) return;
+    let inb = null, pair = null;
+    try { (await pc.getStats()).forEach((r) => { if (r.type === "inbound-rtp" && (r.kind === "video" || r.mediaType === "video")) inb = r; if (r.type === "candidate-pair" && r.state === "succeeded" && r.nominated) pair = r; }); } catch {}
+    pc.__lastFrames = inb?.framesDecoded ?? null;
+    if ($("hud").classList.contains("on")) {
+      const now = performance.now(), kbps = now > last ? (((inb?.bytesReceived ?? 0) - bytes) * 8) / (now - last) : 0; bytes = inb?.bytesReceived ?? 0; last = now;
+      const rtt = pair?.currentRoundTripTime != null ? Math.round(pair.currentRoundTripTime * 1000) + "ms" : "?";
+      hud(`played ${mmss(playedS())} · machine ${mmss((Date.now() - pc.__t0) / 1000)} · handoffs ${state.handoffs}${state.lastHandoff != null ? " (last " + state.lastHandoff.toFixed(1) + "s)" : ""}\n` +
+        `${state.stream ? state.stream.w + "x" + state.stream.h : "-"} fps=${inb?.framesPerSecond ?? "?"} kbps=${kbps.toFixed(0)} rtt=${rtt} lost=${inb?.packetsLost ?? 0} api calls=${state.calls}`);
+    }
+  }, 1000));
 }
 
-$("ovretry").onclick = () => { state.stopping = false; state.tries = 0; play(); };
-$("fs").onclick = () => { if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.(); };
-$("det").onclick = () => { $("log").hidden = !$("log").hidden; $("hud").classList.toggle("on", !$("log").hidden); };
-document.addEventListener("keydown", (e) => { if (e.key === "f" && !state.kb) $("fs").click(); });
+/* ---- sound: autoplay with sound is often refused; start muted and offer one click ---- */
+function playVideo() {
+  video.play().catch(() => { video.muted = true; video.play().catch(() => {}); $("sound").hidden = false; syncMute(); });
+}
+const syncMute = () => { $("mute").textContent = video.muted ? "Unmute" : "Mute"; if (!video.muted) $("sound").hidden = true; };
+$("sound").onclick = () => { video.muted = false; video.play().catch(() => {}); syncMute(); };
+$("mute").onclick = () => { video.muted = !video.muted; if (!video.muted) video.play().catch(() => {}); syncMute(); };
+video.addEventListener("pointerdown", () => { if (video.muted && !$("sound").hidden) $("sound").click(); });
+
+/* ---- keep the screen awake while playing (a sleeping Chromebook hides the tab -> session ends) ---- */
+let wake = null;
+async function holdWake() { try { if (!wake && navigator.wakeLock && document.visibilityState === "visible" && !state.stopping) { wake = await navigator.wakeLock.request("screen"); wake.addEventListener("release", () => { wake = null; }); } } catch {} }
+function releaseWake() { try { wake?.release(); } catch {} wake = null; }
+
+/* ---- lifecycle ---- */
+const dcSend = (s) => { if (state.dc?.readyState === "open") { try { state.dc.send(s); } catch {} } };
+// Only real visibility counts. Window blur is NOT sent as inactive: inside Shasta the game is a frame,
+// and focus moves to the browser UI all the time — telling now.gg "inactive" then starts its
+// TabHiddenTimeout and the game stops by itself. now.gg's own client keys this on visibility too.
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { dcSend("tabstatus::inactive"); releaseAll(); }
+  else { dcSend("tabstatus::active"); holdWake(); resumePending(); }
+});
+window.addEventListener("online", () => { log("  back online"); resumePending(); if (state.pc && state.pc.connectionState !== "connected" && !reconnecting) scheduleReconnect("online"); });
+window.addEventListener("offline", () => { log("  offline"); if (hadPicture) status("No internet connection — waiting…"); });
+window.addEventListener("pagehide", () => { releaseAll(); });
+
+const vpnMsg = "<b>now.gg thinks this is a VPN</b><br>Its play API answered its <i>Proxy/VPN detected</i> page to every route we tried.<br><span style='opacity:.6'>Press Retry in a moment.</span>";
+async function play() {
+  if (!APP) APP = qs.get("g");
+  if (!APP) return card("No game selected.");
+  state.stopping = false; state.tries = 0; state.failSince = 0; lastTakeover = 0; state.vpn = false; state.hunt = false; pendingWhileHidden = null; claim();
+  $("ovname").textContent = (cfg && cfg.name) || ("app " + APP);
+  document.title = (cfg && cfg.name) ? cfg.name : "now.gg";
+  if (cfg && cfg.cover && !hadPicture) $("bg").style.backgroundImage = `url("${String(cfg.cover).replace(/["\\]/g, "")}")`;
+  status("Starting…"); holdWake();
+  if (API === BAKED_API) { const own = await askShellForProxy(); if (own && own !== API) { API = own; log("  proxy " + esc(API) + " (this domain)"); } }
+  try { await doAuth(); await establish(); }
+  catch (e) { log("<b>ERR</b> " + esc(e.message)); if (e.message === "stopped") return; if (state.vpn) offerRetry(vpnMsg); else scheduleReconnect("start-failed"); }
+}
+
+$("ovretry").onclick = () => { state.stopping = false; play(); };
+$("ovkeep").onclick = () => keepPlaying();
+$("fs").onclick = () => { if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.().catch(() => {}); };
+$("det").onclick = () => { const on = $("log").hidden; $("log").hidden = !on; $("hud").classList.toggle("on", on); if (on) $("log").scrollTop = 1e9; };
+// the corner buttons show while the pointer moves, then get out of the way
+let barT = 0; document.addEventListener("pointermove", () => { $("bar").classList.add("on"); clearTimeout(barT); barT = setTimeout(() => $("bar").classList.remove("on"), 2200); }, { passive: true });
+document.addEventListener("keydown", (e) => { if (e.key === "F11" || (e.key === "f" && e.altKey)) { e.preventDefault(); $("fs").click(); } });
 play();
 })();
 </script>
