@@ -3,8 +3,8 @@
 // picture-in-picture, keyboard, resume and source switching — and moves to the next source on a fatal error.
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import {
-  Check, ChevronLeft, Gauge, Loader2, Maximize, Minimize, Pause, PictureInPicture2, Play, RotateCcw,
-  Settings, SkipForward, Subtitles, Volume2, VolumeX, Zap,
+  AudioLines, Check, ChevronLeft, Gauge, Loader2, Maximize, Minimize, Pause, PictureInPicture2, Play, RotateCcw,
+  Server, SkipForward, Subtitles, Volume2, VolumeX, Zap,
 } from 'lucide-react'
 import type Hls from 'hls.js'
 import * as proxy from '@/proxy/scramjetAdapter'
@@ -33,11 +33,31 @@ export interface PlayerProps {
 }
 
 const RATES = [0.5, 0.75, 1, 1.25, 1.5, 2]
+const MENU_TITLE: Record<Exclude<Menu, 'none'>, string> = { source: 'Source', quality: 'Quality', speed: 'Speed', audio: 'Audio', subs: 'Subtitles' }
 const fmt = (s: number) => {
   if (!Number.isFinite(s) || s < 0) s = 0
   const h = Math.floor(s / 3600)
   const m = Math.floor((s % 3600) / 60)
   return `${h ? `${h}:${String(m).padStart(2, '0')}` : m}:${String(Math.floor(s % 60)).padStart(2, '0')}`
+}
+
+/** Keeps a 16:9 box short enough that its bottom controls stay on screen: Watch scrolls inside the tab, not the window,
+ *  so the cap comes from the nearest scrolling ancestor (minus `reserve` px: the sticky Watch nav and the Back row above it). */
+export function useFitHeight(ref: RefObject<HTMLElement | null>, reserve = 140): number | undefined {
+  const [max, setMax] = useState<number>()
+  useEffect(() => {
+    const el = ref.current
+    let sc: HTMLElement | null = el?.parentElement ?? null
+    while (sc && !/(auto|scroll)/.test(getComputedStyle(sc).overflowY)) sc = sc.parentElement
+    if (!sc) return
+    const scroller = sc
+    const measure = () => setMax(Math.max(240, scroller.clientHeight - reserve))
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(scroller)
+    return () => ro.disconnect()
+  }, [ref, reserve])
+  return max
 }
 
 /** The embed path: a real player page, run through Shasta's proxy so its ads are stripped and its host stays hidden.
@@ -91,6 +111,7 @@ export function Player(props: PlayerProps) {
   cb.current = props
 
   const box = useRef<HTMLDivElement>(null)
+  const fitMax = useFitHeight(box)
   const video = useRef<HTMLVideoElement>(null)
   const hls = useRef<Hls | null>(null)
   const dash = useRef<{ reset: () => void } | null>(null)
@@ -414,6 +435,24 @@ export function Player(props: PlayerProps) {
     return () => el.removeEventListener('keydown', onKey)
   }, [toggle, seek, toggleFullscreen, wake, isEmbed])
 
+  // an open menu closes on a click anywhere else in the player or on Escape, like every other popover in Shasta
+  const menuBox = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (menu === 'none') return
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as HTMLElement
+      if (menuBox.current?.contains(t) || t.closest?.('[data-menu-toggle]')) return
+      setMenu('none')
+    }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); setMenu('none') } }
+    document.addEventListener('pointerdown', onDown)
+    document.addEventListener('keydown', onKey, true)
+    return () => { document.removeEventListener('pointerdown', onDown); document.removeEventListener('keydown', onKey, true) }
+  }, [menu])
+
+  // seek bar: hover shows the time under the pointer
+  const [hoverAt, setHoverAt] = useState<number | null>(null)
+
   const menuBtn = (active = false) =>
     cn('grid size-10 shrink-0 place-items-center rounded-lg text-white transition-colors duration-150 ease-shasta hover:bg-white/15', active && 'bg-white/15')
   const item = 'flex h-8 w-full items-center justify-between gap-3 rounded-md px-2.5 text-left text-sm transition-colors duration-150 ease-shasta hover:bg-white/10'
@@ -516,7 +555,7 @@ export function Player(props: PlayerProps) {
   )
 
   return (
-    <div ref={box} tabIndex={0} onMouseMove={wake} onFocus={wake} className="group relative aspect-video w-full overflow-hidden rounded-xl bg-black outline-none">
+    <div ref={box} tabIndex={0} onMouseMove={wake} onFocus={wake} style={fullscreen ? undefined : { maxHeight: fitMax }} className="group relative aspect-video w-full overflow-hidden rounded-xl bg-black outline-none">
       {isEmbed ? (
         <EmbedView url={src} title={title} nonce={embedNonce} direct={!proxyVideo} onFail={onEmbedFail} frameRef={embedFrame} />
       ) : (
@@ -568,10 +607,36 @@ export function Player(props: PlayerProps) {
 
       {/* bottom bar */}
       <div className={cn('absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/65 to-transparent px-3 pb-3 pt-20 transition-opacity duration-200 ease-shasta', isEmbed ? 'opacity-100' : shown || !playing || waiting ? 'opacity-100' : 'opacity-0')}>
-        <div className="relative mb-1 h-1.5 w-full cursor-pointer" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); seek(((e.clientX - r.left) / r.width) * (curDur || 0)) }}>
-          <div className="absolute inset-y-0 left-0 rounded-full bg-white/25" style={{ width: `${curDur ? (curBuffered / curDur) * 100 : 0}%` }} />
-          <div className="absolute inset-y-0 left-0 rounded-full bg-shasta-accent" style={{ width: `${curDur ? (curTime / curDur) * 100 : 0}%` }} />
-          <div className="absolute top-1/2 size-3 -translate-y-1/2 rounded-full bg-shasta-accent" style={{ left: `calc(${curDur ? (curTime / curDur) * 100 : 0}% - 6px)` }} />
+        {/* a 16px hit area around a thin track; keyboard: arrows seek 5 s, Home/End jump */}
+        <div
+          role="slider"
+          tabIndex={curDur ? 0 : -1}
+          aria-label="Seek"
+          aria-valuemin={0}
+          aria-valuemax={Math.round(curDur)}
+          aria-valuenow={Math.round(curTime)}
+          aria-valuetext={`${fmt(curTime)} of ${fmt(curDur)}`}
+          className="group/seek relative mb-0.5 flex h-4 w-full cursor-pointer items-center outline-none"
+          onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); seek(((e.clientX - r.left) / r.width) * (curDur || 0)) }}
+          onMouseMove={(e) => { if (!curDur) return; const r = e.currentTarget.getBoundingClientRect(); setHoverAt(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width))) }}
+          onMouseLeave={() => setHoverAt(null)}
+          onKeyDown={(e) => {
+            const step = e.key === 'ArrowRight' || e.key === 'ArrowUp' ? 5 : e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -5 : 0
+            if (step) { e.preventDefault(); e.stopPropagation(); seek(curTime + step) }
+            else if (e.key === 'Home') { e.preventDefault(); e.stopPropagation(); seek(0) }
+            else if (e.key === 'End') { e.preventDefault(); e.stopPropagation(); seek(curDur) }
+          }}
+        >
+          <div className="relative h-1 w-full rounded-full bg-white/20 transition-[height] duration-150 ease-shasta group-hover/seek:h-1.5 group-focus-visible/seek:h-1.5">
+            <div className="absolute inset-y-0 left-0 rounded-full bg-white/30" style={{ width: `${curDur ? (curBuffered / curDur) * 100 : 0}%` }} />
+            <div className="absolute inset-y-0 left-0 rounded-full bg-shasta-accent" style={{ width: `${curDur ? (curTime / curDur) * 100 : 0}%` }} />
+          </div>
+          <div className="absolute top-1/2 size-3 -translate-y-1/2 rounded-full bg-shasta-accent ring-white/70 group-focus-visible/seek:ring-2" style={{ left: `calc(${curDur ? (curTime / curDur) * 100 : 0}% - 6px)` }} />
+          {hoverAt != null && curDur > 0 && (
+            <span className="pointer-events-none absolute bottom-5 -translate-x-1/2 rounded-md bg-black/85 px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-white" style={{ left: `${hoverAt * 100}%` }}>
+              {fmt(hoverAt * curDur)}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1 text-white">
           <button className={menuBtn()} onClick={toggle} aria-label={curPlaying ? 'Pause' : 'Play'}>{curPlaying ? <Pause className="size-5 fill-white" /> : <Play className="size-5 fill-white" />}</button>
@@ -581,22 +646,22 @@ export function Player(props: PlayerProps) {
           </div>
           <span className="ml-1 font-mono text-xs tabular-nums text-white">{fmt(curTime)} <span className="text-white/60">/ {fmt(curDur)}</span></span>
           <div className="ml-auto flex items-center gap-1">
-            {!isEmbed && audio.length > 1 && <button className={menuBtn(menu === 'audio')} onClick={() => setMenu(menu === 'audio' ? 'none' : 'audio')} title="Audio" aria-label="Audio track"><Settings className="size-5" /></button>}
-            {!isEmbed && subChoices.length > 1 && <button className={menuBtn(menu === 'subs' || subOn >= 0)} onClick={() => setMenu(menu === 'subs' ? 'none' : 'subs')} title="Subtitles" aria-label="Subtitles"><Subtitles className="size-5" /></button>}
-            {!isEmbed && <button className={menuBtn(menu === 'speed')} onClick={() => setMenu(menu === 'speed' ? 'none' : 'speed')} title="Speed" aria-label="Speed"><Gauge className="size-5" /></button>}
-            {!isEmbed && <button className={menuBtn(menu === 'quality')} onClick={() => setMenu(menu === 'quality' ? 'none' : 'quality')} title="Quality" aria-label="Quality"><span className="text-xs font-medium">{level < 0 ? 'Auto' : levels.find((l) => l.index === level)?.label ?? 'Auto'}</span></button>}
+            {!isEmbed && audio.length > 1 && <button data-menu-toggle className={menuBtn(menu === 'audio')} onClick={() => setMenu(menu === 'audio' ? 'none' : 'audio')} title="Audio" aria-label="Audio track" aria-expanded={menu === 'audio'}><AudioLines className="size-5" /></button>}
+            {!isEmbed && subChoices.length > 1 && <button data-menu-toggle className={menuBtn(menu === 'subs' || subOn >= 0)} onClick={() => setMenu(menu === 'subs' ? 'none' : 'subs')} title="Subtitles" aria-label="Subtitles" aria-expanded={menu === 'subs'}><Subtitles className="size-5" /></button>}
+            {!isEmbed && <button data-menu-toggle className={menuBtn(menu === 'speed' || rate !== 1)} onClick={() => setMenu(menu === 'speed' ? 'none' : 'speed')} title="Speed" aria-label="Speed" aria-expanded={menu === 'speed'}>{rate === 1 ? <Gauge className="size-5" /> : <span className="font-mono text-xs tabular-nums">{rate}×</span>}</button>}
+            {!isEmbed && <button data-menu-toggle className={menuBtn(menu === 'quality')} onClick={() => setMenu(menu === 'quality' ? 'none' : 'quality')} title="Quality" aria-label="Quality" aria-expanded={menu === 'quality'}><span className="text-xs font-medium">{level < 0 ? 'Auto' : levels.find((l) => l.index === level)?.label ?? 'Auto'}</span></button>}
             {proxyToggle}
-            {candidates.length > 1 && <button className={menuBtn(menu === 'source')} onClick={() => setMenu(menu === 'source' ? 'none' : 'source')} title="Source" aria-label="Source"><Settings className="size-5" /></button>}
+            {candidates.length > 1 && <button data-menu-toggle className={menuBtn(menu === 'source')} onClick={() => setMenu(menu === 'source' ? 'none' : 'source')} title="Source" aria-label="Source" aria-expanded={menu === 'source'}><Server className="size-5" /></button>}
             {!isEmbed && <button className={menuBtn()} onClick={pip} title="Picture in picture" aria-label="Picture in picture"><PictureInPicture2 className="size-5" /></button>}
-            <button className={menuBtn()} onClick={toggleFullscreen} aria-label="Full screen">{fullscreen ? <Minimize className="size-5" /> : <Maximize className="size-5" />}</button>
+            <button className={menuBtn()} onClick={toggleFullscreen} aria-label={fullscreen ? 'Exit full screen' : 'Full screen'}>{fullscreen ? <Minimize className="size-5" /> : <Maximize className="size-5" />}</button>
           </div>
         </div>
 
         {menu !== 'none' && (
-          <div className="absolute bottom-12 right-3 max-h-[60%] w-64 overflow-auto rounded-xl border border-white/10 bg-[#11141c]/95 p-1.5 text-white shadow-[0_12px_32px_rgb(0_0_0/0.45)]">
+          <div ref={menuBox} role="menu" aria-label={MENU_TITLE[menu]} className="absolute bottom-14 right-3 max-h-[60%] w-64 overflow-auto rounded-xl border border-white/10 bg-[#11141c]/95 p-1.5 text-white shadow-[0_12px_32px_rgb(0_0_0/0.45)]">
+            <p className="px-2 py-1 text-xs text-white/50">{MENU_TITLE[menu]}</p>
             {menu === 'source' && (
               <>
-                <p className="px-2 py-1 text-xs text-white/50">Source</p>
                 {candidates.map((c) => (
                   <button key={c.id} className={item} onClick={() => { cb.current.onPickSource(c); setMenu('none') }}>
                     <span className="truncate">{c.label}{c.audio ? ` · ${c.audio.join(', ')}` : ''}{c.note ? ` — ${c.note}` : ''}</span>

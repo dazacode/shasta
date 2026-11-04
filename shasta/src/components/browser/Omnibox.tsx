@@ -96,6 +96,8 @@ export function Omnibox({ tab }: { tab: Tab }) {
   const inline = useMemo(() => (open && focused && typed && suggestionsOn && !noInline ? inlineCompletion(query, bookmarks, history, predictions) : null), [open, focused, typed, suggestionsOn, noInline, query, bookmarks, history, predictions])
   const rows = useMemo<Row[]>(() => (open ? buildRows({ query: query.trim(), engine, suggestionsOn, bookmarks, history, installed, predictions, inline }) : []), [open, query, engine, suggestionsOn, bookmarks, history, installed, predictions, inline])
   const shownText = inline ? text + inline.suffix : text
+  // with nothing picked, Enter opens the first row (the typed address/search or its completion): show it as chosen, like a browser does
+  const active = highlight >= 0 ? highlight : typed && (rows[0]?.id === 'primary' || rows[0]?.id === 'inline') ? 0 : -1
   // keep the added part selected, so typing replaces it and Enter takes it
   useLayoutEffect(() => {
     const el = inputRef.current
@@ -121,7 +123,9 @@ export function Omnibox({ tab }: { tab: Tab }) {
       if (!open) return setOpen(true)
       if (!rows.length) return
       const dir = e.key === 'ArrowDown' ? 1 : -1
-      setHighlight((h) => (h + dir + rows.length + (h === -1 && dir === -1 ? 1 : 0)) % rows.length)
+      // start from the row already shown as chosen, so the first ArrowDown moves past it
+      const from = highlight >= 0 ? highlight : active
+      setHighlight(from === -1 ? (dir === 1 ? 0 : rows.length - 1) : (from + dir + rows.length) % rows.length)
     } else if (e.key === 'Escape') {
       if (open && rows.length) {
         e.preventDefault()
@@ -154,6 +158,7 @@ export function Omnibox({ tab }: { tab: Tab }) {
   }
 
   const showClear = text.length > 0 && focused
+  const hint = 'rounded-[4px] border border-current/20 px-1 font-mono text-[10px] leading-4'
   const placeholder = getSettings().searchEngine ? `Search ${SEARCH_ENGINES[engine].label} or enter a URL` : 'Search or enter a URL'
 
   return (
@@ -230,7 +235,7 @@ export function Omnibox({ tab }: { tab: Tab }) {
               onMouseDown={(e) => e.preventDefault()}
               onMouseEnter={() => setHighlight(i)}
               onClick={() => go(r.url)}
-              className={cn('flex h-10 cursor-default items-center gap-3 rounded-lg px-3 text-sm', i === highlight && 'bg-shasta-hover')}
+              className={cn('flex h-10 cursor-default items-center gap-3 rounded-lg px-3 text-sm', i === active && 'bg-shasta-hover')}
             >
               {r.kind === 'app' ? (
                 <AppIcon app={{ name: r.primary, iconUrl: r.iconUrl ?? null }} size={20} />
@@ -250,11 +255,20 @@ export function Omnibox({ tab }: { tab: Tab }) {
                 ) : (
                   r.primary
                 )}
-                {r.kind === 'search' && r.secondary && <span className="text-shasta-faint"> · {r.secondary}</span>}
+                {r.kind === 'search' && r.secondary && <span className="ml-2 text-xs text-shasta-faint">{r.secondary}</span>}
                 {r.kind !== 'search' && r.secondary && <span className="ml-2 text-xs text-shasta-faint">{r.kind === 'app' || r.id === 'primary' || r.id === 'inline' ? <span>{r.secondary}</span> : <span className="font-mono"><Match text={r.secondary} q={query.trim()} /></span>}</span>}
               </span>
+              {r.kind === 'bookmark' && <Star className="size-3.5 shrink-0 fill-current text-shasta-faint" role="img" aria-label="Bookmarked" />}
+              {i === active && <kbd aria-hidden className={cn(hint, 'shrink-0 text-shasta-faint max-sm:hidden')}>Enter</kbd>}
             </li>
           ))}
+          {typed && (
+            <li role="presentation" aria-hidden className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-shasta-line px-3 pt-2 pb-1 text-[11px] text-shasta-faint max-sm:hidden">
+              <span><kbd className={hint}>↑</kbd> <kbd className={hint}>↓</kbd> to choose</span>
+              {inline && <span><kbd className={hint}>Tab</kbd> to accept the completion</span>}
+              <span><kbd className={hint}>Esc</kbd> to close</span>
+            </li>
+          )}
         </ul>
       )}
     </div>

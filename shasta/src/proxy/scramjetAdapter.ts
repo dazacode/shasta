@@ -453,9 +453,10 @@ export function serviceWorkerStatus(): string {
 const engineFiles = () => ({
   // the folder Shasta is served from: proxied pages live under it (the service worker's scope)
   prefix: `${BASE}~/sj/`,
-  scramjetPath: `${BASE}scramjet/scramjet.js?v=${__ENGINE_VERSION__}`,
-  injectPath: `${BASE}controller/controller.inject.js?v=${__ENGINE_VERSION__}`,
-  wasmPath: `${BASE}scramjet/scramjet.wasm?v=${__ENGINE_VERSION__}`,
+  // names from vite.config.ts ENGINE_PATHS (neutral /rt/* in Lite builds)
+  scramjetPath: `${BASE}${__ENGINE_PATHS__.core}?v=${__ENGINE_VERSION__}`,
+  injectPath: `${BASE}${__ENGINE_PATHS__.inject}?v=${__ENGINE_VERSION__}`,
+  wasmPath: `${BASE}${__ENGINE_PATHS__.wasm}?v=${__ENGINE_VERSION__}`,
 })
 
 /** The engine's own config: on a shared origin, sites' logins and storage stay in the tab (lib/sharedOrigin.ts). */

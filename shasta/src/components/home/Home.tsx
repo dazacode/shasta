@@ -2,7 +2,7 @@
 // Edit mode is explicit (an "Edit page" button), like a phone's home screen: outside it the page is just the page.
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'motion/react'
-import { GripVertical, Plus, Settings2, Share2, X } from 'lucide-react'
+import { GripVertical, LayoutTemplate, Plus, Settings2, Share2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useHome } from '@/stores/homeStore'
 import { useSettings } from '@/stores/settingsStore'
@@ -11,7 +11,7 @@ import { useUi } from '@/stores/uiStore'
 import { WIDGETS, layoutFromLegacy, type Widget, type WidgetSize, type WidgetType } from '@/lib/home'
 import { cn } from '@/lib/utils'
 import { WIDGET_BODY, WIDGET_LINK } from './widgets'
-import { AddWidgetDialog, ShareHomeDialog, TemplateList, WidgetOptionsDialog } from './HomeDialogs'
+import { AddWidgetDialog, ShareHomeDialog, SizeGlyph, TemplateList, WidgetOptionsDialog } from './HomeDialogs'
 
 /** Widgets whose content needs a title to make sense; the others (a clock, a note, a timer) speak for themselves. */
 const HEADED: WidgetType[] = ['apps', 'live', 'bookmarks', 'recent', 'todo', 'schedule']
@@ -41,7 +41,7 @@ export function Home({ tabId, isPrivate, editing, setEditing }: HomeProps) {
   const introDone = useHome((s) => s.introDone)
   const move = useHome((s) => s.move)
   const [options, setOptions] = useState<string | null>(null)
-  const [adding, setAdding] = useState(false)
+  const [adding, setAdding] = useState<false | 'widgets' | 'templates'>(false)
   const [sharing, setSharing] = useState(false)
   const [dragId, setDragId] = useState<string | null>(null)
   const lastTarget = useRef<string | null>(null)
@@ -130,32 +130,48 @@ export function Home({ tabId, isPrivate, editing, setEditing }: HomeProps) {
           />
         ))}
         {editing && (
-          <button onClick={() => setAdding(true)} className="home-cell home-add" data-size="s">
+          <button onClick={() => setAdding('widgets')} className="home-cell home-add" data-size="s">
             <Plus className="size-5" strokeWidth={1.5} />
             Add a widget
           </button>
         )}
       </div>
       {!editing && widgets.length === 0 && (
-        <button onClick={() => setEditing(true)} className="mx-auto flex h-9 items-center gap-2 rounded-lg px-3 text-sm text-shasta-muted ring-1 ring-shasta-line transition-colors duration-150 ease-shasta hover:bg-shasta-hover hover:text-shasta-fg">
-          <Plus className="size-4" strokeWidth={1.5} /> Add widgets
-        </button>
+        <section className="home-empty-page" aria-label="No widgets on this page">
+          <p className="text-sm leading-5 font-medium">Nothing under the search bar yet</p>
+          <p className="mt-1 text-sm leading-5 text-shasta-muted">Add a clock, a to-do list or your shortcuts, or start from a ready-made page.</p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <Button size="sm" variant="outline" className="gap-2" onClick={() => setEditing(true)}>
+              <Plus className="size-4" strokeWidth={1.5} /> Add widgets
+            </Button>
+            <Button size="sm" variant="ghost" className="gap-2" onClick={() => setAdding('templates')}>
+              <LayoutTemplate className="size-4" strokeWidth={1.5} /> Ready-made pages
+            </Button>
+          </div>
+        </section>
       )}
 
       {editing && (
         <div className="home-editbar" role="toolbar" aria-label="Edit page">
-          <Button size="sm" variant="ghost" onClick={() => setAdding(true)} className="gap-2">
+          <span className="home-editbar-hint">
+            <GripVertical className="size-3.5" strokeWidth={1.5} aria-hidden /> Drag to move. Arrow keys work too.
+          </span>
+          <span className="home-editbar-sep" aria-hidden />
+          <Button size="sm" variant="ghost" onClick={() => setAdding('widgets')} className="gap-2">
             <Plus className="size-4" strokeWidth={1.5} /> Add widget
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setAdding('templates')} className="gap-2" title="Start from a ready-made page">
+            <LayoutTemplate className="size-4" strokeWidth={1.5} /> Pages
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setSharing(true)} className="gap-2">
             <Share2 className="size-4" strokeWidth={1.5} /> Share
           </Button>
-          <span className="mx-1 h-5 w-px bg-shasta-line" aria-hidden />
-          <Button size="sm" onClick={() => setEditing(false)}>Done</Button>
+          <span className="home-editbar-sep" aria-hidden />
+          <Button size="sm" onClick={() => setEditing(false)} title="Done (Esc)">Done</Button>
         </div>
       )}
 
-      <AddWidgetDialog open={adding} onClose={() => setAdding(false)} />
+      <AddWidgetDialog open={!!adding} initialTab={adding || 'widgets'} onClose={() => setAdding(false)} />
       <ShareHomeDialog open={sharing} onClose={() => setSharing(false)} />
       <WidgetOptionsDialog widget={optionsWidget} onClose={() => setOptions(null)} />
     </div>
@@ -220,7 +236,7 @@ function Cell({ w, index, count, tabId, isPrivate, editing, dragging, onDragStar
               <div className="home-sizes" role="radiogroup" aria-label={`${info.name} size`}>
                 {info.sizes.map((s) => (
                   <button key={s} role="radio" aria-checked={w.size === s} aria-label={SIZE_LABEL[s]} title={SIZE_LABEL[s]} onClick={() => resize(w.id, s)}>
-                    {s.toUpperCase()}
+                    <SizeGlyph size={s} />
                   </button>
                 ))}
               </div>

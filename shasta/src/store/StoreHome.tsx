@@ -12,7 +12,7 @@ import { facetQuery, facetsOf, type Facet, type Kind } from './facets'
 import { loadTaste, onTasteChange } from './tasteStore'
 import { useSettings } from '@/stores/settingsStore'
 import { useTabs } from '@/stores/tabsStore'
-import { AppAction, AppGrid, AppIcon, AppTile, Chip, LazyMount, LoadError, LoadMore, Message, Section, Shelf, StoreTile, TILE_FRAME, TileLink, TileSkeleton, TileSkeletons } from './components'
+import { AppAction, AppGrid, AppIcon, AppTile, Chip, ChipRail, LazyMount, LoadError, LoadMore, Message, Section, Shelf, StoreTile, TILE_FRAME, TileLink, TileSkeleton, TileSkeletons } from './components'
 import type { AppCard, Home, SearchResult } from './types'
 import { useSeasonLook } from '@/lib/seasonal'
 import { SeasonSection, THEMES } from '@/components/seasonal/Season'
@@ -238,14 +238,14 @@ function BrowseAll({ kind, facets, kindTotal }: { kind: Kind; facets: Facet[]; k
         </div>
       </header>
       {facets.length > 1 && (
-        <div className="mb-6 flex flex-wrap gap-2" role="group" aria-label="Filter by genre">
+        <ChipRail label="Filter by genre" className="mb-6">
           <Chip active={!pick} onClick={() => setPick(null)}>All</Chip>
           {facets.map((f) => (
             <Chip key={`${f.param}-${f.id}`} active={pick?.param === f.param && pick.id === f.id} onClick={() => setPick(f)}>
               {f.name}{f.count !== null && <span className="font-mono text-xs text-shasta-faint tabular-nums">{f.count}</span>}
             </Chip>
           ))}
-        </div>
+        </ChipRail>
       )}
       {list.error && !list.items.length ? (
         <LoadError message={list.error} offline={list.offline} onRetry={list.reload} />
@@ -392,13 +392,13 @@ export default function StoreHome() {
       </div>
 
       {page.facets.length > 0 && (
-        <nav aria-label="Genres" className="-mx-1 mb-10 flex gap-2 overflow-x-auto px-1 py-1 [scrollbar-width:none]">
+        <ChipRail as="nav" label="Genres" className="mb-10">
           {page.facets.map((f) => (
-            <Chip key={`${f.param}-${f.id}`} className="shrink-0" onClick={() => go(`/search?${facetQuery(f)}`)}>
+            <Chip key={`${f.param}-${f.id}`} onClick={() => go(`/search?${facetQuery(f)}`)}>
               {f.name}{f.count !== null && <span className="font-mono text-xs text-shasta-faint tabular-nums">{f.count}</span>}
             </Chip>
           ))}
-        </nav>
+        </ChipRail>
       )}
 
       {season && kind !== 'apps' && <SeasonShelves key={season.event.id} season={season} exclude={page.exclude} />}

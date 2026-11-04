@@ -63,7 +63,8 @@ export function useNow(ms: number | null) {
   return now
 }
 
-const Empty = ({ children }: { children: React.ReactNode }) => <div className="flex h-full min-h-16 items-end text-sm leading-5 text-shasta-muted">{children}</div>
+// bottom of a small card (like a phone widget); top-left, right under the title, in a wide strip (.home-empty CSS)
+const Empty = ({ children }: { children: React.ReactNode }) => <div className="home-empty text-sm leading-5 text-shasta-muted">{children}</div>
 
 // ---- shortcuts --------------------------------------------------------------------------------------------------
 

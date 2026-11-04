@@ -9,6 +9,8 @@ import { MEDIA_CORS } from '@/lib/appApi'
 
 const hue = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7)
 
+const ARROW = 'grid size-9 shrink-0 place-items-center rounded-full bg-black/45 text-white transition-colors duration-150 ease-shasta outline-none hover:bg-black/65 focus-visible:ring-2 focus-visible:ring-white/80'
+
 /** below this width a banner would be stretched across the hero: it is shown as a framed poster instead */
 const SHARP_WIDTH = 1000
 
@@ -87,7 +89,7 @@ export function Hero({ apps }: { apps: AppCard[] }) {
         {/* <img>, not CSS backgrounds: only an image element can load in CORS mode, which the installed app needs */}
         <HeroArt key={app.id} app={app} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" aria-hidden />
-        <span className="relative text-sm text-white/70">Featured</span>
+        <span className="relative text-sm text-white/70">Featured{n > 1 && <span className="sr-only">, {i + 1} of {n}</span>}</span>
         <div className="relative flex flex-wrap items-end gap-4 text-white">
           <AppIcon app={app} size={96} eager className="shadow-xl ring-1 ring-white/15" />
           <div className="min-w-0 flex-1">
@@ -102,14 +104,12 @@ export function Hero({ apps }: { apps: AppCard[] }) {
         </div>
       </div>
       {n > 1 && (
-        <>
-          <button aria-label="Previous featured app" onClick={() => setI((i - 1 + n) % n)} className="absolute top-1/2 left-3 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-black/45 text-white transition-colors duration-150 ease-shasta hover:bg-black/65">
+        // one control cluster in the corner: the arrows used to sit on the slide's left edge, over its "Featured" label
+        <div className="absolute top-4 right-4 flex items-center gap-2 sm:top-5 sm:right-5">
+          <button aria-label="Previous featured app" onClick={() => setI((i - 1 + n) % n)} className={ARROW}>
             <ChevronLeft className="size-5" />
           </button>
-          <button aria-label="Next featured app" onClick={() => setI((i + 1) % n)} className="absolute top-1/2 right-3 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-black/45 text-white transition-colors duration-150 ease-shasta hover:bg-black/65">
-            <ChevronRight className="size-5" />
-          </button>
-          <div className="absolute top-4 right-5 hidden gap-2 sm:flex" role="tablist" aria-label="Choose a featured app">
+          <div className="hidden gap-2 sm:flex" role="tablist" aria-label="Choose a featured app">
             {apps.map((a, k) => (
               <button
                 key={a.id}
@@ -117,16 +117,17 @@ export function Hero({ apps }: { apps: AppCard[] }) {
                 aria-selected={k === i}
                 aria-label={a.name}
                 onClick={() => setI(k)}
-                className={cn('overflow-hidden rounded-[10px] ring-2 transition-[opacity,box-shadow] duration-150 ease-shasta', k === i ? 'opacity-100 ring-white/90' : 'opacity-55 ring-transparent hover:opacity-100')}
+                className={cn('overflow-hidden rounded-[10px] ring-2 transition-[opacity,box-shadow] duration-150 ease-shasta outline-none focus-visible:ring-shasta-accent', k === i ? 'opacity-100 ring-white/90' : 'opacity-55 ring-transparent hover:opacity-100')}
               >
                 <AppIcon app={a} size={36} />
               </button>
             ))}
           </div>
-          <div className="absolute top-4 right-5 flex gap-1.5 sm:hidden" aria-hidden>
-            {apps.map((a, k) => <span key={a.id} className={cn('size-1.5 rounded-full transition-colors duration-150 ease-shasta', k === i ? 'bg-white' : 'bg-white/40')} />)}
-          </div>
-        </>
+          <span className="min-w-9 text-center font-mono text-xs text-white/75 tabular-nums sm:hidden" aria-hidden>{i + 1}/{n}</span>
+          <button aria-label="Next featured app" onClick={() => setI((i + 1) % n)} className={ARROW}>
+            <ChevronRight className="size-5" />
+          </button>
+        </div>
       )}
     </section>
   )

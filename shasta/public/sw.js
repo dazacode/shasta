@@ -63,7 +63,7 @@ const MANIFEST_URL = "/offline-manifest.json";
 // which shell cache is active, so the next version knows which one to keep as "previous"
 const META_CACHE = "shasta-offline-meta";
 const META_URL = "/__shasta/offline-meta";
-const SHELL_PATHS = /^\/(assets|scramjet|controller|ort)\/[^/]+$|^\/[^/]+\.(webmanifest|svg|png|ico)$/;
+const SHELL_PATHS = /^\/(assets|scramjet|controller|rt|ort)\/[^/]+$|^\/[^/]+\.(webmanifest|svg|png|ico)$/;
 
 addEventListener("fetch", (e) => {
 	if ($scramjetController.shouldRoute(e)) {

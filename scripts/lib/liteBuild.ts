@@ -13,6 +13,10 @@ import { adEnv } from "./adCodes";
 
 export const ROOT = resolve(import.meta.dir, "../..");
 export const FULL = "https://shasta-dtg.pages.dev";
+/** The bunny.net relay (scripts/bunny-relay/relay.js, deployed by deploy-bunny.ts): Wisp + /api on bunny.run, a domain
+ *  that is none of the ones above, so every Lite mirror still has a backend when a filter blocks pages.dev,
+ *  edushasta.lol and vercel.app (seen on a school network 2026-11-03). */
+export const BUNNY_RELAY = process.env.BUNNY_RELAY_HOST || "shasta-lite-relay.bunny.run";
 
 /** Builds Lite into `out` (never shasta/dist, so the Cloudflare staged build is untouched); `statsId` = the host's
  *  own Umami website, never the full site's id from .env, so the hosts show up side by side. `base` = the folder the
@@ -27,13 +31,18 @@ export function buildLite(out: string, statsId: string, base = "/", extraEnv: Re
 	const env: Record<string, string | undefined> = {
 		...process.env,
 		VITE_EDITION: "lite",
+		// engine as /rt/* (vite.config.ts ENGINE_PATHS): a filter refused /scramjet/scramjet.js by its URL
+		VITE_NEUTRAL_ENGINE: "1",
 		// Two tunnels on two domains, tried in order (scramjetAdapter selectWisp/rotateWisp): a filter that blocks one
 		// does not stop browsing on a Lite mirror. A static host cannot hold a websocket itself (Vercel rewrites,
 		// Base44, jsDelivr), so a Lite mirror can never have its own /wisp/; these are the full site's.
 		VITE_WISP_URL: "",
 		// + our Vercel relay last (scripts/vercel-wisp: it pays per byte, so only when both above are blocked); a host
 		// that runs no code (jsDelivr) then depends on no single domain
-		VITE_WISP_URLS: [`wss://${new URL(FULL).host}/wisp/`, "wss://edushasta.lol/wisp/", "wss://shasta-lite.vercel.app/wisp/"].join(","),
+		// then the bunny.net relay (another domain again), Vercel's last
+		VITE_WISP_URLS: [`wss://${new URL(FULL).host}/wisp/`, "wss://edushasta.lol/wisp/", `wss://${BUNNY_RELAY}/wisp/`, "wss://shasta-lite.vercel.app/wisp/"].join(","),
+		// the Store/chat/live backend, tried in this order on a network error (lib/appApi.ts nextApiOrigin)
+		VITE_API_ORIGINS: [FULL, "https://edushasta.lol", `https://${BUNNY_RELAY}`].join(","),
 		// every now.gg proxy a Lite mirror may hand its games, tried in this order when its own is missing or blocked
 		// (store/AppLauncher.tsx nowggBase -> lib/nowggProxy.ts pickNowggBase)
 		VITE_NOWGG_BASES: [`${FULL.replace(/\/$/, "")}/nowgg`, "https://edushasta.lol/nowgg", "https://shasta-lite.vercel.app/nowgg", "https://shasta-lte.base44.app/functions/nowgg?p="].join(","),

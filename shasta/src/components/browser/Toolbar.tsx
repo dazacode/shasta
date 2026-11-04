@@ -1,4 +1,4 @@
-import { SlidersHorizontal, Bookmark, Flag, Gamepad2, HeartHandshake, MessagesSquare, RefreshCw, Share, ShieldCheck, Sparkles, VenetianMask, Film, Library, Store, ArrowLeft, Gauge, ArrowRight, Download, Home, Keyboard, MoreVertical, Printer, RotateCw, X } from 'lucide-react'
+import { SlidersHorizontal, Bookmark, BookmarkCheck, CircleQuestionMark, Flag, Gamepad2, HeartHandshake, History, Maximize2, MessagesSquare, PanelTop, Plus, RefreshCw, Settings, Share, ShieldCheck, Sparkles, Undo2, Users, VenetianMask, Film, Library, Store, ArrowLeft, Gauge, ArrowRight, Download, Home, Keyboard, MoreVertical, Printer, RotateCw, X } from 'lucide-react'
 import { openControls } from '@/stores/gameControlsStore'
 import { openSaveShasta, siteAddress } from '@/lib/saveShasta'
 import { shouldSuggestApp } from '@/lib/shastaApp'
@@ -11,6 +11,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useActiveTab, useTabs } from '@/stores/tabsStore'
@@ -55,7 +58,7 @@ export function Toolbar() {
       <IconButton label="Forward" shortcut={keysFor('forward')} onClick={() => forward()} disabled={!canGoForward(tab)}>
         <ArrowRight className="size-[18px]" strokeWidth={1.6} />
       </IconButton>
-      <IconButton label="Share this page" disabled={!shareUrl} onClick={() => shareUrl && void sharePage(shareUrl, tab.app?.name ?? tabTitleOf(tab))}>
+      <IconButton label="Share this page" className="max-sm:hidden" disabled={!shareUrl} onClick={() => shareUrl && void sharePage(shareUrl, tab.app?.name ?? tabTitleOf(tab))}>
         <Share className="size-[18px]" strokeWidth={1.6} />
       </IconButton>
       {tab.loading ? (
@@ -82,13 +85,13 @@ export function Toolbar() {
         </Tooltip>
       )}
 
-      <IconButton label="Shasta Store" onClick={() => openInternal('store')}>
+      <IconButton label="Shasta Store" className="max-md:hidden" onClick={() => openInternal('store')}>
         <Store className="size-[18px]" strokeWidth={1.6} />
       </IconButton>
-      <IconButton label="Library" onClick={() => openInternal('library')}>
+      <IconButton label="Library" className="max-md:hidden" onClick={() => openInternal('library')}>
         <Library className="size-[18px]" strokeWidth={1.6} />
       </IconButton>
-      <IconButton label="Watch" onClick={() => openInternal('watch')}>
+      <IconButton label="Watch" className="max-md:hidden" onClick={() => openInternal('watch')}>
         <Film className="size-[18px]" strokeWidth={1.6} />
       </IconButton>
       {settings.ai.enabled && (
@@ -125,32 +128,25 @@ export function Toolbar() {
               <DropdownMenuSeparator />
             </>
           )}
+          {/* every entry has an icon, so the labels line up in one column; groups go tabs, places, this page, window, Shasta */}
           <DropdownMenuItem onClick={() => newTab(undefined, { atEnd: true })}>
-            New tab <DropdownMenuShortcut>{keysFor('newTab')}</DropdownMenuShortcut>
+            <Plus /> New tab <DropdownMenuShortcut>{keysFor('newTab')}</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => requestPrivateTab()}>
             <VenetianMask /> New private tab <DropdownMenuShortcut>{keysFor('newPrivateTab')}</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => perform({ action: 'reopenTab' })}>
-            Reopen closed tab <DropdownMenuShortcut>{keysFor('reopenTab')}</DropdownMenuShortcut>
+            <Undo2 /> Reopen closed tab <DropdownMenuShortcut>{keysFor('reopenTab')}</DropdownMenuShortcut>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => perform({ action: 'toggleGameMode' })}>
-            <Gamepad2 /> Game mode <DropdownMenuShortcut>{keysFor('toggleGameMode')}</DropdownMenuShortcut>
-          </DropdownMenuItem>
-          {tab && external && tab.app?.kind !== 'package' && (
-            <DropdownMenuItem onClick={() => openControls(tab.id)}>
-              <SlidersHorizontal /> Controls & controller…
-            </DropdownMenuItem>
-          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => openInternal('history')}>
-            History <DropdownMenuShortcut>{keysFor('history')}</DropdownMenuShortcut>
+            <History /> History <DropdownMenuShortcut>{keysFor('history')}</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => openInternal('bookmarks')}>
-            Bookmarks <DropdownMenuShortcut>{keysFor('bookmarks')}</DropdownMenuShortcut>
+            <BookmarkCheck /> Bookmarks <DropdownMenuShortcut>{keysFor('bookmarks')}</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => openInternal('downloads')}>
-            Downloads <DropdownMenuShortcut>{keysFor('downloads')}</DropdownMenuShortcut>
+            <Download /> Downloads <DropdownMenuShortcut>{keysFor('downloads')}</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => openInternal('store')}>
             <Store /> Shasta Store
@@ -161,6 +157,21 @@ export function Toolbar() {
           <DropdownMenuItem onClick={() => openInternal('watch')}>
             <Film /> Watch
           </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem disabled={!shareUrl} onClick={() => shareUrl && void sharePage(shareUrl, tab.app?.name ?? tabTitleOf(tab))}>
+            <Share /> Share this page…
+          </DropdownMenuItem>
+          <DropdownMenuItem disabled={!external} onClick={() => perform({ action: 'print' })}>
+            <Printer /> Print… <DropdownMenuShortcut>{keysFor('print')}</DropdownMenuShortcut>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => perform({ action: 'toggleGameMode' })}>
+            <Gamepad2 /> Game mode <DropdownMenuShortcut>{keysFor('toggleGameMode')}</DropdownMenuShortcut>
+          </DropdownMenuItem>
+          {tab && external && tab.app?.kind !== 'package' && (
+            <DropdownMenuItem onClick={() => openControls(tab.id)}>
+              <SlidersHorizontal /> Controls & controller…
+            </DropdownMenuItem>
+          )}
           {tab?.app && (
             <DropdownMenuItem onClick={() => openReport({ appId: tab.app!.id, name: tab.app!.name, isGame: tab.app!.scheme === 'game', kind: tab.app!.kind, error: tab.error?.message ?? null, tabId: tab.id })}>
               <Flag /> Report a problem with {tab.app.name.length > 22 ? `${tab.app.name.slice(0, 21)}…` : tab.app.name}
@@ -168,10 +179,10 @@ export function Toolbar() {
           )}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => update({ showBookmarksBar: !settings.showBookmarksBar })}>
-            {settings.showBookmarksBar ? 'Hide' : 'Show'} bookmarks bar <DropdownMenuShortcut>{keysFor('toggleBookmarksBar')}</DropdownMenuShortcut>
+            <PanelTop /> {settings.showBookmarksBar ? 'Hide' : 'Show'} bookmarks bar <DropdownMenuShortcut>{keysFor('toggleBookmarksBar')}</DropdownMenuShortcut>
           </DropdownMenuItem>
-          <DropdownMenuItem disabled={!external} onClick={() => perform({ action: 'print' })}>
-            <Printer /> Print… <DropdownMenuShortcut>{keysFor('print')}</DropdownMenuShortcut>
+          <DropdownMenuItem onClick={() => perform({ action: 'fullscreen' })}>
+            <Maximize2 /> Full screen <DropdownMenuShortcut>{keysFor('fullscreen')}</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => {
@@ -181,41 +192,45 @@ export function Toolbar() {
           >
             <Gauge /> Free up memory
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => perform({ action: 'fullscreen' })}>
-            Full screen <DropdownMenuShortcut>{keysFor('fullscreen')}</DropdownMenuShortcut>
-          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => openInternal('settings')}>
-            Settings <DropdownMenuShortcut>{isMac ? '⌘,' : 'Ctrl+,'}</DropdownMenuShortcut>
+            <Settings /> Settings <DropdownMenuShortcut>{isMac ? '⌘,' : 'Ctrl+,'}</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => openInternal('chat')}>
             <MessagesSquare /> Community chat
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => openInternal('discord')}>
-            <MessagesSquare /> Join our Discord
+            <Users /> Join our Discord
           </DropdownMenuItem>
           {siteAddress() && (
             <DropdownMenuItem onClick={() => openSaveShasta()}>
               <Bookmark /> Save Shasta (bookmark, phone)
             </DropdownMenuItem>
           )}
-          <DropdownMenuItem onClick={() => openInternal('whats-new')}>
-            <Sparkles /> What's new
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => openInternal('support')}>
-            <HeartHandshake /> Support Shasta
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => openInternal('privacy')}>
-            <ShieldCheck /> Privacy policy
-          </DropdownMenuItem>
           {shouldSuggestApp() && (
             <DropdownMenuItem onClick={() => openInternal('get-app')}>
               <Download /> Get the Shasta app
             </DropdownMenuItem>
           )}
-          <DropdownMenuItem onClick={() => useUi.getState().setShortcutsOpen(true)}>
-            <Keyboard /> Keyboard shortcuts
+          <DropdownMenuItem onClick={() => openInternal('support')}>
+            <HeartHandshake /> Support Shasta
           </DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <CircleQuestionMark /> Help and about
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-56">
+              <DropdownMenuItem onClick={() => useUi.getState().setShortcutsOpen(true)}>
+                <Keyboard /> Keyboard shortcuts
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => openInternal('whats-new')}>
+                <Sparkles /> What's new
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => openInternal('privacy')}>
+                <ShieldCheck /> Privacy policy
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
         </DropdownMenuContent>
       </DropdownMenu>
 

@@ -24,11 +24,56 @@ const PAPER: Record<string, string> = { yellow: 'bg-[#f3e7c4]', pink: 'bg-[#f2d3
 
 // ---- add a widget / start from a template ---------------------------------------------------------------------
 
-export function AddWidgetDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+const SIZE_NAME: Record<string, string> = { s: 'Small', m: 'Medium', l: 'Wide' }
+
+export function AddWidgetDialog({ open, onClose, initialTab = 'widgets' }: { open: boolean; onClose: () => void; initialTab?: 'widgets' | 'templates' }) {
   const widgets = useHome((s) => s.widgets) ?? NO_WIDGETS
   const add = useHome((s) => s.add)
-  const [tab, setTab] = useState<'widgets' | 'templates'>('widgets')
+  const [tab, setTab] = useState<'widgets' | 'templates'>(initialTab)
+  // each time the dialog opens it starts on the tab it was opened for
+  useEffect(() => {
+    if (open) setTab(initialTab)
+  }, [open, initialTab])
   const full = widgets.length >= MAX_WIDGETS
+  // what can still be added first; the one-per-page widgets already on the page are listed apart, below
+  const available = WIDGET_TYPES.filter((t) => canAdd(widgets, t) || full)
+  const placed = full ? [] : WIDGET_TYPES.filter((t) => !canAdd(widgets, t))
+  const item = (type: WidgetType) => {
+    const Icon = WIDGET_ICON[type]
+    const ok = canAdd(widgets, type)
+    const info = WIDGETS[type]
+    return (
+      <li key={type}>
+        <button
+          disabled={!ok}
+          onClick={() => {
+            const id = add(type)
+            if (!id) return
+            onClose()
+            useUi.getState().toast(`${info.name} added at the bottom`)
+            requestAnimationFrame(() => document.querySelector(`[data-widget="${id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
+          }}
+          className="group/add flex h-full w-full items-start gap-3 rounded-xl p-3 text-left ring-1 ring-shasta-line transition-colors duration-150 ease-shasta hover:bg-shasta-hover focus-visible:ring-2 focus-visible:ring-shasta-accent disabled:cursor-default disabled:opacity-60 disabled:hover:bg-transparent"
+        >
+          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-shasta-field">
+            <Icon className="size-4.5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm leading-5 font-medium">{info.name}</span>
+            <span className="mt-0.5 block text-xs leading-4 text-shasta-muted">{info.blurb}</span>
+            {ok && <span className="mt-2 flex gap-1" aria-label={`Sizes: ${info.sizes.map((z) => SIZE_NAME[z]).join(', ')}`}>
+              {info.sizes.map((z) => (
+                <span key={z} className="home-size-chip" title={SIZE_NAME[z]}>
+                  <SizeGlyph size={z} />
+                </span>
+              ))}
+            </span>}
+          </span>
+          {ok && <Plus className="mt-2 size-4 shrink-0 text-shasta-muted opacity-0 transition-opacity duration-150 ease-shasta group-hover/add:opacity-100 group-focus-visible/add:opacity-100" aria-hidden />}
+        </button>
+      </li>
+    )
+  }
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
@@ -38,44 +83,31 @@ export function AddWidgetDialog({ open, onClose }: { open: boolean; onClose: () 
         </DialogHeader>
         <Segmented<'widgets' | 'templates'> label="Add" value={tab} onChange={setTab} options={[{ value: 'widgets', label: 'Widgets' }, { value: 'templates', label: 'Ready-made pages' }]} />
         {tab === 'widgets' ? (
-          <ul className="grid gap-2 sm:grid-cols-2">
-            {WIDGET_TYPES.map((type) => {
-              const Icon = WIDGET_ICON[type]
-              const ok = canAdd(widgets, type)
-              const info = WIDGETS[type]
-              return (
-                <li key={type}>
-                  <button
-                    disabled={!ok}
-                    onClick={() => {
-                      const id = add(type)
-                      if (!id) return
-                      onClose()
-                      useUi.getState().toast(`${info.name} added at the bottom`)
-                      requestAnimationFrame(() => document.querySelector(`[data-widget="${id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
-                    }}
-                    className="flex h-full w-full items-start gap-3 rounded-xl p-3 text-left ring-1 ring-shasta-line transition-colors duration-150 ease-shasta hover:bg-shasta-hover disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
-                  >
-                    <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-shasta-field">
-                      <Icon className="size-4.5" />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="flex items-center gap-2 text-sm font-medium">
-                        {info.name}
-                        {!ok && !full && <span className="text-xs font-normal text-shasta-muted">On your page</span>}
-                      </span>
-                      <span className="mt-0.5 block text-xs text-shasta-muted">{info.blurb}</span>
-                    </span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
+          <div className="grid gap-5">
+            <ul className="grid gap-2 sm:grid-cols-2">{available.map(item)}</ul>
+            {placed.length > 0 && (
+              <section aria-labelledby="home-placed" className="grid gap-2">
+                <h3 id="home-placed" className="text-xs leading-4 text-shasta-muted">Already on your page (one of each)</h3>
+                <ul className="grid gap-2 sm:grid-cols-2">{placed.map(item)}</ul>
+              </section>
+            )}
+          </div>
         ) : (
           <TemplateList onDone={onClose} />
         )}
       </DialogContent>
     </Dialog>
+  )
+}
+
+/** A widget size drawn as its shape on the 4-column grid: a square, a two-column block, a full-width strip. */
+export function SizeGlyph({ size }: { size: string }) {
+  const w = size === 's' ? 6 : size === 'm' ? 12 : 18
+  const h = size === 'l' ? 4 : 6
+  return (
+    <svg width="18" height="8" viewBox="0 0 18 8" aria-hidden>
+      <rect x={(18 - w) / 2 + 0.5} y={(8 - h) / 2 + 0.5} width={w - 1} height={h - 1} rx="1.25" fill="none" stroke="currentColor" strokeWidth="1" />
+    </svg>
   )
 }
 
@@ -112,12 +144,22 @@ export function TemplateList({ onDone, compact = false }: { onDone?: () => void;
 function TemplatePreview({ widgets }: { widgets: { type: WidgetType; size: string }[] }) {
   return (
     <span className="grid h-24 grid-cols-4 content-start gap-1 overflow-hidden rounded-lg bg-shasta-field p-2" aria-hidden>
-      {widgets.map((w, i) => (
-        <span
-          key={i}
-          className={cn('rounded-[3px] bg-shasta-fg/12', w.size === 's' ? 'col-span-1 h-6' : w.size === 'm' ? 'col-span-2 h-6' : 'col-span-4 h-3', w.type === 'notes' && 'bg-[#f3e7c4]/80')}
-        />
-      ))}
+      {widgets.map((w, i) => {
+        // the widget's own icon in its block, so a layout reads as "timer, to-do, note" and not as grey bars
+        const Icon = WIDGET_ICON[w.type]
+        return (
+          <span
+            key={i}
+            className={cn(
+              'flex items-center gap-1 overflow-hidden rounded-[3px] bg-shasta-fg/12 px-1 text-shasta-fg/55',
+              w.size === 's' ? 'col-span-1 h-6 justify-center' : w.size === 'm' ? 'col-span-2 h-6' : 'col-span-4 h-4',
+              w.type === 'notes' && 'bg-[#f3e7c4]/80 text-[#3a3226]/70',
+            )}
+          >
+            <Icon className={cn('shrink-0', w.size === 'l' ? 'size-2.5' : 'size-3')} />
+          </span>
+        )
+      })}
     </span>
   )
 }

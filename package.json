@@ -14,6 +14,7 @@
 		"deploy:base44": "bun scripts/deploy-base44.ts",
 		"deploy:vercel-lite": "bun scripts/deploy-vercel-lite.ts",
 		"deploy:jsdelivr": "bun scripts/deploy-jsdelivr.ts",
+		"deploy:bunny": "bun scripts/deploy-bunny.ts",
 		"stats": "bun scripts/stats.ts",
 		"check": "bun scripts/check.ts",
 		"engine": "bun scripts/engine.ts",

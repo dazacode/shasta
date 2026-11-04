@@ -7,7 +7,7 @@ import { facetsOf, type Facet, type Kind } from './facets'
 import type { AppCard, CategoryRef, GenreCount, SearchIntent, SearchMeta } from './types'
 import { appsQuery, useApi, usePagedApps } from './hooks'
 import { useStoreNav } from './nav'
-import { AppAction, AppCover, AppGrid, AppIcon, Chip, LoadError, LoadMore, Message, TILE_FRAME, TileLink, TileSkeletons } from './components'
+import { AppAction, AppCover, AppGrid, AppIcon, Chip, ChipRail, LoadError, LoadMore, Message, TILE_FRAME, TileLink, TileSkeletons } from './components'
 
 const SORTS = [
   ['relevance', 'Best match'],
@@ -96,7 +96,7 @@ export default function StoreSearch() {
 
   return (
     <div className="pt-2">
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+      <div className="mb-5">
         <div className="min-w-0">
           <h1 className="sh-title break-words">{heading}</h1>
           <p className="mt-1 min-h-5 text-sm text-shasta-muted tabular-nums" aria-live="polite">
@@ -104,17 +104,12 @@ export default function StoreSearch() {
             {q && intent?.browse && <span className="text-shasta-faint"> for “{q}”</span>}
           </p>
         </div>
-        <label className="flex items-center gap-2 text-sm text-shasta-muted">
-          Sort by
-          <select value={sort} onChange={(e) => to({ sort: e.target.value })} className="h-9 rounded-lg bg-shasta-field px-3 text-sm text-shasta-fg ring-1 ring-shasta-line outline-none focus-visible:ring-2 focus-visible:ring-shasta-accent">
-            {SORTS.filter(([v]) => v !== 'relevance' || q).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-          </select>
-        </label>
       </div>
 
       {q && <Understood q={q} meta={meta} exact={exact} devName={devName} onSearch={search} onGenre={(id) => go(`/search?genre=${encodeURIComponent(id)}${intent?.group ? `&group=${intent.group}` : ''}`)} />}
 
-      {!(q && list.total === 0) && <div className="mb-4 flex flex-wrap gap-2">
+      {/* every "how to show the results" control on one toolbar row: what, which type, then the order on the far side */}
+      {!(q && list.total === 0) && <div className="mb-4 flex flex-wrap items-center gap-2">
         <Segmented
           label="Show games, apps or both"
           value={shownGroup}
@@ -131,17 +126,23 @@ export default function StoreSearch() {
           options={KINDS.map(([v, l, hint]) => [v, l, refine ? (v === 'linked' ? refine.kinds.linked : v === 'package' ? refine.kinds.package : refine.kinds.linked + refine.kinds.package) : null, hint] as const)}
           onChange={(v) => to({ kind: v || (q && intent?.kind ? 'any' : '') })}
         />
+        <label className="ml-auto flex items-center gap-2 text-sm text-shasta-muted">
+          Sort by
+          <select value={sort} onChange={(e) => to({ sort: e.target.value })} className="h-9 rounded-lg bg-shasta-field px-3 text-sm text-shasta-fg ring-1 ring-shasta-line outline-none focus-visible:ring-2 focus-visible:ring-shasta-accent">
+            {SORTS.filter(([v]) => v !== 'relevance' || q).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </label>
       </div>}
 
       {genreChips.length > 0 && (
-        <div className="mb-6 flex flex-wrap gap-2" role="group" aria-label={q ? 'Narrow down by genre' : 'Filter by genre'}>
+        <ChipRail label={q ? 'Narrow down by genre' : 'Filter by genre'} className="mb-6">
           <Chip active={!category && !genre} onClick={() => to({ category: '', genre: '' })}>All</Chip>
           {genreChips.map((f) => (
             <Chip key={`${f.param}-${f.id}`} active={active(f)} onClick={() => to({ category: f.param === 'category' ? f.id : '', genre: active(f) ? '' : f.param === 'genre' ? f.id : '' })}>
               {f.name}{f.count !== null && <span className="font-mono text-xs text-shasta-faint tabular-nums">{f.count.toLocaleString()}</span>}
             </Chip>
           ))}
-        </div>
+        </ChipRail>
       )}
 
       {q && !intent?.developer && !!meta?.developers.length && (

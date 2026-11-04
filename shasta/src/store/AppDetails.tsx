@@ -29,11 +29,20 @@ function Screenshots({ shots, name }: { shots: string[]; name: string }) {
         ))}
       </Shelf>
       <Dialog open={open !== null} onOpenChange={(o) => !o && setOpen(null)}>
-        <DialogContent className="max-h-[92vh] sm:max-w-4xl" aria-label={`${name} screenshot`}>
+        <DialogContent
+          className="max-h-[92vh] sm:max-w-4xl"
+          aria-label={`${name} screenshot`}
+          onKeyDown={(e) => {
+            // arrow keys page through, like any image viewer
+            if (e.key === 'ArrowRight') (e.preventDefault(), setOpen((o) => (o === null ? o : Math.min(o + 1, shots.length - 1))))
+            else if (e.key === 'ArrowLeft') (e.preventDefault(), setOpen((o) => (o === null ? o : Math.max(o - 1, 0))))
+          }}
+        >
           <DialogTitle className="sr-only">{name} screenshot {open !== null ? open + 1 : ''}</DialogTitle>
           {open !== null && <img crossOrigin={MEDIA_CORS} src={shots[open]} alt={`${name} screenshot ${open + 1}`} className="max-h-[78vh] w-full rounded-lg object-contain" />}
-          <div className="flex justify-between">
+          <div className="flex items-center justify-between">
             <Button variant="ghost" disabled={open === 0} onClick={() => setOpen((o) => (o ?? 1) - 1)}>Previous</Button>
+            <span className="font-mono text-xs text-shasta-faint tabular-nums" aria-live="polite">{open !== null ? `${open + 1} of ${shots.length}` : ''}</span>
             <Button variant="ghost" disabled={open === shots.length - 1} onClick={() => setOpen((o) => (o ?? 0) + 1)}>Next</Button>
           </div>
         </DialogContent>
@@ -48,6 +57,46 @@ const Row = ({ k, v }: { k: string; v: React.ReactNode }) => (
     <dd className="text-right">{v}</dd>
   </div>
 )
+
+/** One column of the facts strip under the header: a small label, the value, an optional line under it. */
+function Fact({ label, value, sub, onClick }: { label: string; value: React.ReactNode; sub?: string; onClick?: () => void }) {
+  const body = (
+    <>
+      <span className="block self-stretch truncate text-xs text-shasta-faint">{label}</span>
+      <span className="mt-1 block self-stretch truncate text-sm font-medium">{value}</span>
+      {sub && <span className="block self-stretch truncate text-xs text-shasta-muted" title={sub}>{sub}</span>}
+    </>
+  )
+  const cls = 'flex w-full min-w-0 flex-col items-start justify-start px-4 py-3 text-left'
+  return (
+    <li className="flex min-w-36 flex-1 border-l border-shasta-line first:border-l-0 [&:first-child>*]:pl-0">
+      {onClick ? (
+        <button type="button" onClick={onClick} className={cn(cls, 'rounded-lg transition-colors duration-150 ease-shasta outline-none hover:text-shasta-fg focus-visible:ring-2 focus-visible:ring-shasta-accent [&:hover>span:nth-child(2)]:underline')}>{body}</button>
+      ) : (
+        <div className={cls}>{body}</div>
+      )}
+    </li>
+  )
+}
+
+/** Listing placeholder in the page's own shape (icon, title lines, actions), so the layout does not jump when it loads. */
+function DetailsSkeleton() {
+  return (
+    <div className="mx-auto max-w-4xl" aria-busy="true" aria-label="Loading">
+      <div className="flex gap-6">
+        <div className="size-28 shrink-0 animate-pulse rounded-[25px] bg-shasta-field" />
+        <div className="flex-1 space-y-3 pt-1">
+          <div className="h-8 w-1/2 animate-pulse rounded-lg bg-shasta-field" />
+          <div className="h-4 w-1/4 animate-pulse rounded bg-shasta-field" />
+          <div className="h-4 w-2/3 animate-pulse rounded bg-shasta-field" />
+          <div className="h-10 w-32 animate-pulse rounded-lg bg-shasta-field pt-2" />
+        </div>
+      </div>
+      <div className="mt-8 h-16 animate-pulse rounded-xl bg-shasta-home" />
+      <div className="mt-8 h-56 animate-pulse rounded-xl bg-shasta-home" />
+    </div>
+  )
+}
 
 export default function AppDetails({ slug }: { slug: string }) {
   const { go, tabId } = useStoreNav()
@@ -87,13 +136,15 @@ export default function AppDetails({ slug }: { slug: string }) {
       </div>
     )
   }
-  if (!app) return <div className="pt-2">{back}<div className="h-64 animate-pulse rounded-2xl bg-shasta-home" /></div>
+  if (!app) return <div className="pt-2">{back}<DetailsSkeleton /></div>
 
   // a version only means something once the app has been updated (never for web apps)
   const credits = app.credits ?? []
   const latest = app.hasVersionHistory ? app.versions?.[0] : undefined
   const older = app.hasVersionHistory ? (app.versions ?? []).slice(1) : []
   const linkedHost = app.linkedUrl ? new URL(app.linkedUrl).hostname : null
+  const report = () => openReport({ appId: app.id, name: app.name, official: !!app.storefront?.official, isGame: !!app.category?.isGame, kind: app.kind, appVersion: app.version })
+  const genres = app.genres ?? []
 
   return (
     <article className="mx-auto max-w-4xl pt-2" aria-busy={loading}>
@@ -129,7 +180,6 @@ export default function AppDetails({ slug }: { slug: string }) {
                 <Share2 /> Share
               </Button>
             )}
-            <Button variant="ghost" onClick={() => openReport({ appId: app.id, name: app.name, official: !!app.storefront?.official, isGame: !!app.category?.isGame, kind: app.kind, appVersion: app.version })}><Flag /> Report a problem</Button>
           </div>
           {mine?.updateAvailable && (
             <div className="mt-4 rounded-xl bg-shasta-home px-4 py-3 text-sm ring-1 ring-shasta-line">
@@ -147,9 +197,32 @@ export default function AppDetails({ slug }: { slug: string }) {
               {mine.canStay && <p className="mt-2 text-xs text-shasta-muted">Saved progress is kept separately for each version.</p>}
             </div>
           )}
-          <p className="mt-4 text-xs text-shasta-faint">No account needed. Your library is kept on this device.</p>
+          <p className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-shasta-faint">
+            <span>No account needed. Your library is kept on this device.</span>
+            {/* not one of the page's actions: a quiet link, so Install stays the one thing that stands out */}
+            <button type="button" onClick={report} className="inline-flex items-center gap-1 text-shasta-muted underline-offset-4 hover:text-shasta-fg hover:underline">
+              <Flag className="size-3.5" aria-hidden /> Report a problem
+            </button>
+          </p>
         </div>
       </header>
+
+      {/* the facts at a glance, like a store's info strip: only what the Store really knows (no ratings exist) */}
+      <ul className="mt-8 flex overflow-x-auto border-y border-shasta-line [scrollbar-width:none]" aria-label="At a glance">
+        {genres.length > 0 ? (
+          <Fact label={genres.length > 1 ? 'Genres' : 'Genre'} value={genres[0].name} sub={genres.length > 1 ? genres.slice(1, 3).map((g) => g.name).join(', ') : undefined} onClick={() => go(`/search?genre=${encodeURIComponent(genres[0].id)}`)} />
+        ) : app.category ? (
+          <Fact label="Category" value={app.category.name} onClick={() => go(`/search?category=${app.category!.id}`)} />
+        ) : null}
+        {app.developer && <Fact label="Made by" value={app.developer} onClick={() => go(`/search?q=${encodeURIComponent(`by ${app.developer}`)}`)} />}
+        {app.kind === 'package' ? (
+          <Fact label="Type" value="Download" sub="Runs from the Store, works offline" />
+        ) : (
+          <Fact label="Type" value="Web link" sub={linkedHost ? `Opens ${linkedHost}` : 'Opens its own site'} />
+        )}
+        {app.kind === 'package' && app.sizeBytes > 0 && <Fact label="Size" value={formatBytes(app.sizeBytes)} sub={`${app.fileCount} files`} />}
+        {app.hasVersionHistory && app.updatedAt ? <Fact label="Updated" value={formatDate(app.updatedAt)} sub={app.version ? `Version ${app.version}` : undefined} /> : app.releasedAt ? <Fact label="Added" value={formatDate(app.releasedAt)} /> : null}
+      </ul>
 
       {app.kind === 'linked' && (
         <p className="mt-6 flex items-start gap-2 rounded-xl bg-shasta-field px-4 py-3 text-sm">

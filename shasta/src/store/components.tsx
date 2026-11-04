@@ -90,14 +90,26 @@ const prefetchListing = (app: AppCardType) => {
   if (app.status === 'published') prefetchApi(`/api/catalog/apps/${encodeURIComponent(app.slug)}`)
 }
 
-/** The app's wide artwork, or a gradient in its own colour. Space is reserved (16:9) so nothing jumps when it loads. */
-export function AppCover({ app, className, eager }: { app: Pick<AppCardType, 'name' | 'bannerUrl'>; className?: string; eager?: boolean }) {
+/**
+ * The app's wide artwork. Without any (most packages and many imports), its icon sits in the middle of a gradient in its
+ * own colour, over a soft blur of itself, so a row of artless tiles still reads as different apps instead of empty boxes.
+ * Space is reserved (16:9) so nothing jumps when it loads.
+ */
+export function AppCover({ app, className, eager }: { app: Pick<AppCardType, 'name' | 'bannerUrl' | 'iconUrl'>; className?: string; eager?: boolean }) {
   const [failed, setFailed] = useState(false)
   const h = hue(app.name)
+  const art = app.bannerUrl && !failed
   return (
     <div className={cn('relative aspect-video overflow-hidden', className)} style={{ background: `linear-gradient(135deg, oklch(0.36 0.06 ${h}), oklch(0.25 0.04 ${h}))` }} aria-hidden>
-      {app.bannerUrl && !failed && (
-        <img crossOrigin={MEDIA_CORS} src={app.bannerUrl} alt="" loading={eager ? 'eager' : 'lazy'} decoding="async" draggable={false} onError={() => setFailed(true)} className="absolute inset-0 size-full object-cover" />
+      {art ? (
+        <img crossOrigin={MEDIA_CORS} src={app.bannerUrl!} alt="" loading={eager ? 'eager' : 'lazy'} decoding="async" draggable={false} onError={() => setFailed(true)} className="absolute inset-0 size-full object-cover" />
+      ) : (
+        <>
+          {app.iconUrl && <img crossOrigin={MEDIA_CORS} src={app.iconUrl} alt="" loading={eager ? 'eager' : 'lazy'} decoding="async" draggable={false} className="absolute inset-0 size-full scale-125 object-cover opacity-35 blur-2xl" />}
+          <div className="absolute inset-0 grid place-items-center">
+            <AppIcon app={app} size={72} eager={eager} className="shadow-lg ring-1 ring-white/10 transition-transform duration-200 ease-shasta group-hover:scale-[1.04]" />
+          </div>
+        </>
       )}
     </div>
   )
@@ -386,6 +398,41 @@ export function Chip({ active, children, ...props }: React.ComponentProps<'butto
     >
       {children}
     </button>
+  )
+}
+
+/**
+ * One row of chips that scrolls sideways instead of wrapping into a wall of filters. The far edge fades while there is
+ * more to see, and the chosen chip is scrolled into view, so a filter picked further along is never hidden.
+ */
+export function ChipRail({ label, children, className, as: Tag = 'div' }: { label: string; children: ReactNode; className?: string; as?: 'div' | 'nav' }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [more, setMore] = useState({ start: false, end: false })
+  const measure = () => {
+    const el = ref.current
+    if (el) setMore({ start: el.scrollLeft > 4, end: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 })
+  }
+  useEffect(() => {
+    measure()
+    const el = ref.current
+    el?.querySelector<HTMLElement>('[aria-pressed=true]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [children])
+  const fade = more.start && more.end ? 'linear-gradient(to right, transparent, black 2.5rem, black calc(100% - 2.5rem), transparent)' : more.end ? 'linear-gradient(to right, black calc(100% - 2.5rem), transparent)' : more.start ? 'linear-gradient(to right, transparent, black 2.5rem)' : undefined
+  return (
+    <Tag
+      ref={ref}
+      role={Tag === 'div' ? 'group' : undefined}
+      aria-label={label}
+      onScroll={measure}
+      style={fade ? { maskImage: fade, WebkitMaskImage: fade } : undefined}
+      className={cn('-mx-1 flex gap-2 overflow-x-auto px-1 py-1 [scrollbar-width:none] [&>*]:shrink-0', className)}
+    >
+      {children}
+    </Tag>
   )
 }
 

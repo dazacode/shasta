@@ -3,12 +3,12 @@
 // both. Every section is a hero + rows from the server registry (/api/watch/home); a title opens on its own page and
 // the Player / Reader only take over once Play / Read is pressed. My List and progress stay on this device.
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ArrowLeft, BookOpen, Bookmark, Clock, Film, Library, Loader2, Play, Plus, Star, Trash2, Tv as TvIcon, X } from 'lucide-react'
+import { ArrowLeft, BookOpen, Bookmark, Check, ChevronDown, Clock, Film, Library, Loader2, Play, Plus, Star, Trash2, Tv as TvIcon, X } from 'lucide-react'
 import { MEDIA_CORS } from '@/lib/appApi'
 import * as proxy from '@/proxy/scramjetAdapter'
 import { artUrl, watchApi, WatchError } from '@/watch/api'
 import { CardGrid, featuredFromRow, Hero, KIND_LABEL, MediaCard, RowHeading, RowSection, Scroller, SkeletonCard, typeIcon, useFirstFilledRow, useRow } from '@/watch/components'
-import { Player } from '@/watch/Player'
+import { Player, useFitHeight } from '@/watch/Player'
 import { SearchBox, SearchResults } from '@/watch/Search'
 import { Reader } from '@/watch/Reader'
 import { useWatch } from '@/watch/store'
@@ -54,6 +54,13 @@ function kindFacts(t: Title): string[] {
   }
   if (isReadKind(t.kind)) return [t.format || KIND_LABEL[t.kind]]
   return [KIND_LABEL[t.kind]]
+}
+/** "1999-10-20" -> "20 Oct 1999" in the person's own locale; anything unparseable is shown as it came. */
+function airDateText(d: string | null): string {
+  if (!d) return ''
+  const t = Date.parse(d)
+  // a bare date parses as UTC midnight: format it in UTC too, or it shows the day before west of Greenwich
+  return Number.isFinite(t) ? new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : d
 }
 const statusText = (s?: string) => (s ? s.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase()) : '')
 
@@ -607,7 +614,7 @@ function ListView({ onOpen, onResume }: { onOpen: (c: Card, play?: boolean) => v
 
 function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
   return (
-    <button onClick={onClick} aria-pressed={on} className={cn('flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-[13px] transition-[color,background-color,box-shadow] duration-150 ease-shasta', on ? 'sh-selected' : 'bg-shasta-field text-shasta-muted hover:text-shasta-fg')}>
+    <button onClick={onClick} aria-pressed={on} className={cn('flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[13px] transition-[color,background-color,box-shadow] duration-150 ease-shasta', on ? 'sh-selected' : 'bg-shasta-field text-shasta-muted hover:text-shasta-fg')}>
       {children}
     </button>
   )
@@ -863,7 +870,7 @@ function VideoDetail({ detail, onBack, onOpen, onTop }: { detail: Detail; onBack
                   candidate={candidate}
                   candidates={sources}
                   title={title.title}
-                  sub={isSeries ? `S${season}E${episode}` : undefined}
+                  sub={isSeries ? [`S${season} · E${episode}`, title.episodes?.find((e) => e.number === episode)?.title].filter(Boolean).join(' · ') : undefined}
                   poster={title.backdrop ?? title.poster ?? null}
                   startAt={startAt}
                   nextLabel={hasNext ? 'Next episode' : undefined}
@@ -881,10 +888,19 @@ function VideoDetail({ detail, onBack, onOpen, onTop }: { detail: Detail; onBack
                 )}
               </>
             ) : (
-              <div className="grid aspect-video w-full place-items-center rounded-xl bg-black text-sm text-white/70">
-                {loading ? <span className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" /> Finding a source…</span>
-                  : <span className="px-6 text-center">No playable source answered right now.{title.trailer && <> <button className="underline underline-offset-2" onClick={() => setShowTrailer(true)}>Watch the trailer</button></>}</span>}
-              </div>
+              <SourceWait>
+                {/* the title's own art, dimmed, so the wait reads as this title loading rather than a dead black box */}
+                {(title.backdrop || title.poster) && (
+                  <img src={artUrl(title.backdrop || title.poster)} crossOrigin={MEDIA_CORS} alt="" aria-hidden className={cn('absolute inset-0 size-full object-cover', title.backdrop ? 'opacity-30' : 'scale-110 opacity-25 blur-2xl')} />
+                )}
+                <div className="relative px-6 text-center">
+                  <p className="text-base font-medium text-white">{title.title}</p>
+                  {isSeries && <p className="mt-0.5 text-[13px] text-white/60">S{season} · E{episode}{title.episodes?.find((e) => e.number === episode)?.title ? ` · ${title.episodes.find((e) => e.number === episode)!.title}` : ''}</p>}
+                  {loading ? <p className="mt-4 flex items-center justify-center gap-2"><Loader2 className="size-4 animate-spin" /> Finding a source…</p>
+                    : <p className="mt-4">No playable source answered right now.{title.trailer && <> <button className="underline underline-offset-2" onClick={() => setShowTrailer(true)}>Watch the trailer</button></>}</p>}
+                  {!loading && <button onClick={() => setPlaying(false)} className="mt-3 rounded-lg bg-white/15 px-3 py-1.5 text-[13px] text-white hover:bg-white/25">Back to the title</button>}
+                </div>
+              </SourceWait>
             )
           )}
 
@@ -930,6 +946,17 @@ function VideoDetail({ detail, onBack, onOpen, onTop }: { detail: Detail; onBack
   )
 }
 
+/** The player-sized box shown while a source is found (or when none answers), capped like the Player itself. */
+function SourceWait({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const max = useFitHeight(ref)
+  return (
+    <div ref={ref} style={{ maxHeight: max }} className="relative grid aspect-video w-full place-items-center overflow-hidden rounded-xl bg-black text-sm text-white/75">
+      {children}
+    </div>
+  )
+}
+
 function EpisodePanel({ title, season, episode, onSeason, onPlay }: { title: Title; season: number; episode: number; onSeason: (s: number) => void; onPlay: (e: number) => void }) {
   const progressFor = useWatch((s) => s.progressFor)
   const episodes = title.episodes ?? []
@@ -937,17 +964,38 @@ function EpisodePanel({ title, season, episode, onSeason, onPlay }: { title: Tit
   return (
     <div className="mt-6">
       {title.seasons && title.seasons.length > 1 && (
-        <div className="mb-4 flex gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {title.seasons.map((s) => (
-            <Chip key={s.number} on={s.number === season} onClick={() => onSeason(s.number)}>{s.name}</Chip>
-          ))}
-        </div>
+        // a handful of seasons fit as chips; a long run (One Piece has 30+ arcs) gets one picker, like a TV app
+        title.seasons.length <= 6 ? (
+          <div className="mb-4 flex gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {title.seasons.map((s) => (
+              <Chip key={s.number} on={s.number === season} onClick={() => onSeason(s.number)}>{s.name}</Chip>
+            ))}
+          </div>
+        ) : (
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <label className="relative flex max-w-full items-center">
+              <span className="sr-only">Season</span>
+              <select
+                value={season}
+                onChange={(e) => onSeason(Number(e.target.value))}
+                className="h-9 w-72 max-w-full appearance-none truncate rounded-[10px] bg-shasta-field pl-3 pr-9 text-sm font-medium text-shasta-fg ring-1 ring-shasta-line outline-none hover:bg-shasta-raised focus-visible:ring-2 focus-visible:ring-shasta-accent"
+              >
+                {title.seasons.map((s) => (
+                  <option key={s.number} value={s.number}>{s.name}{s.episodes ? ` (${s.episodes})` : ''}</option>
+                ))}
+              </select>
+              <ChevronDown aria-hidden className="pointer-events-none absolute right-3 size-4 text-shasta-muted" />
+            </label>
+            <span className="sh-meta text-shasta-faint">{title.seasons.findIndex((s) => s.number === season) + 1} of {title.seasons.length}</span>
+          </div>
+        )
       )}
       <RangePicker ranges={ranges} idx={idx} onPick={setIdx} />
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
         {(ranges[idx]?.items ?? []).map((e) => {
           const p = progressFor(title.kind, title.id, e.number)
           const current = e.number === episode
+          const watched = !!p && !!p.duration && p.position / p.duration >= 0.9
           return (
             <button
               key={e.number}
@@ -965,7 +1013,12 @@ function EpisodePanel({ title, season, episode, onSeason, onPlay }: { title: Tit
                   <span className="truncate font-medium">{e.title || `Episode ${e.number}`}</span>
                 </span>
                 {e.overview && <span className="mt-1 line-clamp-2 block text-xs leading-5 text-shasta-muted">{e.overview}</span>}
-                {e.airDate && <span className="mt-1 block text-[11px] text-shasta-faint">{e.airDate}</span>}
+                {(e.airDate || watched) && (
+                  <span className="mt-1 flex items-center gap-2 text-[11px] text-shasta-faint">
+                    {e.airDate && <span>{airDateText(e.airDate)}</span>}
+                    {watched && <span className="flex items-center gap-1 text-shasta-muted"><Check className="size-3" /> Watched</span>}
+                  </span>
+                )}
               </span>
             </button>
           )

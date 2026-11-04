@@ -23,5 +23,11 @@
 		"short": "jsDelivr",
 		"domain": "cdn.jsdelivr.net",
 		"id": "32359927-bca9-4b7e-82fe-d41315829b1a"
+	},
+	{
+		"name": "Shasta Lite (Bunny)",
+		"short": "BN",
+		"domain": "shasta-lite.b-cdn.net",
+		"id": "d6737221-5998-430a-8747-d426b08be530"
 	}
 ]

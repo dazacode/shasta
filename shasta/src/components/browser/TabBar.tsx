@@ -132,7 +132,8 @@ const TabItem = memo(function TabItem({ tab, active, group, groups, tabIndex, dr
         onDragEnd={onDragEnd}
         className={cn(
           'group relative flex h-tab-h cursor-default items-center gap-2 text-[13px] outline-offset-[-2px] transition-colors duration-150 ease-shasta',
-          tab.pinned ? 'size-[calc(var(--sh-tab-h)-0.5rem)] shrink-0 justify-center rounded-lg px-0' : 'w-52 min-w-28 shrink px-3',
+          // unpinned tabs are size containers: a squeezed tab drops its title and close button and keeps the favicon (like Chrome)
+          tab.pinned ? 'size-[calc(var(--sh-tab-h)-0.5rem)] shrink-0 justify-center rounded-lg px-0' : '@container/tab w-52 min-w-0 shrink overflow-hidden px-2.5',
           !tab.pinned && (active ? 'rounded-t-xl border border-b-0 border-shasta-line bg-shasta-bg' : 'mb-1 h-[calc(var(--sh-tab-h)-0.25rem)] rounded-xl border border-shasta-line'),
           active ? 'text-shasta-fg' : 'text-shasta-muted hover:bg-shasta-hover',
           tab.pinned && active && 'bg-shasta-raised',
@@ -160,7 +161,7 @@ const TabItem = memo(function TabItem({ tab, active, group, groups, tabIndex, dr
         )}
         {!tab.pinned && (
           <>
-            <span className="min-w-0 flex-1 truncate">{title}</span>
+            <span className="hidden min-w-0 flex-1 truncate @[2.75rem]/tab:block">{title}</span>
             <button
               aria-label={`Close ${title}`}
               tabIndex={-1}
@@ -170,7 +171,7 @@ const TabItem = memo(function TabItem({ tab, active, group, groups, tabIndex, dr
               }}
               className={cn(
                 'grid size-5 shrink-0 place-items-center rounded-md text-shasta-muted transition-colors duration-150 ease-shasta hover:bg-shasta-line hover:text-shasta-fg',
-                !active && 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100',
+                !active && 'hidden opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 @[5rem]/tab:grid',
               )}
             >
               <X className="size-3.5" />
@@ -373,12 +374,12 @@ function StripActions() {
   const btn = 'size-7 rounded-lg'
   return (
     <div className="flex shrink-0 items-end gap-2">
-      <div className={pod}>
+      <div className={cn(pod, 'max-md:hidden')}>
         <IconButton label="Bookmark this page" className={btn} disabled={!external || tab.private} onClick={() => useUi.getState().openBookmarkEditor()}>
           <Bookmark className="size-[18px]" strokeWidth={1.6} />
         </IconButton>
       </div>
-      <div className={pod}>
+      <div className={cn(pod, 'max-md:hidden')}>
         <IconButton label="Downloads" className={btn} onClick={() => openInternal('downloads')}>
           <Download className="size-[18px]" strokeWidth={1.6} />
         </IconButton>
@@ -408,6 +409,27 @@ export function TabBar() {
   useEffect(() => {
     listRef.current?.querySelector(`[data-tab-id="${activeId}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }, [activeId, tabs.length])
+
+  // which ends of the strip have tabs scrolled out of view: those edges fade, so hidden tabs read as "more this way"
+  const [edges, setEdges] = useState({ start: false, end: false })
+  useEffect(() => {
+    const el = listRef.current
+    if (!el) return
+    const measure = () => {
+      const start = el.scrollLeft > 1
+      const end = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
+      setEdges((e) => (e.start === start && e.end === end ? e : { start, end }))
+    }
+    measure()
+    el.addEventListener('scroll', measure, { passive: true })
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => {
+      el.removeEventListener('scroll', measure)
+      ro.disconnect()
+    }
+  }, [tabs.length])
+  const fade = edges.start || edges.end ? `linear-gradient(to right, ${edges.start ? 'transparent, #000 2rem' : '#000'}, ${edges.end ? '#000 calc(100% - 2rem), transparent' : '#000'})` : undefined
 
   const onDragOver = useCallback((e: DragEvent, id: string) => {
     if (!e.dataTransfer.types.includes('text/x-shasta-tab')) return
@@ -472,7 +494,7 @@ export function TabBar() {
     lastGroup = group?.id ?? null
     if (group?.collapsed) return
     ;(tab.pinned ? pinned : items).push(
-      <motion.div key={tab.id} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.14 }} className={cn('flex', tab.pinned ? 'shrink-0' : 'min-w-0 shrink')}>
+      <motion.div key={tab.id} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.14 }} className={cn('flex', tab.pinned ? 'shrink-0' : tab.id === activeId ? 'min-w-28 shrink' : 'min-w-11 shrink')}>
         <TabItem
           tab={tab}
           active={tab.id === activeId}
@@ -505,7 +527,13 @@ export function TabBar() {
           {pinned}
         </div>
       )}
-      <div ref={listRef} role="tablist" aria-label="Open tabs" aria-orientation="horizontal" className="no-scrollbar relative z-[1] flex min-w-0 items-end gap-1 overflow-x-auto" onDragLeave={(e) => !e.currentTarget.contains(e.relatedTarget as Node) && setDrop(null)}>
+      <div ref={listRef} role="tablist" aria-label="Open tabs" aria-orientation="horizontal" className="no-scrollbar relative z-[1] flex min-w-0 items-end gap-1 overflow-x-auto" style={fade ? { maskImage: fade, WebkitMaskImage: fade } : undefined}
+        // a mouse wheel scrolls an overflowing strip sideways
+        onWheel={(e) => {
+          const el = e.currentTarget
+          if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && el.scrollWidth > el.clientWidth) el.scrollLeft += e.deltaY
+        }}
+        onDragLeave={(e) => !e.currentTarget.contains(e.relatedTarget as Node) && setDrop(null)}>
         {items}
       </div>
       <div data-strip-blank className="h-tab-h min-w-6 flex-1" />

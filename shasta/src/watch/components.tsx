@@ -123,7 +123,7 @@ export function MediaCard({
   return (
     <div className={cn('group/card relative', fixed && 'w-[136px] shrink-0 snap-start sm:w-[156px] lg:w-[176px]')}>
       <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-shasta-field ring-1 ring-shasta-line transition-shadow duration-150 ease-shasta group-hover/card:ring-shasta-fg/25">
-        <button data-card onClick={() => onOpen(card)} className="block size-full text-left" aria-label={`${card.title} details`}>
+        <button data-card onClick={() => onOpen(card)} className="block size-full text-left focus-visible:outline-offset-[-2px]" aria-label={`${card.title} details`}>
           {card.poster ? (
             <img src={artUrl(card.poster)} crossOrigin={MEDIA_CORS} loading="lazy" alt="" className="size-full object-cover" />
           ) : (
@@ -148,7 +148,7 @@ export function MediaCard({
         )}
 
         {/* extra metadata + actions: pass-through overlay (clicks reach the poster), actions tappable; shown always on touch */}
-        <div className="pointer-events-none absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/90 via-black/30 to-transparent p-2 transition-opacity duration-200 md:opacity-0 md:group-hover/card:opacity-100">
+        <div className="pointer-events-none absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/90 via-black/30 to-transparent p-2 transition-opacity duration-200 md:opacity-0 md:group-hover/card:opacity-100 md:group-focus-within/card:opacity-100">
           {card.overview && <p className="mb-1 line-clamp-3 text-[11px] leading-snug text-white/85">{card.overview}</p>}
           {card.genres && card.genres.length > 0 && <p className="mb-1.5 truncate text-[11px] text-white/60">{card.genres.join(' · ')}</p>}
           <div className="pointer-events-auto flex gap-1">

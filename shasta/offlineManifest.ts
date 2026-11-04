@@ -49,7 +49,7 @@ export function classify(rel: string): OfflineGroup | null {
 }
 
 /** Files whose URL carries the engine version (they have fixed names; see engineFiles() in scramjetAdapter.ts). */
-const VERSIONED = new Set(['scramjet/scramjet.js', 'scramjet/scramjet.wasm', 'controller/controller.api.js', 'controller/controller.inject.js'])
+let VERSIONED = new Set(['scramjet/scramjet.js', 'scramjet/scramjet.wasm', 'controller/controller.api.js', 'controller/controller.inject.js'])
 
 function walk(dir: string, base = dir): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -74,7 +74,8 @@ export function buildManifest(dist: string, app: string, engine: string): Offlin
   return { version, app, engine, files }
 }
 
-export function offlineManifestPlugin({ app, engine }: { app: string; engine: string }): Plugin {
+export function offlineManifestPlugin({ app, engine, versioned }: { app: string; engine: string; versioned?: string[] }): Plugin {
+  if (versioned) VERSIONED = new Set(versioned)
   let outDir = ''
   return {
     name: 'shasta-offline-manifest',

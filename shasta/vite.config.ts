@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -29,12 +29,51 @@ const engineHash = createHash('sha1')
 for (const f of engineFiles) if (existsSync(scramjet(f))) engineHash.update(readFileSync(scramjet(f)))
 const engineVersion = engineHash.digest('hex').slice(0, 10)
 
+// Where the engine files are served (relative to BASE). VITE_NEUTRAL_ENGINE=1 (every Lite build, scripts/lib/liteBuild.ts)
+// serves them as /rt/*: a school filter (Cisco Umbrella, 2026-11-03) refused /scramjet/scramjet.js by its URL while
+// the page itself loaded, leaving `$scramjet` undefined. Same bytes, other names.
+const NEUTRAL_ENGINE = process.env.VITE_NEUTRAL_ENGINE === '1'
+// --outDir from the command line (liteBuild passes one), else dist
+const outDirOf = () => {
+  const i = process.argv.indexOf('--outDir')
+  return i > 0 ? path.resolve(process.cwd(), process.argv[i + 1]) : path.resolve(import.meta.dirname, 'dist')
+}
+const ENGINE_PATHS = NEUTRAL_ENGINE
+  ? { core: 'rt/core.js', wasm: 'rt/core.wasm', api: 'rt/api.js', inject: 'rt/inject.js', sw: 'rt/sw.js' }
+  : { core: 'scramjet/scramjet.js', wasm: 'scramjet/scramjet.wasm', api: 'controller/controller.api.js', inject: 'controller/controller.inject.js', sw: 'controller/controller.sw.js' }
+const engineCopy = NEUTRAL_ENGINE
+  ? [
+      { src: '../scramjet/packages/core/dist/scramjet.js', dest: 'rt', rename: { stripBase: true as const, name: 'core.js' } },
+      { src: '../scramjet/packages/core/dist/scramjet.wasm', dest: 'rt', rename: { stripBase: true as const, name: 'core.wasm' } },
+      { src: '../scramjet/packages/controller/dist/controller.api.js', dest: 'rt', rename: { stripBase: true as const, name: 'api.js' } },
+      { src: '../scramjet/packages/controller/dist/controller.inject.js', dest: 'rt', rename: { stripBase: true as const, name: 'inject.js' } },
+      { src: '../scramjet/packages/controller/dist/controller.sw.js', dest: 'rt', rename: { stripBase: true as const, name: 'sw.js' } },
+    ]
+  : [
+      { src: '../scramjet/packages/core/dist/*.{js,mjs,wasm}', dest: 'scramjet', rename: { stripBase: true as const } },
+      { src: '../scramjet/packages/controller/dist/*.js', dest: 'controller', rename: { stripBase: true as const } },
+    ]
+
 export default defineConfig({
-  define: { __APP_VERSION__: JSON.stringify(pkg.version), __ENGINE_VERSION__: JSON.stringify(engineVersion) },
+  define: { __APP_VERSION__: JSON.stringify(pkg.version), __ENGINE_VERSION__: JSON.stringify(engineVersion), __ENGINE_PATHS__: JSON.stringify(ENGINE_PATHS) },
   plugins: [
     {
       name: 'engine-version',
-      transformIndexHtml: (html) => html.replaceAll('%ENGINE_VERSION%', engineVersion),
+      transformIndexHtml: (html) =>
+        html.replaceAll('%ENGINE_VERSION%', engineVersion).replaceAll('%ENGINE_CORE%', ENGINE_PATHS.core).replaceAll('%ENGINE_API%', ENGINE_PATHS.api),
+    },
+    {
+      // the service worker is a public file (not transformed): point its importScripts at the neutral name
+      name: 'engine-sw-path',
+      apply: 'build',
+      // closeBundle: the public folder is copied by then; runs before the offline manifest's (order: post)
+      closeBundle() {
+        if (!NEUTRAL_ENGINE) return
+        const sw = path.resolve(import.meta.dirname, outDirOf(), 'sw.js')
+        const src = readFileSync(sw, 'utf8')
+        if (!src.includes('"./controller/controller.sw.js"')) throw new Error('sw.js: engine importScripts not found')
+        writeFileSync(sw, src.replace('"./controller/controller.sw.js"', `"./${ENGINE_PATHS.sw}"`))
+      },
     },
     // canonical/og/JSON-LD origin + robots.txt/sitemap.xml, so school-filter classifiers can find a
     // topic. VITE_SITE_ORIGIN sets the domain; see docs/unblocking.md.
@@ -43,8 +82,7 @@ export default defineConfig({
     tailwindcss(),
     viteStaticCopy({
       targets: [
-        { src: '../scramjet/packages/core/dist/*.{js,mjs,wasm}', dest: 'scramjet', rename: { stripBase: true } },
-        { src: '../scramjet/packages/controller/dist/*.js', dest: 'controller', rename: { stripBase: true } },
+        ...engineCopy,
         // the on-device AI's WebAssembly runtime is served by Shasta itself (a school filter may block the CDN the library would use)
         { src: 'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.{mjs,wasm}', dest: 'ort', rename: { stripBase: true } },
       ],
@@ -60,7 +98,7 @@ export default defineConfig({
       },
     },
     // offline-manifest.json + the version stamped into sw.js (the offline application shell)
-    offlineManifestPlugin({ app: pkg.version, engine: engineVersion }),
+    offlineManifestPlugin({ app: pkg.version, engine: engineVersion, versioned: [ENGINE_PATHS.core, ENGINE_PATHS.wasm, ENGINE_PATHS.api, ENGINE_PATHS.inject] }),
     // Obfuscate Shasta's OWN chunks (the app code) on top of esbuild minification, so a downloaded
     // .swbn is not readable source at a glance. Vendor chunks (react, transformers, onnx) are left
     // alone: they are not ours to hide and obfuscating them mostly costs build time. AGPL is
@@ -108,6 +146,11 @@ export default defineConfig({
       // pad.html = the phone controller (src/pad/main.ts): its own tiny page, none of the browser
       input: { index: path.resolve(import.meta.dirname, 'index.html'), pad: path.resolve(import.meta.dirname, 'pad.html') },
       output: {
+        // Lite (VITE_NEUTRAL_ENGINE): the engine's glue chunks are named after their modules
+        // (scramjet-external, controller-external); give them names a URL filter does not match
+        ...(NEUTRAL_ENGINE
+          ? { chunkFileNames: (c: { name: string }) => `assets/${c.name.replace(/scramjet/gi, 'rt').replace(/controller/gi, 'ctl')}-[hash].js` }
+          : {}),
         // Keep the big libraries that only load on demand (transports with inlined wasm, ad blocker, OpenUI, Wisp) out of the
         // shared vendor chunk, which index.html modulepreloads: otherwise first paint waits for ~5 MB it never runs.
         codeSplitting: {

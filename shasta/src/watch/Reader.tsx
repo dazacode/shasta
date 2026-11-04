@@ -10,6 +10,7 @@ import { MEDIA_CORS } from '@/lib/appApi'
 import { apiUrl, streamUrl, watchApi, WatchError } from './api'
 import type { Kind, ReadPages, ReadText, Title } from './types'
 import { cn } from '@/lib/utils'
+import { useFitHeight } from './Player'
 
 export interface ReaderProps {
   title: Title
@@ -63,6 +64,7 @@ const menu = 'flex h-9 w-full items-center justify-between gap-3 rounded-md px-2
 
 function ImageReader({ title, chapter, startPage = 1, onChapter, onClose, onProgress }: ReaderProps) {
   const box = useRef<HTMLDivElement>(null)
+  const fit = useFitHeight(box)
   const scroller = useRef<HTMLDivElement>(null)
   const [prefs, setPrefs] = useState<Prefs>(loadPrefs)
   const [data, setData] = useState<ReadPages | null>(null)
@@ -165,7 +167,8 @@ function ImageReader({ title, chapter, startPage = 1, onChapter, onClose, onProg
   const imgSrc = (u: string, referer?: string) => apiUrl(streamUrl(u, referer))
 
   return (
-    <div ref={box} className="relative h-[76vh] min-h-[420px] w-full overflow-hidden rounded-xl bg-black text-white">
+    // sized to the visible part of the tab (76vh of the window overshot it, hiding the page bar); full screen overrides it
+    <div ref={box} style={fit ? { height: fit } : undefined} className="relative h-[76vh] min-h-[420px] w-full overflow-hidden rounded-xl bg-black text-white">
       {loading && <div className="grid size-full place-items-center"><Loader2 className="size-8 animate-spin text-white/70" /></div>}
       {error && <div className="grid size-full place-items-center p-6 text-center text-sm text-white/80">{error}</div>}
 
@@ -182,6 +185,7 @@ function ImageReader({ title, chapter, startPage = 1, onChapter, onClose, onProg
                   alt=""
                   loading={i < 3 ? 'eager' : 'lazy'}
                   className={cn('block bg-neutral-900', prefs.fit === 'width' ? 'w-full max-w-[900px]' : prefs.fit === 'height' ? 'h-[76vh] w-auto' : 'w-auto max-w-none')}
+                  style={prefs.fit === 'height' && fit && !full ? { height: fit } : undefined}
                 />
               ))}
             </div>
@@ -207,7 +211,7 @@ function ImageReader({ title, chapter, startPage = 1, onChapter, onClose, onProg
         <button className={btn} onClick={onClose} aria-label="Back"><ArrowLeft className="size-5" /></button>
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{title.title}</p>
-          <p className="truncate text-xs text-white/60">{data ? `${data.chapterTitle}` : ''}{total ? ` · ${title.format ?? ''} ${chapter}/${total}` : ''}</p>
+          <p className="truncate text-xs text-white/60">{data ? data.chapterTitle : `Chapter ${chapter}`}{total ? ` · ${chapter} of ${total}` : ''}</p>
         </div>
         <div className="ml-auto flex items-center gap-1">
           <button className={btn} disabled={atFirst} onClick={() => onChapter(chapter - 1)} aria-label="Previous chapter"><ChevronLeft className="size-5" /></button>
@@ -275,6 +279,7 @@ function Seg({ on, onClick, icon, label }: { on: boolean; onClick: () => void; i
 
 function TextReader({ title, chapter, onChapter, onClose, onProgress }: ReaderProps) {
   const box = useRef<HTMLDivElement>(null)
+  const fit = useFitHeight(box)
   const [prefs, setPrefs] = useState<Prefs>(loadPrefs)
   const [data, setData] = useState<ReadText | null>(null)
   const [error, setError] = useState('')
@@ -333,7 +338,7 @@ function TextReader({ title, chapter, onChapter, onClose, onProgress }: ReaderPr
   const theme = { light: 'bg-[#fbfaf7] text-[#22201c]', sepia: 'bg-[#f3e9d6] text-[#3b2f22]', dark: 'bg-[#14141a] text-[#d9d7d2]' }[prefs.theme]
 
   return (
-    <div ref={box} className={cn('relative h-[76vh] min-h-[420px] w-full overflow-y-auto rounded-xl', theme)}>
+    <div ref={box} style={fit ? { height: fit } : undefined} className={cn('relative h-[76vh] min-h-[420px] w-full overflow-y-auto rounded-xl', theme)}>
       <div className="sticky top-0 z-20 flex items-center gap-2 border-b border-black/10 bg-inherit/95 px-3 py-2 backdrop-blur">
         <button className="grid size-9 place-items-center rounded-lg hover:bg-black/10" onClick={onClose} aria-label="Back"><ArrowLeft className="size-5" /></button>
         <div className="min-w-0">

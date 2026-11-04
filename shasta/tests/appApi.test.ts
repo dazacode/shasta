@@ -45,3 +45,46 @@ describe('routeToBackend', () => {
     expect((await load(`${APP}/`, 'http://localhost:8090')).APP_API_ORIGIN).toBe('')
   })
 })
+
+describe('Lite backends (VITE_API_ORIGINS)', () => {
+  async function lite(fetchImpl: (u: string) => Promise<Response>) {
+    vi.resetModules()
+    const href = 'https://lite.example/'
+    vi.stubGlobal('location', { href, origin: 'https://lite.example', protocol: 'https:' })
+    const win = { fetch: (i: RequestInfo | URL) => fetchImpl(i instanceof Request ? i.url : String(i)), EventSource: class {} }
+    vi.stubGlobal('window', win)
+    vi.stubEnv('VITE_EDITION', 'lite')
+    vi.stubEnv('VITE_API_ORIGINS', 'https://a.example,https://b.example')
+    const mod = await import('@/lib/appApi')
+    return { mod, fetch: win.fetch }
+  }
+
+  it('moves to the next backend when one cannot be reached, and stays there', async () => {
+    const seen: string[] = []
+    const { mod, fetch } = await lite(async (u) => {
+      seen.push(u)
+      if (u.startsWith('https://a.example')) throw new TypeError('Failed to fetch')
+      return new Response('ok')
+    })
+    expect(mod.API_ORIGINS[0]).toBe('https://a.example')
+    expect(await (await fetch('/api/x')).text()).toBe('ok')
+    expect(mod.APP_API_ORIGIN).toBe('https://b.example')
+    await fetch('/api/y')
+    expect(seen).toEqual(['https://a.example/api/x', 'https://b.example/api/x', 'https://b.example/api/y'])
+    // a URL a caller built on the old backend follows the move too
+    expect(mod.routeToBackend('https://a.example/api/media/1')).toBe('https://b.example/api/media/1')
+  })
+
+  it('an HTTP error is an answer, not a reason to switch', async () => {
+    const { mod, fetch } = await lite(async () => new Response('no', { status: 500 }))
+    expect((await fetch('/api/x')).status).toBe(500)
+    expect(mod.APP_API_ORIGIN).toBe('https://a.example')
+  })
+
+  it('throws once every backend failed', async () => {
+    const { fetch } = await lite(async () => {
+      throw new TypeError('Failed to fetch')
+    })
+    await expect(fetch('/api/x')).rejects.toThrow('Failed to fetch')
+  })
+})

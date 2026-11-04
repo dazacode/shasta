@@ -47,7 +47,7 @@ const config = {
 	// shasta:// pages and ?app= links are client-side: every unknown path answers the app.
 	// /cloud/* rides the full site's Cloudflare worker (the cloud-game proxy), so a Lite mirror works too.
 	// /nowgg/* likewise, at Vercel's edge: a now.gg game opened here talks to THIS domain only (VITE_NOWGG_SELF).
-	rewrites: [{ source: "/cloud/:path*", destination: "https://edushasta.lol/cloud/:path*" }, { source: "/nowgg/:path*", destination: "https://edushasta.lol/nowgg/:path*" }, { source: "/wisp/", destination: "/api/wisp" }, { source: "/wisp", destination: "/api/wisp" }, { source: "/((?!assets/|scramjet/|controller/|adblock/|licenses/|api/).*)", destination: "/index.html" }],
+	rewrites: [{ source: "/cloud/:path*", destination: "https://edushasta.lol/cloud/:path*" }, { source: "/nowgg/:path*", destination: "https://edushasta.lol/nowgg/:path*" }, { source: "/wisp/", destination: "/api/wisp" }, { source: "/wisp", destination: "/api/wisp" }, { source: "/((?!assets/|scramjet/|controller/|rt/|adblock/|licenses/|api/).*)", destination: "/index.html" }],
 };
 writeFileSync(join(OUT, "vercel.json"), JSON.stringify(config, null, 2));
 

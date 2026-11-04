@@ -13,7 +13,7 @@
 // its edge (a week in browsers): every file without a hash in its name is purged after the push.
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { buildLite, FULL, ROOT, run } from "./lib/liteBuild";
+import { BUNNY_RELAY, buildLite, FULL, ROOT, run } from "./lib/liteBuild";
 
 const REPO = process.env.SHASTA_JSDELIVR_REPO ?? "dazacode/shasta-lite";
 const BASE = `/gh/${REPO}/`;
@@ -27,7 +27,13 @@ const MAX_FILE = 20 * 1024 * 1024;
 
 // Umami website "Shasta Lite (jsDelivr)"
 // Ads: none (no Adsterra site for cdn.jsdelivr.net in scripts/lib/adCodes.ts; another host's codes must not run here)
-buildLite(BUILD, "32359927-bca9-4b7e-82fe-d41315829b1a", BASE, { VITE_SHARED_ORIGIN: "1" });
+// jsDelivr runs no code, so it has no backend of its own: the bunny.net relay (bunny.run, scripts/bunny-relay) goes
+// FIRST for Wisp and the Store, so a network that blocks the full site's domains does not wait out two 6 s probes.
+buildLite(BUILD, "32359927-bca9-4b7e-82fe-d41315829b1a", BASE, {
+	VITE_SHARED_ORIGIN: "1",
+	VITE_WISP_URLS: [`wss://${BUNNY_RELAY}/wisp/`, `wss://${new URL(FULL).host}/wisp/`, "wss://edushasta.lol/wisp/", "wss://shasta-lite.vercel.app/wisp/"].join(","),
+	VITE_API_ORIGINS: [`https://${BUNNY_RELAY}`, FULL, "https://edushasta.lol"].join(","),
+});
 
 // the service worker answers the entry addresses (public/sw.js CDN_BASE)
 const swPath = join(BUILD, "sw.js");

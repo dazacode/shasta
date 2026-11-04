@@ -35,6 +35,7 @@ export function ErrorPage({ tab }: { tab: Tab }) {
             This looks like a sign-in page. {signIn.known ? `${signIn.known.title}. ${signIn.known.body}` : 'Some sign-in methods do not work through a proxy.'} You can open the original website in your browser instead; Shasta can't promise every login works.
           </p>
         )}
+        {/* one clear next step, one alternative; the rarer ways out sit below as quiet links */}
         <div className="mt-6 flex flex-wrap gap-2">
           <Button
             size="lg"
@@ -48,13 +49,15 @@ export function ErrorPage({ tab }: { tab: Tab }) {
           <Button size="lg" variant="outline" onClick={() => useUi.getState().requestOmniboxFocus()}>
             <Pencil /> Edit address
           </Button>
-          <Button size="lg" variant="ghost" onClick={() => useTabs.getState().resetFrame(tab.id)}>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+          <button className="rounded-sm py-1 text-shasta-muted underline-offset-2 transition-colors hover:text-shasta-fg hover:underline" onClick={() => useTabs.getState().resetFrame(tab.id)}>
             Reset this tab
-          </Button>
+          </button>
           {canOpenDirect && (
-            <Button size="lg" variant="ghost" onClick={() => openInHostBrowser(tab.error!.url)}>
-              <ExternalLink /> Open the original website in your browser
-            </Button>
+            <button className="inline-flex items-center gap-1.5 rounded-sm py-1 text-shasta-muted underline-offset-2 transition-colors hover:text-shasta-fg hover:underline" onClick={() => openInHostBrowser(tab.error!.url)}>
+              <ExternalLink className="size-3.5" /> Open the original website in your browser
+            </button>
           )}
         </div>
         {tab.app && info.kind !== 'offline' && info.kind !== 'proxy' && (
