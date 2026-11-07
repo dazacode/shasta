@@ -162,7 +162,7 @@ export function Omnibox({ tab }: { tab: Tab }) {
   const placeholder = getSettings().searchEngine ? `Search ${SEARCH_ENGINES[engine].label} or enter a URL` : 'Search or enter a URL'
 
   return (
-    <div className="relative min-w-0 flex-1">
+    <div className="relative min-w-0 flex-1" data-omnibox>
       <div
         className={cn(
           'flex h-bar-h items-center gap-1.5 rounded-full bg-shasta-field px-2 transition-shadow',

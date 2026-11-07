@@ -4,8 +4,8 @@
 |---|---|
 | Hosted instance | https://shasta-dtg.pages.dev |
 | Shasta version | 0.2.0 |
-| Published from | commit `ead080c956de00230551307997fea9066769145f` (plus uncommitted work at publish time) |
-| Published on | 2026-11-04 |
+| Published from | commit `f621d1027b96ef87000031be05a874c7541554ac` |
+| Published on | 2026-11-07 |
 | Scramjet engine | https://github.com/dazacode/shasta-scramjet, tag `shasta-v0.1.4` (submodule `scramjet/`) |
 | Wisp relay | https://github.com/dazacode/shasta-wisp, tag `shasta-v0.1.2` (submodule `wisp/`) |
 
@@ -14,6 +14,9 @@ AGPL-3.0, so a hosted copy must let its users get the corresponding source of th
 using. This repository is that source: published from our development tree at the commit above, so
 it is the real code and not a re-implementation of it. (Our own production bundle is minified and
 obfuscated for size; the code here is what it is built from.)
+
+The hosted version is built from exactly this tree. (Shasuta, an unreleased experiment, is in neither the hosted
+build nor here; inert stand-ins sit where its modules would be.)
 
 Included: the browser, its Scramjet integration, the build scripts, and the engine and relay forks
 as submodules. Not included: anything that only exists to serve Shasta from our own machines (the

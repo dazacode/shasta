@@ -10,6 +10,7 @@ import { requestPrivateTab } from '@/lib/privateTab'
 import { NO_PRIVATE_BOOKMARKS } from '@/hooks/usePrivateTab'
 import * as proxy from '@/proxy/scramjetAdapter'
 import { forceFocus } from '@/lib/gameControl'
+import { exitBrowser, SHASUTA_BUILT, useShasuta } from '@/shasuta/state'
 
 export const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
 export const MOD = isMac ? '⌘' : 'Ctrl+'
@@ -17,7 +18,7 @@ export const MOD = isMac ? '⌘' : 'Ctrl+'
 export type Action =
   | 'newTab' | 'newPrivateTab' | 'closeTab' | 'reopenTab' | 'focusAddress' | 'reload' | 'stop' | 'bookmark'
   | 'nextTab' | 'prevTab' | 'back' | 'forward' | 'home' | 'settings' | 'history' | 'downloads'
-  | 'bookmarks' | 'fullscreen' | 'duplicateTab' | 'pinTab' | 'print' | 'toggleBookmarksBar' | 'tabN' | 'toggleGameMode' | 'toggleAssistant'
+  | 'bookmarks' | 'fullscreen' | 'duplicateTab' | 'pinTab' | 'print' | 'toggleBookmarksBar' | 'tabN' | 'toggleGameMode' | 'toggleAssistant' | 'consoleHome'
 
 export interface ShortcutDef {
   action: Action
@@ -50,6 +51,7 @@ export const SHORTCUTS: ShortcutDef[] = [
   { action: 'toggleGameMode', label: 'Game mode (pause shortcuts, send all keys to the page)', keys: ['Alt+Shift+G'] },
   { action: 'toggleAssistant', label: 'Shasta AI assistant', keys: [isMac ? '⇧⌘K' : 'Ctrl+Shift+K', 'Alt+Shift+A'] },
   { action: 'print', label: 'Print page', keys: [`${MOD}P`] },
+  ...(SHASUTA_BUILT ? [{ action: 'consoleHome' as const, label: 'Exit to Shasuta (gaming mode)', keys: ['Alt+Shift+H'] }] : []),
 ]
 
 export const keysFor = (action: Action) => SHORTCUTS.find((s) => s.action === action)?.keys[0] ?? ''
@@ -73,6 +75,7 @@ export function matchAction(e: KeyboardEvent): { action: Action; n?: number } | 
     if (e.code === 'KeyZ') return { action: 'reopenTab' }
     if (e.code === 'KeyG') return { action: 'toggleGameMode' }
     if (e.code === 'KeyA') return { action: 'toggleAssistant' }
+    if (SHASUTA_BUILT && e.code === 'KeyH') return { action: 'consoleHome' }
   }
 
   if (e.key === 'F5') return { action: 'reload' }
@@ -182,6 +185,9 @@ export function perform(match: { action: Action; n?: number }) {
       else ui.toast('Shasta AI is turned off. Turn it on in Settings → AI.')
       break
     case 'print': if (active && !isInternalUrl(tabUrl(active))) proxy.print(active.id); break
+    case 'consoleHome':
+      if (SHASUTA_BUILT && !exitBrowser()) ui.toast('Shasuta is turned off. Turn it on in Settings → Appearance.')
+      break
   }
 }
 
@@ -191,7 +197,16 @@ export function handleKeydown(e: KeyboardEvent): boolean {
   const match = matchAction(e)
   if (!match) return false
   // in game mode only the way out is ours; everything else belongs to the page
-  if (useUi.getState().gameMode && match.action !== 'toggleGameMode') return false
+  if (useUi.getState().gameMode && match.action !== 'toggleGameMode' && match.action !== 'consoleHome') return false
+  // Shasuta on screen: the browser behind it does not react; Alt+Shift+H goes back to it, full screen still works
+  if (useShasuta.getState().visible) {
+    if (match.action === 'consoleHome') {
+      e.preventDefault()
+      useShasuta.getState().hide()
+      return true
+    }
+    if (match.action !== 'fullscreen') return false
+  }
   e.preventDefault()
   perform(match)
   return true

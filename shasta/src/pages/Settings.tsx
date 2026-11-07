@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { exitBrowser, SHASUTA_BUILT, useShasuta } from '@/shasuta/state'
 import { Activity, CloudDownload, Download, Gauge, Globe, HardDrive, Heart, LayoutGrid, Lock, Palette, Sparkles, Upload } from 'lucide-react'
 import { PageShell } from './PageShell'
 import { Button } from '@/components/ui/button'
@@ -82,6 +83,28 @@ function Appearance() {
       <Row title="High contrast" desc="Stronger borders and text colours in Shasta's own interface." htmlFor="hc">
         <Toggle id="hc" label="High contrast" checked={s.highContrast} onChange={(highContrast) => update({ highContrast })} />
       </Row>
+      {SHASUTA_BUILT && <ShasutaRows />}
+    </>
+  )
+}
+
+/** Shasuta, the gaming mode (shasuta/): an experiment, so it can be switched off here and its look kept or not. */
+function ShasutaRows() {
+  const p = useShasuta((x) => x.prefs)
+  const setPrefs = useShasuta((x) => x.setPrefs)
+  return (
+    <>
+      <Row title="Shasuta gaming mode (experimental)" desc="Leaving the browser (the menu's “Exit to Shasuta”, Alt+Shift+H, a controller's Home button, or closing the last tab) opens Shasuta, a console-style home for your games. Your tabs stay open behind it." htmlFor="shasuta">
+        <div className="flex items-center gap-2">
+          {p.enabled && <button className="rounded-full px-3 py-1 text-sm text-shasta-accent hover:bg-shasta-hover" onClick={() => exitBrowser()}>Open</button>}
+          <Toggle id="shasuta" label="Shasuta gaming mode" checked={p.enabled} onChange={(enabled) => setPrefs({ enabled })} />
+        </div>
+      </Row>
+      {p.enabled && p.visited && (
+        <Row title="Browser takes Shasuta's look" desc="Blue toolbar with round tabs and buttons, to match Shasuta." htmlFor="shasuta-look">
+          <Toggle id="shasuta-look" label="Browser takes Shasuta's look" checked={p.browserLook} onChange={(browserLook) => setPrefs({ browserLook })} />
+        </Row>
+      )}
     </>
   )
 }

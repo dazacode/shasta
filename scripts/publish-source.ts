@@ -29,6 +29,30 @@ const SKIP = new Set(["promptclaude.rtf"]);
 const EXCLUDE = ["server/", "docs/", "CLAUDE.md", ".claude/", ".github/", "Dockerfile", ".dockerignore"];
 const excluded = (f: string) => EXCLUDE.some((e) => (e.endsWith("/") ? f.startsWith(e) : f === e));
 
+/**
+ * Shasuta (the console-style gaming mode) is unreleased and still in development: production builds leave it out
+ * (shasta/vite.config.ts), so neither its code nor its tests belong in the source offer. The hosted build and this
+ * snapshot are the same thing: the app's imports of `@/shasuta/*` land on inert stand-ins (shasta/src/shasutaOff/),
+ * which the snapshot ships at the real paths so a clone typechecks and builds without any alias.
+ * `bun run publish:source` stops if anything else of Shasuta is about to go out.
+ */
+const SHASUTA_DROP = [
+	"shasta/src/shasuta/",
+	"shasta/src/shasutaOff/",
+	"shasta/src/components/whatsNew/ShasutaDemo",
+	"shasta/src/components/whatsNew/shasutaDemo",
+	"shasta/tests/shasuta",
+	"shasta/tsconfig.shasutaoff.json",
+];
+const SHASUTA_STANDINS: Record<string, string> = {
+	"shasta/src/shasutaOff/state.ts": "shasta/src/shasuta/state.ts",
+	"shasta/src/shasutaOff/host.tsx": "shasta/src/shasuta/host.tsx",
+	"shasta/src/shasutaOff/album.ts": "shasta/src/shasuta/album.ts",
+	"shasta/src/shasutaOff/art.tsx": "shasta/src/shasuta/art.tsx",
+	"shasta/src/shasutaOff/ShasutaDemo.tsx": "shasta/src/components/whatsNew/ShasutaDemo.tsx",
+};
+const shasutaDropped = (f: string) => SHASUTA_DROP.some((d) => f.startsWith(d));
+
 function run(cmd: string[], cwd: string, quiet = false) {
 	if (!quiet) console.log(`\x1b[36m> ${cmd.join(" ")}\x1b[0m`);
 	const p = Bun.spawnSync(cmd, { cwd, stdio: ["inherit", quiet ? "pipe" : "inherit", "inherit"] });
@@ -45,7 +69,7 @@ const lines = (s: string) => s.split("\n").map((l) => l.trim()).filter(Boolean);
 const files = [
 	...lines(run(["git", "ls-files"], root, true)),
 	...lines(run(["git", "ls-files", "--others", "--exclude-standard"], root, true)),
-].filter((f) => f !== "scramjet" && f !== "wisp" && !SKIP.has(f) && !excluded(f)); // the two submodules are re-created as gitlinks below
+].filter((f) => f !== "scramjet" && f !== "wisp" && !SKIP.has(f) && !excluded(f) && !shasutaDropped(f)); // the two submodules are re-created as gitlinks below
 
 const submodules = lines(run(["git", "ls-files", "--stage"], root, true))
 	.filter((l) => l.split(/\s+/)[0] === "160000")
@@ -76,6 +100,19 @@ for (const rel of files) {
 	cpSync(path.join(root, rel), dest);
 }
 
+// Shasuta's stand-ins at the real paths, and a hard stop if any other file of it is still in the set
+for (const [from, to] of Object.entries(SHASUTA_STANDINS)) {
+	mkdirSync(path.dirname(path.join(stage, to)), { recursive: true });
+	cpSync(path.join(root, from), path.join(stage, to));
+}
+// scripts/lib/shasutaGuard.ts (imported by the published deploy scripts) is only a name check on build folders, no Shasuta code
+const standins = new Set([...Object.values(SHASUTA_STANDINS), "scripts/lib/shasutaGuard.ts"]);
+const leaked = files.filter((f) => /shasuta/i.test(f) && !standins.has(f));
+if (leaked.length) {
+	console.error(`\x1b[31mShasuta files in the public snapshot, refusing to publish:\n  ${leaked.join("\n  ")}\x1b[0m`);
+	process.exit(1);
+}
+
 // public clones have no SSH keys: the submodules are the public forks, and are declared with https
 const gitmodules = readFileSync(path.join(root, ".gitmodules"), "utf8").replaceAll("git@github.com:", "https://github.com/");
 writeFileSync(path.join(stage, ".gitmodules"), gitmodules);
@@ -98,6 +135,9 @@ AGPL-3.0, so a hosted copy must let its users get the corresponding source of th
 using. This repository is that source: published from our development tree at the commit above, so
 it is the real code and not a re-implementation of it. (Our own production bundle is minified and
 obfuscated for size; the code here is what it is built from.)
+
+The hosted version is built from exactly this tree. (Shasuta, an unreleased experiment, is in neither the hosted
+build nor here; inert stand-ins sit where its modules would be.)
 
 Included: the browser, its Scramjet integration, the build scripts, and the engine and relay forks
 as submodules. Not included: anything that only exists to serve Shasta from our own machines (the

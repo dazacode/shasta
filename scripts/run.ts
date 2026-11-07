@@ -1,7 +1,7 @@
 // One entry point for dev / start / build. Builds only what is missing or stale.
 import { randomBytes } from "node:crypto";
 import { chmodSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { delimiter, dirname, join, resolve } from "node:path";
 import { adEnv } from "./lib/adCodes";
 
 const ROOT = resolve(import.meta.dir, "..");
@@ -11,10 +11,31 @@ const SERVER = join(ROOT, "server");
 const PORT = process.env.PORT ?? "8080";
 
 // scramjet's build script needs bash >= 4 and cargo; macOS ships bash 3.2.
+// Windows names the variable `Path` and separates entries with `;`, and has no $HOME or Homebrew.
+const WIN = process.platform === "win32";
+const PATH_KEY = Object.keys(process.env).find((k) => k.toLowerCase() === "path") ?? "PATH";
+const HOME = process.env.HOME ?? process.env.USERPROFILE ?? "";
 const env = {
 	...process.env,
-	PATH: `/opt/homebrew/bin:${process.env.HOME}/.cargo/bin:${process.env.PATH}`,
+	[PATH_KEY]: [...(WIN ? [] : ["/opt/homebrew/bin"]), join(HOME, ".cargo", "bin"), process.env[PATH_KEY] ?? ""].join(delimiter),
 };
+
+/**
+ * Windows: `bash` on the PATH is usually WSL's (System32's bash.exe), a Linux that cannot see the Windows
+ * cargo / wasm-opt / wasm-snip, so the rewriter's build.sh reports them missing. Git for Windows ships a bash that
+ * shares the Windows PATH: put its folder first for that step. (Elsewhere: nothing to change.)
+ */
+function gitBashFirst(): Record<string, string> {
+	if (!WIN) return {};
+	const roots = [dirname(dirname(Bun.which("git") ?? "")), process.env.ProgramFiles, process.env["ProgramFiles(x86)"], process.env.LOCALAPPDATA && join(process.env.LOCALAPPDATA, "Programs")]
+		.filter((r): r is string => !!r)
+		.map((r) => (r.toLowerCase().endsWith("git") ? r : join(r, "Git")));
+	for (const root of roots) {
+		const bin = join(root, "usr", "bin");
+		if (existsSync(join(bin, "bash.exe"))) return { [PATH_KEY]: `${bin}${delimiter}${env[PATH_KEY]}` };
+	}
+	fail("Windows needs Git for Windows (its Git Bash runs the engine's build script). Install it from https://git-scm.com/download/win, or run this from Git Bash.");
+}
 
 function fail(msg: string): never {
 	console.error(`\n\x1b[31m${msg}\x1b[0m`);
@@ -22,7 +43,7 @@ function fail(msg: string): never {
 }
 
 function need(cmd: string, hint: string) {
-	if (!Bun.which(cmd, { PATH: env.PATH })) fail(`Missing \`${cmd}\`. ${hint}`);
+	if (!Bun.which(cmd, { PATH: env[PATH_KEY] })) fail(`Missing \`${cmd}\`. ${hint}`);
 }
 
 async function run(label: string, cmd: string[], cwd: string, extra: Record<string, string> = {}, tolerate = false) {
@@ -109,7 +130,7 @@ async function ensureEngine(force: boolean) {
 	need("wasm-opt", "Install with: brew install binaryen");
 	const core = join(SCRAMJET, "packages/core");
 	await run("scramjet: pnpm i", ["pnpm", "i", "--frozen-lockfile"], SCRAMJET);
-	await run("scramjet: rewriter (wasm)", ["pnpm", "rewriter:build"], core, { RELEASE: "1" });
+	await run("scramjet: rewriter (wasm)", ["pnpm", "rewriter:build"], core, { RELEASE: "1", ...gitBashFirst() });
 	// exits non-zero on known, harmless .d.ts errors; bundles are still emitted
 	await run("scramjet: bundles", ["pnpm", "build"], core, {}, true);
 	if (!engineArtifacts()) fail("Scramjet build did not produce its bundles. See the output above.");
@@ -181,6 +202,12 @@ if (mode === "build") {
 	await ensureEngine(true);
 	await ensureDeps();
 	await ensureShasta(true);
+	console.log("\nbuild ok -> shasta/dist");
+} else if (mode === "build-stale") {
+	// Like build, but only what is missing or stale (no forced engine rebuild): for deploying after a code change.
+	await ensureEngine(false);
+	await ensureDeps();
+	await ensureShasta(false);
 	console.log("\nbuild ok -> shasta/dist");
 } else if (mode === "start") {
 	needServer();

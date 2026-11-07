@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { consoleLookOn, useShasuta } from '@/shasuta/state'
 import { LayoutGrid, Mic, Search, SlidersHorizontal, Square } from 'lucide-react'
 import { RibbonWallpaper } from '@/components/RibbonWallpaper'
 import { WALLPAPERS, effectiveWallpaper, isSeasonalWallpaper, wallpaperBackground } from '@/lib/wallpaper'
@@ -101,9 +102,14 @@ export function NewTab({ tabId }: { tabId: string }) {
   // text colour follows what is behind it, after the dimming
   const luma = customImage ? picture.luma : customColor ? hexLuma(settings.newTabBgColor) : 1
   const customDark = luma * (1 - settings.newTabBgDim / 100) < 0.5
-  const dark = immersive || !!photo || (custom ? customDark : !!WALLPAPERS[wallpaper].dark)
-  const greeting = settings.newTabGreetingText.trim() || (isPrivate ? 'Private tab at Shasta' : seasonLook ? seasonLook.greeting : 'Happy to see you at Shasta')
-  const headline = settings.newTabHeadlineText.trim() || (seasonLook && !isPrivate ? seasonLook.headline : 'How can I help you?')
+  // Shasuta's console look (shasuta/browserLook.css): the default background becomes Shasuta's blue room. The person's
+  // own wallpaper, picture, colour or a holiday photo always wins over it.
+  const consoleRoom = useShasuta((s) => consoleLookOn(s.prefs)) && !photo && !custom && wallpaper === 'none'
+  const dark = consoleRoom || immersive || !!photo || (custom ? customDark : !!WALLPAPERS[wallpaper].dark)
+  // the page names itself (today's date over "Where to?"); holiday text only while its event is on
+  const [today] = useState(() => new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }))
+  const greeting = settings.newTabGreetingText.trim() || (seasonLook && !isPrivate ? seasonLook.greeting : today)
+  const headline = settings.newTabHeadlineText.trim() || (seasonLook && !isPrivate ? seasonLook.headline : isPrivate ? 'Private tab' : 'Where to?')
   const recording = useAssistant((s) => s.recording)
   const transcribing = useAssistant((s) => s.transcribing)
   const engine = SEARCH_ENGINES[settings.searchEngine].label
@@ -148,7 +154,7 @@ export function NewTab({ tabId }: { tabId: string }) {
   const fancySearch = (
     <form className="nt-search" role="search" onSubmit={(e) => void onFancySearch(e)}>
       <span className="nt-caret" aria-hidden />
-      <input aria-label={searchLabel} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search or type a web address" spellCheck={false} autoComplete="off" className="nt-input" />
+      <input aria-label={searchLabel} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search or enter address" spellCheck={false} autoComplete="off" className="nt-input" />
       <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => { pickPicture(e.target.files?.[0]); e.target.value = '' }} />
       <button type="button" className="nt-eye" aria-label="Search with a picture" title="Search with a picture" onClick={() => fileRef.current?.click()}>
         <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -184,7 +190,7 @@ export function NewTab({ tabId }: { tabId: string }) {
   )
 
   return (
-    <div className={cn(immersive ? 'nt' : 'nt-plain', dark && 'dark', 'text-shasta-fg')} data-wallpaper={wallpaper} data-style={style}>
+    <div className={cn(immersive ? 'nt' : 'nt-plain', dark && 'dark', 'text-shasta-fg')} data-wallpaper={wallpaper} data-style={style} data-console={consoleRoom ? '' : undefined}>
       {photo ? (
         <SeasonPhoto id={photo} />
       ) : wallpaper === 'ribbon' ? (
@@ -206,8 +212,8 @@ export function NewTab({ tabId }: { tabId: string }) {
           <svg className="nt-ridge" viewBox="0 0 1600 260" preserveAspectRatio="none" aria-hidden>
             <defs>
               <linearGradient id="nt-ridge-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#262c52" stopOpacity="0.5" />
-                <stop offset="1" stopColor="#090b10" stopOpacity="0" />
+                <stop offset="0" stopColor="#1a1e28" stopOpacity="0.9" />
+                <stop offset="1" stopColor="#0b0d14" stopOpacity="0" />
               </linearGradient>
             </defs>
             <path d="M0 260 V190 L180 150 L300 176 L470 120 L560 148 L700 96 L800 40 L850 22 L890 44 L930 82 L1040 128 L1190 104 L1320 160 L1460 134 L1600 178 V260 Z" fill="url(#nt-ridge-fill)" />
@@ -225,7 +231,7 @@ export function NewTab({ tabId }: { tabId: string }) {
             {showSearch && (
               <>
                 {fancySearch}
-                <p className="nt-hint" aria-live="polite">{aiRoute ? 'Questions go to Shasta AI, on this device. Web addresses open as usual.' : `Searches ${engine}. Type a web address to go straight there.`}</p>
+                <p className="nt-hint" aria-live="polite">{aiRoute ? 'Questions go to Shasta AI, on this device. Web addresses open as usual.' : `Searches ${engine}`}</p>
               </>
             )}
           </>

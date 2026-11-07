@@ -4,7 +4,9 @@
 //   - /wisp/ : a plain byte relay to the full site's Wisp. The TLS of every proxied site still ends in the browser,
 //     so Bunny only ever sees encrypted Wisp frames.
 //   - /api/*, /cloud/*, /nowgg/*, /ai-models/* : forwarded to the full site unchanged, the browser's Origin included
-//     (the backend allows the Lite origins listed in APP_ORIGINS and answers CORS itself).
+//     (the backend allows the Lite origins listed in APP_ORIGINS and answers CORS itself). A WebSocket upgrade there
+//     (/api/events/ws, /api/pulse/ws, /api/chat/ws, /api/pad/ws, the cloud signalling socket) cannot go through
+//     fetch(), so it is relayed like Wisp; the upstream socket carries no Origin, which the backend accepts.
 // Nothing is stored or logged here.
 import * as BunnySDK from "https://esm.sh/@bunny.net/edgescript-sdk@0.11.2";
 
@@ -13,7 +15,7 @@ const FORWARD = /^\/(api|cloud|nowgg|ai-models)(\/|$)/;
 const MAX_QUEUE = 4 * 1024 * 1024; // bytes held while the upstream connects
 const HOP = ["host", "connection", "upgrade", "keep-alive", "transfer-encoding", "te", "trailer", "proxy-authorization", "cdn-loop"];
 
-function relayWisp(request) {
+function relaySocket(request, path) {
 	const { response, socket: client } = request.upgradeWebSocket({ idleTimeout: 60 });
 	let up = null;
 	let opened = false;
@@ -28,7 +30,7 @@ function relayWisp(request) {
 		finish();
 	};
 	const connect = () => {
-		const ws = new WebSocket(UPSTREAMS[next++].replace(/^https/, "wss") + "/wisp/");
+		const ws = new WebSocket(UPSTREAMS[next++].replace(/^https/, "wss") + path);
 		ws.binaryType = "arraybuffer";
 		up = ws;
 		ws.onopen = () => {
@@ -80,9 +82,12 @@ BunnySDK.net.http.serve(async (request) => {
 	const url = new URL(request.url);
 	if (url.pathname === "/wisp/" || url.pathname === "/wisp") {
 		if ((request.headers.get("upgrade") || "").toLowerCase() !== "websocket") return new Response("Wisp relay", { status: 426 });
-		return relayWisp(request);
+		return relaySocket(request, "/wisp/");
 	}
 	if (url.pathname === "/healthz") return new Response("ok");
-	if (FORWARD.test(url.pathname)) return forward(request, url);
+	if (FORWARD.test(url.pathname)) {
+		if ((request.headers.get("upgrade") || "").toLowerCase() === "websocket") return relaySocket(request, url.pathname + url.search);
+		return forward(request, url);
+	}
 	return new Response("Not found", { status: 404 });
 });

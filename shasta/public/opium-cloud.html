@@ -263,6 +263,15 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
       HOSTS = up.map((x) => x.h);
       return (HOST = HOSTS[0]);
     }
+    // The mirrors DID answer plainly, and their own status says the pool is down (`pool.health.down`; measured
+    // 2026-11-07: every mirror 200 in ~150 ms with down:true, 7983 failures in a row, nothing created for 6+ hours).
+    // That is the provider telling us, not a guess about the network, and it is not a Cloudflare challenge: do not
+    // fall through to the challenge path (it told people to open /stratus/status in a tab to clear a "security check").
+    const answered = probes.filter(Boolean);
+    if (answered.length && answered.every((x) => x.down)) {
+      Object.assign(hostCheck, { result: "provider-down", plain: 0, challenged: 0, blocked: MIRRORS.length - answered.length, down: answered.length, total: MIRRORS.length });
+      throw new Error("provider-down");
+    }
     // nothing answered plainly. Most likely Cloudflare's JS challenge (fetch cannot solve it, and the challenge
     // reply has no CORS so it looks like a dead host). Let the browser solve it in a hidden iframe per relay and
     // wait for one to start answering; a school/datacenter/VPN IP trips this while a normal home network does not.
@@ -306,7 +315,47 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
   // datacenters). From inside the browser the two look the same: on 2026-11-03 a report said "down" while the
   // service was up and busy from a home network. So never claim which one it is; another network tells.
   const SERVICE_DOWN = "The cloud game service isn't answering from this network. Its servers are online, but the game service behind them isn't replying. Either the service is down right now, or this network (some school filters, VPNs) keeps it out. Try again in a few minutes, or on another network (home Wi-Fi or a phone hotspot).";
-  const hostError = (e) => (e && e.message === "challenge" && challengedHost ? CHALLENGED(challengedHost) : e && e.message === "down" ? SERVICE_DOWN : UNREACHABLE);
+  // Different from SERVICE_DOWN: here the provider's own status page answered and said its gaming computers are down,
+  // so this is stated as what the provider reports (nothing the person's network or Shasta can change).
+  const PROVIDER_DOWN = "The cloud game provider's own status says its gaming computers are down right now, so no cloud game can start. That's on their side, not your network or Shasta, and nothing you change will fix it. It usually comes back on its own.";
+  const hostError = (e) => (e && e.message === "challenge" && challengedHost ? CHALLENGED(challengedHost) : e && e.message === "down" ? SERVICE_DOWN : e && e.message === "provider-down" ? PROVIDER_DOWN : UNREACHABLE);
+  // The provider's /stratus FLAPS: it stops answering browsers for a few minutes and comes back (2026-11-03: GTA V
+  // failed with "isn't answering", then streamed fine minutes later from the same network). So a failed check never
+  // leaves a dead end: it waits QUICK_WAIT_MS for the service first, and after that keeps checking once a minute
+  // (only while the player is in view and online) and starts the game by itself as soon as a mirror answers.
+  const QUICK_WAIT_MS = 45000;
+  const AUTO_RETRY_MS = 60000;
+  const AUTO_NOTE = " Shasta keeps checking once a minute and starts the game by itself as soon as the service answers.";
+  let autoRetry = null;
+  const anyMirrorUp = async () => (await Promise.all(MIRRORS.map(probeStatus))).some((x) => x && !x.down);
+  function stopAutoRetry() { clearInterval(autoRetry); autoRetry = null; }
+  function startAutoRetry() {
+    stopAutoRetry();
+    const timer = setInterval(async () => {
+      if (busy || !lastStart || document.visibilityState !== "visible" || navigator.onLine === false) return;
+      if (!(await anyMirrorUp()) || autoRetry !== timer || busy) return;
+      stopAutoRetry();
+      teardownQuiet();
+      HOST = qs.get("h") || null;
+      start(...lastStart);
+    }, AUTO_RETRY_MS);
+    autoRetry = timer;
+  }
+  /** pickHost, but a service that is not answering is waited out for a while before giving up */
+  async function pickHostPatiently() {
+    try { return await pickHost(); } catch (e) {
+      if (e.message === "challenge" || e.message === "provider-down") throw e; // provider-down: the caller shows it at once and keeps re-checking
+      phase("Waiting for the cloud service…");
+      sub("it isn't answering right now, trying again");
+      const until = Date.now() + QUICK_WAIT_MS;
+      while (Date.now() < until) {
+        await sleepMs(5000);
+        // a plain answer, not a cleared challenge: drop the "security check" note pickHost's failure path set
+        if (await anyMirrorUp()) { sub(""); challengeHost = false; return pickHost(); }
+      }
+      throw e;
+    }
+  }
   const CHALLENGED = (h) => `The cloud servers want to check this network before they answer, and that check can't run inside a game window. Open https://${h}/stratus/status in a normal Chrome tab (not Incognito), wait until it shows text, then press Try again here. Or try another network (home Wi-Fi or a phone hotspot).`;
 
   // ---- catalogue ------------------------------------------------------
@@ -529,6 +578,7 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
   }
   function verdict() {
     if (!diag.startedAt && hostCheck.result === "challenge") return { ok: false, text: `no cloud server answered plainly: ${hostCheck.challenged} of ${hostCheck.total} answered with a Cloudflare security check this game window cannot pass, ${hostCheck.blocked} were unreachable${hostCheck.proxy === "unavailable" ? ", and Shasta's proxy was unavailable" : ""}. Opening the mirror's /stratus/status in a normal tab may clear it.` };
+    if (!diag.startedAt && hostCheck.result === "provider-down") return { ok: false, text: `the cloud game provider's status says its gaming computers are down: ${hostCheck.down} of ${hostCheck.total} cloud servers answered, and every one that answered reported its pool as down.` };
     if (!diag.startedAt && hostCheck.result === "down") return { ok: false, text: `the cloud game service did not answer from this network: ${hostCheck.sites} of ${hostCheck.total} cloud server domains answered, but none of their /stratus game services did. Either the provider is down or this network (a filter reading full addresses, a VPN or hosting IP) is kept from it; trying another network tells which.` };
     if (!diag.startedAt && hostCheck.result === "unreachable") return { ok: false, text: `none of the ${hostCheck.total} cloud server domains could be reached from this network (blocked by a filter or down)${hostCheck.proxy === "unavailable" ? ", and Shasta's proxy was unavailable" : ""}.` };
     if (!diag.startedAt) return { ok: false, text: `the video connection has not started yet (${phaseText.replace(/…$/, "") || "not started"}), so nothing is known about this network's ports.` };
@@ -765,6 +815,8 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
   async function start(key, name, cover, again = false) {
     if (busy || !key) return;
     busy = true;
+    stopAutoRetry();
+    if (!HOST) challengeHost = false; // a fresh relay pick sets it again only if a challenge really shows up
     player.classList.add("on", "showbar");
     $("pname").textContent = name || key; $("pbar").textContent = name || key;
     $("pcover").src = cover || "";
@@ -777,7 +829,11 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
         await ensureApi();
         hostCheck.proxy = API.base ? "answered" : PROXY_BASES.length ? "unavailable" : "none";
         if (!API.base) {
-          try { await pickHost(); } catch (e) { return fail(hostError(e)); }
+          try { await pickHostPatiently(); } catch (e) {
+            fail(hostError(e) + (e.message === "challenge" ? "" : AUTO_NOTE));
+            if (e.message !== "challenge") startAutoRetry();
+            return;
+          }
         }
       }
       phase("Asking for a gaming PC…");
@@ -930,6 +986,7 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
     dc = pc = ws = uuid = null; SIG = null;
   }
   function teardown() {
+    stopAutoRetry();
     closing = true; clearTimeout(readyTimer); clearTimeout(iceTimer); clearTimeout(iceGiveUp); clearInterval(diagStats);
     try { dc?.close(); } catch {}
     try { pc?.close(); } catch {}
@@ -951,7 +1008,7 @@ window.__OPIUM_PROXY__ = /*__PROXY__*/null;
   addEventListener("keydown", (e) => { if (e.key === "Escape" && player.classList.contains("on") && !document.pointerLockElement) { /* let Esc free the pointer first */ } });
   addEventListener("pagehide", () => { if (uuid) teardown(); });
 
-  loadCatalog().catch((e) => { $("status").textContent = e.message === "unreachable" || e.message === "down" || e.message === "challenge" ? hostError(e) : "could not load the catalogue: " + e.message; });
+  loadCatalog().catch((e) => { $("status").textContent = e.message === "unreachable" || e.message === "down" || e.message === "challenge" || e.message === "provider-down" ? hostError(e) : "could not load the catalogue: " + e.message; });
 })();
 </script>
 </body>

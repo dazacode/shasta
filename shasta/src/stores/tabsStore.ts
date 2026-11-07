@@ -93,6 +93,10 @@ const GROUP_COLORS = Object.keys(ACCENTS) as AccentName[]
 let appLauncher: ((addr: { slug: string; path: string }) => void) | null = null
 export const registerAppLauncher = (fn: typeof appLauncher) => (appLauncher = fn)
 
+/** Closing the last tab is leaving the browser: Shasuta (shasuta/host.tsx) takes over when it is on. */
+let lastTabClosed: (() => void) | null = null
+export const registerLastTabClosed = (fn: typeof lastTabClosed) => (lastTabClosed = fn)
+
 function startTabs(): { tabs: Tab[]; activeId: string; groups: TabGroup[]; closed: ClosedTab[] } {
   const fresh = () => {
     const tab = makeTab(startUrl())
@@ -287,7 +291,9 @@ export const useTabs = create<TabsState>()((set, get) => {
       const groups = s.groups.filter((g) => remaining.some((t) => t.groupId === g.id))
       if (!remaining.length) {
         const blank = makeTab(startUrl())
-        return set({ tabs: [blank], activeId: blank.id, groups: [], closed })
+        set({ tabs: [blank], activeId: blank.id, groups: [], closed })
+        lastTabClosed?.()
+        return
       }
       set({ tabs: remaining, activeId: nextActive ?? remaining[0].id, groups, closed })
       update(nextActive ?? remaining[0].id, activate)

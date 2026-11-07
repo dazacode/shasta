@@ -7,6 +7,7 @@
 //   - the ONNX Runtime wasm (on-device AI, 26 MB twice) is left out.
 // The service worker adds COOP/COEP/DIP to Shasta's own pages (sw.js LITE_BUILD) for hosts that cannot send headers;
 // on a host that can, the headers are simply already there.
+import { assertNoShasuta } from "./shasutaGuard";
 import { existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { adEnv } from "./adCodes";
@@ -61,6 +62,8 @@ export function buildLite(out: string, statsId: string, base = "/", extraEnv: Re
 	delete env.VITE_OBFUSCATE;
 
 	run(["bunx", "vite", "build", "--outDir", out, "--emptyOutDir", "--base", base], join(ROOT, "shasta"), env);
+
+	assertNoShasuta(out, "the Lite build"); // the gaming mode is unreleased (scripts/lib/shasutaGuard.ts)
 
 	const swPath = join(out, "sw.js");
 	const sw = readFileSync(swPath, "utf8");

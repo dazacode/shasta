@@ -54,6 +54,21 @@ const engineCopy = NEUTRAL_ENGINE
       { src: '../scramjet/packages/controller/dist/*.js', dest: 'controller', rename: { stripBase: true as const } },
     ]
 
+// Shasuta (the gaming mode, src/shasuta/) is still in development, so a production build leaves it OUT: its imports
+// resolve to the inert stand-ins in src/shasutaOff/ and none of its code, styles or strings reach the bundle. Dev
+// (`bun run dev`) keeps it. `VITE_SHASUTA=1` builds it in on purpose (`VITE_SHASUTA=0` leaves it out in dev).
+// Without src/shasutaOff/ (the public source snapshot ships the stand-ins at the real paths) there is nothing to alias.
+const BUILDING = process.argv.includes('build')
+const SHASUTA_OFF_DIR = path.resolve(import.meta.dirname, 'src/shasutaOff')
+const SHASUTA = process.env.VITE_SHASUTA === '1' || (process.env.VITE_SHASUTA !== '0' && !BUILDING)
+if (BUILDING) console.log(`[shasta] Shasuta (gaming mode): ${SHASUTA ? 'INCLUDED' : 'left out'}`)
+const shasutaAlias = SHASUTA || !existsSync(SHASUTA_OFF_DIR)
+  ? []
+  : [
+      { find: /^@\/shasuta\/(host|state|album|art)$/, replacement: `${SHASUTA_OFF_DIR}/$1` },
+      { find: /^@\/components\/whatsNew\/ShasutaDemo$/, replacement: `${SHASUTA_OFF_DIR}/ShasutaDemo` },
+    ]
+
 export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(pkg.version), __ENGINE_VERSION__: JSON.stringify(engineVersion), __ENGINE_PATHS__: JSON.stringify(ENGINE_PATHS) },
   plugins: [
@@ -169,6 +184,7 @@ export default defineConfig({
   worker: { format: 'es' },
   resolve: {
     alias: [
+      ...shasutaAlias,
       { find: '@', replacement: path.resolve(import.meta.dirname, 'src') },
       // Scramjet is built by its own pnpm workspace (it relies on workspace:/catalog: protocols
       // that bun can't resolve), so we consume its built files directly. Their own imports

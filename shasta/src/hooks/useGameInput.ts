@@ -11,6 +11,7 @@ import { useUi } from '@/stores/uiStore'
 import { openControls, useGameControls } from '@/stores/gameControlsStore'
 import { onPhonePadEvent, phonePadsConnected, setPhonePadGame } from '@/lib/phonePad'
 import { tabTitle } from '@/lib/tabModel'
+import { useShasuta } from '@/shasuta/state'
 
 export const tabControlsKey = (t: Tab): string | null => {
   const url = tabUrl(t)
@@ -48,6 +49,8 @@ export function useGameInput() {
 
     const stop = startGamepads({
       target: () => {
+        // Shasuta (or its Quick Menu) on screen: the controller drives that (shasuta/nav.ts), never a game behind it
+        if (useShasuta.getState().visible || useShasuta.getState().quick) return null
         const s = useTabs.getState()
         const tab = s.tabs.find((t) => t.id === s.activeId)
         // a phone that joined is a clear "I want to play this": it drives the front page even outside game mode

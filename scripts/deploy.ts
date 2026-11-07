@@ -11,6 +11,7 @@
 // only after their go-ahead `bun run deploy cloudflare --prod` ships the SAME build to production (main). --prod
 // refuses a dist that differs from the last staged one (`--force` overrides). `bun run deploy cloudflare --rollback
 // [deployment id]` puts production back on an earlier deployment (default: the one before the current).
+import { assertNoShasuta } from "./lib/shasutaGuard";
 import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
@@ -42,6 +43,7 @@ if (!existsSync(join(DIST, "index.html"))) {
 	console.error("shasta/dist is missing: run `bun run build` first");
 	process.exit(1);
 }
+assertNoShasuta(DIST, "shasta/dist"); // the gaming mode is unreleased: never upload a build that has it
 // The links on shasta://get-app are baked in at build time; a dist built without them (e.g. `cd shasta && bun run
 // build`, which does not load the root .env) hides the download buttons.
 for (const name of ["VITE_APP_BUNDLE_URL", "VITE_APP_UPDATE_MANIFEST_URL"]) {

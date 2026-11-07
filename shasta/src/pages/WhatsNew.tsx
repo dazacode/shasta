@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
 import { motion, useReducedMotion } from 'motion/react'
-import { ArrowRight, AudioLines, Bookmark, ChevronLeft, Cloud, Gamepad2, Heart, Laptop, Smartphone, Sparkles } from 'lucide-react'
+import { ArrowRight, AudioLines, Bookmark, ChevronLeft, Cloud, Gamepad2, Heart, LayoutGrid, Laptop, Smartphone, Sparkles } from 'lucide-react'
 import { Logo } from '@/components/Logo'
 import { buttonVariants } from '@/components/ui/button'
 import { QrImage } from '@/components/DiscordQr'
@@ -12,6 +12,8 @@ import { cn } from '@/lib/utils'
 import SaveDemo from '@/components/demos/SaveDemo'
 import { WelcomeDemo } from '@/components/whatsNew/WelcomeDemo'
 import { CloudDemo } from '@/components/whatsNew/CloudDemo'
+import { ShasutaDemo } from '@/components/whatsNew/ShasutaDemo'
+import { SHASUTA_BUILT } from '@/shasuta/state'
 import { HomeDemo } from '@/components/whatsNew/HomeDemo'
 import { MediaDemo } from '@/components/whatsNew/MediaDemo'
 import { StoreDemo } from '@/components/whatsNew/StoreDemo'
@@ -43,9 +45,23 @@ const UPDATE: Slide[] = [
     // a Cloud title picked from the Store and its stream starting (components/whatsNew/CloudDemo.tsx)
     demo: <CloudDemo />,
     eyebrow: 'New',
-    title: 'Cloud gaming is here',
-    body: <>Play 200+ big PC games streamed from a gaming PC, with nothing to download. More are on the way.</>,
+    title: 'Cloud gaming, 200+ PC games',
+    body: <>Streamed from a gaming PC, with nothing to download. More are on the way.</>,
   },
+  // not listed in a build without Shasuta (shasutaOff/): there is nothing to announce
+  ...(SHASUTA_BUILT
+    ? [
+      {
+        icon: <LayoutGrid />,
+        // Shasuta, the console-style home (experimental, on by default): the shortcut, its first sticker, the game that is
+        // still running picked from its tiles (components/whatsNew/ShasutaDemo.tsx)
+        demo: <ShasutaDemo />,
+        eyebrow: 'New',
+        title: 'A console-style home for your games',
+        body: <>Press Alt+Shift+H, or a controller's Home button, to open Shasuta, with your tabs still running behind it.</>,
+      },
+      ]
+    : []),
   {
     icon: <Laptop />,
     // honest scope (CLAUDE.md "Memory64 games on Chrome < 133"): games built for newer Chrome now start on older

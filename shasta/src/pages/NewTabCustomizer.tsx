@@ -259,8 +259,8 @@ export function NewTabCustomizer({ onEditPage }: { onEditPage?: () => void } = {
           {s.newTabStyle === 'immersive' && s.newTabGreeting && (
             <Row title="Your words" desc="Leave empty for the default." stack>
               <div className="grid w-full gap-2 sm:grid-cols-2">
-                <Input aria-label="Greeting" maxLength={60} placeholder="Happy to see you at Shasta" value={s.newTabGreetingText} onChange={(e) => update({ newTabGreetingText: e.target.value })} />
-                <Input aria-label="Headline" maxLength={60} placeholder="How can I help you?" value={s.newTabHeadlineText} onChange={(e) => update({ newTabHeadlineText: e.target.value })} />
+                <Input aria-label="Greeting" maxLength={60} placeholder="Today's date" value={s.newTabGreetingText} onChange={(e) => update({ newTabGreetingText: e.target.value })} />
+                <Input aria-label="Headline" maxLength={60} placeholder="Where to?" value={s.newTabHeadlineText} onChange={(e) => update({ newTabHeadlineText: e.target.value })} />
               </div>
             </Row>
           )}

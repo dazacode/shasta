@@ -13,6 +13,7 @@
         "@ghostery/adblocker-content": "2.20.1",
         "@ghostery/adblocker-extended-selectors": "2.20.1",
         "@huggingface/transformers": "4.3.1",
+        "@mcp-b/webmcp-polyfill": "^6.0.3",
         "@mercuryworkshop/epoxy-transport": "3.0.1",
         "@mercuryworkshop/libcurl-transport": "2.0.5",
         "@mercuryworkshop/proxy-transports": "1.0.2",
@@ -25,9 +26,11 @@
         "dashjs": "^5.2.1",
         "embla-carousel-react": "^8.6.0",
         "fflate": "^0.8.3",
+        "fuse.js": "^7.5.0",
         "hls.js": "^1.7.4",
         "lucide-react": "^1.61.0",
         "motion": "^14.6.0",
+        "ogl": "^1.0.11",
         "pdfjs-dist": "^6.4.299",
         "react": "^19.3.1",
         "react-dom": "^19.3.1",
@@ -645,6 +648,8 @@
 
     "@xtuc/long": ["@xtuc/long@4.2.2", "", {}, "sha512-NuHqBY1PB/D8xU6s/thBgOAiAP7HOYDQ32+BFZILJ8ivkUkAHQnWfn6WhL79Owj1qmUnoN/YPhktdIoucipkAQ=="],
 
+    "@mcp-b/webmcp-polyfill": ["@mcp-b/webmcp-polyfill@6.0.3", "", { "dependencies": { "webmcp-types": "0.1.9" } }, "sha512-pD8iKBXpDKLeYyqDcWPiNFI0JuK7/f+/RxspA6qW81kcDdabWUTt7A0fH+cJx6EIjpoHkk4o3QPci7yQPuHofA=="],
+
     "accepts": ["accepts@2.0.0", "", { "dependencies": { "mime-types": "^3.0.0", "negotiator": "^1.0.0" } }, "sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng=="],
 
     "acorn": ["acorn@8.19.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-oJlA3XiRm7Cyk6qFD2Jn8ak9B7jSy0qy00ADO3+8dpT0LSjFihQYv4C02LFCSYJV3Q37xYwwRy5m+IpIiUzqWw=="],
@@ -931,6 +936,8 @@
 
     "function-bind": ["function-bind@1.1.2", "", {}, "sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA=="],
 
+    "fuse.js": ["fuse.js@7.5.0", "", {}, "sha512-sQtrEfA+ez/3G0cCZecF70oqpCRttCexYUG4mUrtWL49ULUzUyxokt5kyqwtKzj1270RaKih+hcP3qLcumccow=="],
+
     "fuzzysort": ["fuzzysort@3.1.0", "", {}, "sha512-sR9BNCjBg6LNgwvxlBd0sBABvQitkLzoVY9MYYROQVX/FvfJ4Mai9LsGhDgd8qYdds0bY77VzYd5iuB+v5rwQQ=="],
 
     "generator-function": ["generator-function@2.0.1", "", {}, "sha512-SFdFmIJi+ybC0vjlHN0ZGVGHc3lgE0DxPAT0djjVg+kjOnSqclqmj0KQ7ykTOLP6YxoqOvuAODGdcHJn+43q3g=="],
@@ -1196,6 +1203,8 @@
     "object.assign": ["object.assign@4.1.7", "", { "dependencies": { "call-bind": "^1.0.8", "call-bound": "^1.0.3", "define-properties": "^1.2.1", "es-object-atoms": "^1.0.0", "has-symbols": "^1.1.0", "object-keys": "^1.1.1" } }, "sha512-nK28WOo+QIjBkDduTINE4JkF/UJJKyf2EJxvJKfblDpyg0Q+pkOHNTL0Qwy6NP6FhE/EnzV73BxxqcJaXY9anw=="],
 
     "obug": ["obug@3.0.0", "", {}, "sha512-5vvB5+W7ePv+p3uqxi+RcW1XAzLW0/hxt3/4X4Lc4qHudzOhmBiBwOY6DRob4WnanAEGvNcLjF+KNOufrUoEQw=="],
+
+    "ogl": ["ogl@1.0.11", "", {}, "sha512-kUpC154AFfxi16pmZUK4jk3J+8zxwTWGPo03EoYA8QPbzikHoaC82n6pNTbd+oEaJonaE8aPWBlX7ad9zrqLsA=="],
 
     "on-finished": ["on-finished@2.4.2", "", { "dependencies": { "ee-first": "1.1.1" } }, "sha512-ATWUv387i+nLD49EiDoOft5scf32Vsdz3ktrQJG9bi7jRFmaXTssvyvj1EmeKVVgvesbqUtvQQvaS2TpTukAZQ=="],
 
@@ -1500,6 +1509,8 @@
     "wasm-feature-detect": ["wasm-feature-detect@1.9.0", "", {}, "sha512-zonE+xlIIYtxPy++L24ow0hAD8CICb4+FgPyROd3buyXIqsJvUEDkBgfCCoXOd1Hu3DUr0GOfnPIdcGV+YpNaA=="],
 
     "watchpack": ["watchpack@2.6.3", "", { "dependencies": { "graceful-fs": "^4.1.2" } }, "sha512-s3NZy0QpTY9qGqzc0wtz4qI28z3+5qKbbAec4MV4G9N3CfgZ9wgvQRr0cl2jh/tqkWG1NWHkmVMHZpCamev5Wg=="],
+
+    "webmcp-types": ["webmcp-types@0.1.9", "", {}, "sha512-ibdkppgRDkQ/nvH541YS48kVt96OiuDr+d9JHnirAtI5k0coaFdo2QqCipbXyfwrteDC6xXwPoUGC9uS5ZGwfw=="],
 
     "webpack": ["webpack@5.112.2", "", { "dependencies": { "@types/estree": "^1.0.8", "@types/json-schema": "^7.0.15", "@webassemblyjs/ast": "^1.14.1", "@webassemblyjs/wasm-edit": "^1.14.1", "@webassemblyjs/wasm-parser": "^1.14.1", "browserslist": "^4.28.1", "chrome-trace-event": "^1.0.2", "enhanced-resolve": "^5.26.0", "es-module-lexer": "^2.1.0", "events": "^3.2.0", "graceful-fs": "^4.2.11", "mime-db": "^1.54.0", "minimizer-webpack-plugin": "^5.13.0", "schema-utils": "^4.8.1", "tapable": "^2.3.0", "watchpack": "^2.6.3", "webpack-sources": "^3.6.0" }, "peerDependencies": { "webpack-cli": "*" }, "optionalPeers": ["webpack-cli"], "bin": { "webpack": "bin/webpack.js" } }, "sha512-B2tp1LI9D8GVpPDqprdt12ukTkXXahj9MzqSWJq4faSPgOUM7CdZaGAB6HrL/8E6UwbBpdj4vzWDbKoFnVoU6g=="],
 

@@ -9,6 +9,8 @@ dist/
 # scramjet.premigration/ is the pre-submodule checkout, kept until the migration is verified.
 /scramjet.premigration/
 data/
+# vendored vendor-category tables (server/src/services/filters/categories.ts imports them); the blanket data/ rule above hid them
+!/server/src/services/filters/data/
 
 # deploy staging, platform link folders
 .deploy/

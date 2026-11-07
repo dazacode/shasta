@@ -1,4 +1,4 @@
-import { SlidersHorizontal, Bookmark, BookmarkCheck, CircleQuestionMark, Flag, Gamepad2, HeartHandshake, History, Maximize2, MessagesSquare, PanelTop, Plus, RefreshCw, Settings, Share, ShieldCheck, Sparkles, Undo2, Users, VenetianMask, Film, Library, Store, ArrowLeft, Gauge, ArrowRight, Download, Home, Keyboard, MoreVertical, Printer, RotateCw, X } from 'lucide-react'
+import { SlidersHorizontal, Bookmark, BookmarkCheck, CircleQuestionMark, Flag, Gamepad2, HeartHandshake, History, Maximize2, MessagesSquare, PanelTop, Plus, RefreshCw, Settings, Share, ShieldCheck, Sparkles, Undo2, Users, VenetianMask, Film, Library, Store, ArrowLeft, Gauge, Camera, Joystick, ArrowRight, Download, Home, Keyboard, MoreVertical, Printer, RotateCw, X } from 'lucide-react'
 import { openControls } from '@/stores/gameControlsStore'
 import { openSaveShasta, siteAddress } from '@/lib/saveShasta'
 import { shouldSuggestApp } from '@/lib/shastaApp'
@@ -28,6 +28,8 @@ import { requestPrivateTab } from '@/lib/privateTab'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { openReport } from '@/store/ReportDialog'
 import { appShareLink, shareLink, shareLinkFor } from '@/lib/shareLink'
+import { exitBrowser, SHASUTA_BUILT, useShasuta } from '@/shasuta/state'
+import { captureActiveTab } from '@/shasuta/album'
 
 const tabTitleOf = (t: { entries: { title: string }[]; index: number }) => t.entries[t.index]?.title ?? ''
 
@@ -45,13 +47,14 @@ export function Toolbar() {
   const running = activeDownloads(downloads).length
   const updateReady = useOffline((s) => s.updateReady)
   const assistantOpen = useUi((s) => s.assistantOpen)
+  const shasutaOn = useShasuta((s) => s.prefs.enabled)
   const url = tabUrl(tab)
   const external = !isInternalUrl(url)
   // Store pages and Store apps share an https link that opens them in Shasta; other sites share their own address
   const shareUrl = tab?.app ? appShareLink(tab.app.slug) : external ? url : shareLinkFor(url)
 
   return (
-    <div className="relative flex items-center gap-1 px-2 py-1.5" role="toolbar" aria-label="Browser toolbar">
+    <div className="relative flex items-center gap-1 px-2 py-1.5" role="toolbar" aria-label="Browser toolbar" data-zone="toolbar">
       <IconButton label="Back" shortcut={keysFor('back')} onClick={() => back()} disabled={!canGoBack(tab)}>
         <ArrowLeft className="size-[18px]" strokeWidth={1.6} />
       </IconButton>
@@ -129,6 +132,14 @@ export function Toolbar() {
             </>
           )}
           {/* every entry has an icon, so the labels line up in one column; groups go tabs, places, this page, window, Shasta */}
+          {SHASUTA_BUILT && shasutaOn && (
+            <>
+              <DropdownMenuItem onClick={() => exitBrowser()} className="font-medium">
+                <Joystick /> Exit to Shasuta <DropdownMenuShortcut>{keysFor('consoleHome')}</DropdownMenuShortcut>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
           <DropdownMenuItem onClick={() => newTab(undefined, { atEnd: true })}>
             <Plus /> New tab <DropdownMenuShortcut>{keysFor('newTab')}</DropdownMenuShortcut>
           </DropdownMenuItem>
@@ -167,6 +178,17 @@ export function Toolbar() {
           <DropdownMenuItem onClick={() => perform({ action: 'toggleGameMode' })}>
             <Gamepad2 /> Game mode <DropdownMenuShortcut>{keysFor('toggleGameMode')}</DropdownMenuShortcut>
           </DropdownMenuItem>
+          {SHASUTA_BUILT && shasutaOn && external && (
+            <DropdownMenuItem
+              onClick={() =>
+                void captureActiveTab().then((r) =>
+                  useUi.getState().toast(r.ok ? `Saved to your Shasuta Album.` : r.reason, { tone: r.ok ? 'success' : 'error', ms: r.ok ? 4000 : 8000, action: r.ok ? { label: 'Open Album', run: () => exitBrowser({ name: 'album' }) } : undefined }),
+                )
+              }
+            >
+              <Camera /> Capture to Album
+            </DropdownMenuItem>
+          )}
           {tab && external && tab.app?.kind !== 'package' && (
             <DropdownMenuItem onClick={() => openControls(tab.id)}>
               <SlidersHorizontal /> Controls & controller…

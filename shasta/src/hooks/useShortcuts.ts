@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { focusActiveFrame, handleKeydown } from '@/lib/shortcuts'
+import { useShasuta } from '@/shasuta/state'
 import { useTabs } from '@/stores/tabsStore'
 import { useUi } from '@/stores/uiStore'
 import { setGameControl } from '@/lib/gameControl'
@@ -17,6 +18,7 @@ export function useShortcuts() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (handleKeydown(e)) return
+      if (useShasuta.getState().visible) return
       // Escape stops a loading page, but never steals it from inputs, menus or dialogs
       if (e.key === 'Escape' && !e.defaultPrevented && !isEditable(e.target)) {
         const s = useTabs.getState()

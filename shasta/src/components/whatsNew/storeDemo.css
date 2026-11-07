@@ -1,5 +1,5 @@
 /* What's new "Thank you" (StoreDemo.tsx): one figure on the night surface, mono like every count in Shasta. */
-.sd .ss-stage { --ss-font: 'Geist Variable', system-ui, sans-serif; overflow: hidden; border-radius: 18px; background: radial-gradient(60% 50% at 50% 0%, rgb(68 74 140 / 0.5), transparent 70%), #090b10; box-shadow: inset 0 0 0 1px rgb(238 240 245 / 0.09); }
+.sd .ss-stage { --ss-font: 'Geist Variable', system-ui, sans-serif; overflow: hidden; border-radius: 18px; background: #0b0d14; box-shadow: inset 0 0 0 1px rgb(238 240 245 / 0.09); }
 .sd-page { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; color: #eef0f5; font: 400 13px / 20px var(--ss-font); text-align: center; }
 .sd-label { color: #a3a9b8; }
 .sd-fig { font: 400 88px / 1 'Geist Mono Variable', ui-monospace, monospace; font-variant-numeric: tabular-nums; letter-spacing: -0.04em; }

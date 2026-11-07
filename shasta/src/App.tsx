@@ -45,6 +45,8 @@ import { useHome } from '@/stores/homeStore'
 import { ImportHomeDialog } from '@/components/home/HomeDialogs'
 import { useFocusAlarms } from '@/components/home/Home'
 import { applyMediaWatch } from '@/proxy/mediaWatch'
+import { ShasutaHost, startShasuta } from '@/shasuta/host'
+import { useShasuta } from '@/shasuta/state'
 
 function useBootstrap() {
   useEffect(() => {
@@ -65,6 +67,8 @@ function useBootstrap() {
     // "online now" counts every open window, not only those showing a new tab
     startPulse()
     startMaintenance()
+    // Shasuta, the gaming mode: leaving the browser opens it (experimental, Settings -> Appearance)
+    startShasuta()
     // a link someone shared (https://<site>/?app=<slug>) opens that Store page
     // first open (and after a big change): the welcome tour and beta notice, before a shared link so that one ends up in front
     showWhatsNewOnce(() => useTabs.getState().openInternal('whats-new'))
@@ -109,11 +113,13 @@ export default function App() {
   const showBar = useSettings((s) => s.settings.showBookmarksBar)
   const hidden = useUi((s) => s.chromeHidden)
   const setHidden = useUi((s) => s.setChromeHidden)
+  // Shasuta covers the browser: the browser stays loaded (tabs, pages, games keep their state) but out of reach
+  const shasuta = useShasuta((s) => (s.visible || s.quick) && s.prefs.enabled)
 
   return (
     <MotionConfig reducedMotion={reducedMotion ? 'always' : 'user'}>
       <TooltipProvider delay={400}>
-        <div className="flex h-dvh flex-col overflow-hidden bg-shasta-chrome text-shasta-fg">
+        <div className="flex h-dvh flex-col overflow-hidden bg-shasta-chrome text-shasta-fg" data-zone="browser" inert={shasuta} aria-hidden={shasuta || undefined}>
           {hidden ? (
             <button onClick={() => setHidden(false)} className="flex h-4 w-full shrink-0 items-center justify-center bg-shasta-chrome text-shasta-muted hover:bg-shasta-hover" aria-label="Show toolbar" title="Show toolbar">
               <ChevronDown className="size-3.5" />
@@ -121,7 +127,7 @@ export default function App() {
           ) : (
             <TabBar />
           )}
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-shasta-bg">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-shasta-bg" data-zone="column">
             {!hidden && (
               <>
                 <Toolbar />
@@ -130,7 +136,7 @@ export default function App() {
             )}
             <LiteBanner />
             <ConnectionBanner />
-            <div className="relative flex min-h-0 flex-1">
+            <div className="relative flex min-h-0 flex-1" data-zone="view">
               <BrowserView />
               <AssistantPanel />
             </div>
@@ -146,6 +152,7 @@ export default function App() {
         <ImportHomeDialog />
         <Toasts />
         <PageContextMenu />
+        <ShasutaHost />
       </TooltipProvider>
     </MotionConfig>
   )

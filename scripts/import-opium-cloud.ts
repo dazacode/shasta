@@ -25,7 +25,11 @@ const opt = (n: string) => {
 
 const origin = opt("origin") ?? process.env.VITE_SITE_ORIGIN ?? "https://edushasta.lol";
 const mode = (opt("mode") ?? "packages") as "packages" | "linked";
-const host = opt("host") ?? (await pickMirror());
+// --catalog <url|file> skips the provider entirely: its API ignores non-browser clients at times (2026-11-03: every
+// bun/curl request hung while browsers got answers), so save /stratus/games from a browser and pass the file.
+const catalog = opt("catalog");
+const catalogUrl = catalog && !/^[a-z]+:\/\//i.test(catalog) ? Bun.pathToFileURL(path.resolve(catalog)).href : catalog;
+const host = opt("host") ?? (catalog ? "catalog" : await pickMirror());
 
 // --api-base points the apps at a self-hosted x8rr/stratus-api (prefix cloud/v1) instead of the mirrors
 const apiBase = opt("api-base");
@@ -34,7 +38,7 @@ const api = apiBase
 	: null;
 
 // the live catalogue, else the snapshot `fetch:opium-cloud` saved (the provider's API sometimes hangs for everyone)
-let games = await fetchCloudGames(host).then(
+let games = catalog ? [] : await fetchCloudGames(host).then(
 	(r) => r.games,
 	async (e) => {
 		const snap = path.resolve(import.meta.dir, "../data/opium-cloud.json");
@@ -42,9 +46,8 @@ let games = await fetchCloudGames(host).then(
 		return ((await Bun.file(snap).json()) as { games: any[] }).games.filter((g) => g && g.key && g.name);
 	},
 );
-const catalog = opt("catalog");
-if (catalog) {
-	const fromCatalog = await fetch(catalog).then((r) => r.json());
+if (catalogUrl) {
+	const fromCatalog = await fetch(catalogUrl).then((r) => r.json());
 	games = (Array.isArray(fromCatalog) ? fromCatalog : fromCatalog.games ?? []).map((g: any) => ({ ...g, key: g.key ?? g.game_key })).filter((g: any) => g.key && g.name);
 }
 console.log(`${games.length} opium cloud games via ${host} · mode=${mode} · origin=${origin}${api ? ` · api=${api.base}` : ""}`);
