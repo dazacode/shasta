@@ -1,7 +1,7 @@
 /* Stream */
 
 @layer stageshow {
-  .ss-stream__w {
+  .sk-stream__w {
     opacity: 0;
     filter: blur(3px);
     border-radius: 3px;
@@ -10,22 +10,22 @@
     transition: opacity 0.35s ease, filter 0.35s ease, background-color 0.3s ease;
   }
 
-  .ss-stream__w[data-on] {
+  .sk-stream__w[data-on] {
     opacity: 1;
     filter: none;
   }
 
   /* Changed words, joined into runs */
-  .ss-stream__w[data-mark] {
-    background-color: var(--ss-success-soft);
+  .sk-stream__w[data-mark] {
+    background-color: var(--sk-success-soft);
   }
 
-  .ss-stream__w[data-join] {
+  .sk-stream__w[data-join] {
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
   }
 
-  .ss-stream__w[data-joined] {
+  .sk-stream__w[data-joined] {
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
   }

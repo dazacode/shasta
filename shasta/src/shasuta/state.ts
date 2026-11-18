@@ -16,6 +16,8 @@ export interface ShasutaPrefs {
 }
 
 interface OffState {
+  /** never set without Shasuta */
+  play: { tabId: string; kind: 'game' | 'app'; peek: boolean } | null
   visible: boolean
   quick: boolean
   prefs: ShasutaPrefs
@@ -24,6 +26,7 @@ interface OffState {
 }
 
 const OFF: OffState = {
+  play: null,
   visible: false,
   quick: false,
   prefs: { enabled: false, browserLook: false, visited: false, avatar: { kind: 'preset', id: 0 } },
@@ -31,7 +34,17 @@ const OFF: OffState = {
   hide: () => {},
 }
 
-export const useShasuta = Object.assign(<T,>(select: (s: OffState) => T): T => select(OFF), { getState: () => OFF })
+export const useShasuta = Object.assign(<T,>(select: (s: OffState) => T): T => select(OFF), {
+  getState: () => OFF,
+  subscribe: (_listener: (s: OffState, prev: OffState) => void) => () => {},
+})
+
+/** never immersive without Shasuta */
+export const useImmersive = (): 'game' | 'app' | null => null
 
 export const exitBrowser = (_screen?: unknown): boolean => false
+/** no tour without Shasuta, so none of its gifts */
+export const requestTour = (_from?: unknown): boolean => false
+export const tourGifts = (): boolean => false
+export const useTourGifts = (): boolean => false
 export const consoleLookOn = (_prefs: ShasutaPrefs): boolean => false

@@ -84,7 +84,8 @@ const cfg = window.__NOWGG__ || (qs.get("g") ? { appId: qs.get("g"), name: qs.ge
 // break games for someone on pages.dev or a Lite mirror. Only our own domains are accepted (the guest token goes there).
 const BAKED_API = (window.__NOWGG_PROXY__ || "/nowgg").replace(/\/+$/, "");
 let API = BAKED_API;
-const OUR_HOSTS = /^(https:\/\/((www\.)?edushasta\.lol|([a-z0-9-]+\.)?shasta-dtg\.pages\.dev|shasta-lite\.vercel\.app|shasta-lte\.base44\.app|shasta-lite-395c5527\.base44\.app)|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?)$/;
+// + the FreeDNS mirrors of the full site (scripts/mirrors/hosts.ts)
+const OUR_HOSTS = /^(https:\/\/((www\.)?edushasta\.lol|(learnmathwit|shastastud)\.chickenkiller\.com|kidsmathfun\.crabdance\.com|mathforbeg\.mooo\.com|findedu\.twilightparadox\.com|([a-z0-9-]+\.)?shasta-dtg\.pages\.dev|shasta-lite\.vercel\.app)|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?)$/;
 // a proxy is `<origin>/nowgg` (path appended) or, on Base44, `<origin>/functions/nowgg?p=` (path as the query)
 const ourBase = (b) => { try { const u = new URL(b); if (!OUR_HOSTS.test(u.origin)) return null;
   if (/^\/nowgg\/?$/.test(u.pathname) && !u.search) return u.origin + "/nowgg";

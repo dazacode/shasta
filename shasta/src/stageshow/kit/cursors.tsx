@@ -16,8 +16,8 @@ export function MacIbeam() {
   return (
     <svg width="10" height="16" viewBox="0 0 10 16" fill="none" overflow="visible">
       {/* A thin edge in the opposite tone, as macOS draws it, so it reads on any surface */}
-      <path d="M3 1H7M3 15H7M5 1V15" style={{ stroke: 'var(--ss-cursor-edge, #fff)' }} strokeWidth="2.6" strokeLinecap="round" />
-      <path d="M3 1H7M3 15H7M5 1V15" style={{ stroke: 'var(--ss-cursor-line, #000)' }} strokeWidth="1" strokeLinecap="round" />
+      <path d="M3 1H7M3 15H7M5 1V15" style={{ stroke: 'var(--sk-cursor-edge, #fff)' }} strokeWidth="2.6" strokeLinecap="round" />
+      <path d="M3 1H7M3 15H7M5 1V15" style={{ stroke: 'var(--sk-cursor-line, #000)' }} strokeWidth="1" strokeLinecap="round" />
     </svg>
   )
 }
@@ -25,8 +25,8 @@ export function MacIbeam() {
 export function MacCrosshair() {
   return (
     <svg width="17" height="17" viewBox="0 0 17 17" fill="none" overflow="visible">
-      <path d="M8.5 0V17M0 8.5H17" style={{ stroke: 'var(--ss-cursor-edge, #fff)' }} strokeWidth="2.6" />
-      <path d="M8.5 0V17M0 8.5H17" style={{ stroke: 'var(--ss-cursor-line, #000)' }} strokeWidth="1" />
+      <path d="M8.5 0V17M0 8.5H17" style={{ stroke: 'var(--sk-cursor-edge, #fff)' }} strokeWidth="2.6" />
+      <path d="M8.5 0V17M0 8.5H17" style={{ stroke: 'var(--sk-cursor-line, #000)' }} strokeWidth="1" />
     </svg>
   )
 }
@@ -94,8 +94,8 @@ function MacResize({ turn }: { turn: number }) {
   return (
     <svg width="21" height="21" viewBox="-14 -14 28 28" overflow="visible">
       <g transform={`rotate(${turn})`} strokeLinejoin="round">
-        <path d={RESIZE_TIP} style={{ fill: 'var(--ss-cursor-edge, #fff)', stroke: 'var(--ss-cursor-edge, #fff)' }} strokeWidth="3.2" />
-        <path d={RESIZE_TIP} style={{ fill: 'var(--ss-cursor-line, #000)', stroke: 'var(--ss-cursor-line, #000)' }} strokeWidth="1.2" />
+        <path d={RESIZE_TIP} style={{ fill: 'var(--sk-cursor-edge, #fff)', stroke: 'var(--sk-cursor-edge, #fff)' }} strokeWidth="3.2" />
+        <path d={RESIZE_TIP} style={{ fill: 'var(--sk-cursor-line, #000)', stroke: 'var(--sk-cursor-line, #000)' }} strokeWidth="1.2" />
       </g>
     </svg>
   )

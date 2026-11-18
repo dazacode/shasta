@@ -2,16 +2,16 @@
 
 @layer stageshow {
   /* Facepile: each face is cut out where the next overlaps it (a mask, not a ring) */
-  .ss-facepile {
+  .sk-facepile {
     display: inline-flex;
     align-items: center;
   }
 
-  .ss-facepile__face {
+  .sk-facepile__face {
     display: flex;
   }
 
-  .ss-facepile__face + .ss-facepile__face {
-    margin-left: var(--ss-overlap);
+  .sk-facepile__face + .sk-facepile__face {
+    margin-left: var(--sk-overlap);
   }
 }

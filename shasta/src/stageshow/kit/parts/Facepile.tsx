@@ -15,9 +15,9 @@ export function Facepile({ names, size = 22, overlap = 6, gap = 2, tones, classN
   const next = size - overlap + r
   const mask = `radial-gradient(circle at ${next}px 50%, transparent ${r + gap}px, #000 ${r + gap + 0.5}px)`
   return (
-    <span {...rest} className={`ss-facepile${className ? ` ${className}` : ''}`} style={{ ['--ss-overlap' as string]: `${-overlap}px`, ...style }}>
+    <span {...rest} className={`sk-facepile${className ? ` ${className}` : ''}`} style={{ ['--sk-overlap' as string]: `${-overlap}px`, ...style }}>
       {names.map((n, i) => (
-        <span key={i} className="ss-facepile__face" style={i < names.length - 1 ? { WebkitMaskImage: mask, maskImage: mask } : undefined}>
+        <span key={i} className="sk-facepile__face" style={i < names.length - 1 ? { WebkitMaskImage: mask, maskImage: mask } : undefined}>
           <Avatar name={n} size={size} tone={tones?.[i] ?? 'person'} />
         </span>
       ))}

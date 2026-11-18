@@ -81,7 +81,7 @@ function InviteDialog({ open, onClose, onCreated }: { open: boolean; onClose: ()
   )
 }
 
-const INVITE_STYLE: Record<Invite['status'], string> = { open: 'text-emerald-600 dark:text-emerald-400', used: 'text-shasta-muted', revoked: 'text-shasta-danger', expired: 'text-shasta-muted' }
+const INVITE_STYLE: Record<Invite['status'], string> = { open: 'text-shasta-success', used: 'text-shasta-muted', revoked: 'text-shasta-danger', expired: 'text-shasta-muted' }
 
 export function PeopleTab() {
   const [search, setSearch] = useState('')

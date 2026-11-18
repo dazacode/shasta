@@ -55,7 +55,7 @@ const HOTSPOT: Record<CursorKind, Point> = {
 const ARROW_HOTSPOT: Point = { x: 4, y: 3 }
 function SolidArrow() {
   return (
-    <svg width="22" height="22" viewBox="0 0 22 22" className="ss-cursor__arrow" aria-hidden>
+    <svg width="22" height="22" viewBox="0 0 22 22" className="sk-cursor__arrow" aria-hidden>
       <path d="M4 3 18.5 9.6 11.8 11.8 9.6 18.5Z" />
     </svg>
   )
@@ -64,10 +64,10 @@ function SolidArrow() {
 /** The cursor element. The stage moves it (a transform on cursorRef) and marks it pressed or idle. */
 export function Cursor({ cursorRef, style = 'real', kind }: { cursorRef: Ref<HTMLDivElement>; style?: CursorStyle; kind: CursorKind }) {
   return (
-    <div ref={cursorRef} className="ss-cursor" data-style={style} data-kind={kind} aria-hidden>
-      {style === 'touch' && <span className="ss-cursor__streak" />}
-      <div className="ss-cursor__press">
-        {(style === 'circle' || style === 'touch') && <span className="ss-cursor__dot" />}
+    <div ref={cursorRef} className="sk-cursor" data-style={style} data-kind={kind} aria-hidden>
+      {style === 'touch' && <span className="sk-cursor__streak" />}
+      <div className="sk-cursor__press">
+        {(style === 'circle' || style === 'touch') && <span className="sk-cursor__dot" />}
         {style !== 'circle' && style !== 'touch' && (Object.keys(GLYPHS) as CursorKind[]).map((k) => {
           const arrow = style === 'arrow'
           // The arrow style has two glyphs: the arrow, and the I-beam over text
@@ -78,7 +78,7 @@ export function Cursor({ cursorRef, style = 'real', kind }: { cursorRef: Ref<HTM
           return (
             <div
               key={k}
-              className="ss-cursor__glyph"
+              className="sk-cursor__glyph"
               data-glyph={k}
               data-active={k === shown}
               style={{ marginLeft: -hot.x, marginTop: -hot.y, transformOrigin: `${hot.x}px ${hot.y}px` }}
@@ -95,7 +95,7 @@ export function Cursor({ cursorRef, style = 'real', kind }: { cursorRef: Ref<HTM
 /** A ring that spreads from the click point and fades, drawn under the cursor. */
 export function ripple(root: HTMLElement, at: Point) {
   const r = document.createElement('span')
-  r.className = 'ss-ripple'
+  r.className = 'sk-ripple'
   r.style.left = `${at.x}px`
   r.style.top = `${at.y}px`
   root.appendChild(r)

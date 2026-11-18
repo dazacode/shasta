@@ -1,6 +1,8 @@
 // Supporter state for this device. The code and its signed pass live in settings (`settings.supporter`); this store
 // checks the pass against the server's public key and keeps it fresh. useSupporter() is the ONE gate for perks
 // (hasPerks() outside React: lib/ads.ts shows supporters no adverts at all).
+// The Shasuta tour's 24-hour pass (`settings.tourPass`, see claimTourPass) is checked here too and counts as perks
+// while it lasts; it never touches the code's record.
 import { create } from 'zustand'
 import { useSettings, getSettings } from '@/stores/settingsStore'
 import {
@@ -11,6 +13,7 @@ import {
   normalizeCode,
   purgeLegacyPaymentKeys,
   statusOf,
+  tourPassOk,
   verifyToken,
   type SupporterKind,
   type SupporterRecord,
@@ -34,6 +37,8 @@ interface SupporterState {
   busy: boolean
   /** the saved pass has been checked at least once this session (adverts wait for it: supporters see none) */
   checked: boolean
+  /** the tour's ad-free pass is valid until then (unix seconds); 0 = none, or it has ended */
+  tourUntil: number
   /** start once at boot: check the saved pass, refresh it when due, and re-check now and then */
   boot: () => void
   /** re-read settings and check the pass; resolves with the new status */
@@ -119,6 +124,15 @@ export function redeemError(status: number): string {
 const setRecord = (supporter: SupporterRecord | null) => useSettings.getState().update({ supporter })
 let booted = false
 let expiryTimer: ReturnType<typeof setTimeout> | undefined
+let tourTimer: ReturnType<typeof setTimeout> | undefined
+
+/** Checks the saved tour pass: until when it is valid (unix seconds), 0 = none or over. */
+async function tourValidUntil(): Promise<number> {
+  const rec = getSettings().tourPass
+  if (!rec || rec.exp * 1000 <= Date.now()) return 0
+  const r = await check(rec.token)
+  return tourPassOk(r) && r?.payload ? r.payload.exp : 0
+}
 
 export const useSupporterStore = create<SupporterState>()((set, get) => ({
   status: 'none',
@@ -128,10 +142,15 @@ export const useSupporterStore = create<SupporterState>()((set, get) => ({
   note: null,
   busy: false,
   checked: false,
+  tourUntil: 0,
 
   evaluate: async () => {
     const record = getSettings().supporter
-    const result = record?.token ? await check(record.token) : null
+    const [result, tourUntil] = await Promise.all([record?.token ? check(record.token) : Promise.resolve(null), tourValidUntil()])
+    // the tour pass: perks for its day, then they end on their own (ads come back without a reload)
+    set({ tourUntil })
+    clearTimeout(tourTimer)
+    if (tourUntil) tourTimer = setTimeout(() => void get().evaluate(), Math.min(2 ** 31 - 1, tourUntil * 1000 - Date.now() + 1000))
     // the record may have changed while the pass was being checked; the newer evaluation wins
     if (getSettings().supporter !== record) return get().status
     const status = statusOf(record, result)
@@ -196,7 +215,7 @@ export const useSupporterStore = create<SupporterState>()((set, get) => ({
     purgeLegacyPaymentKeys()
     // whenever the saved record changes (redeem, refresh, remove, another tab), check it again
     useSettings.subscribe((s, prev) => {
-      if (s.settings.supporter !== prev.settings.supporter) void get().evaluate()
+      if (s.settings.supporter !== prev.settings.supporter || s.settings.tourPass !== prev.settings.tourPass) void get().evaluate()
     })
     void get().evaluate().then(() => get().refresh())
     // a long-running tab: re-check twice a day (cheap; only calls the server when the pass is due)
@@ -206,8 +225,14 @@ export const useSupporterStore = create<SupporterState>()((set, get) => ({
 
 export interface Supporter {
   status: SupporterStatus
-  /** perks are on: an active trial or supporter pass */
+  /** perks are on: an active trial or supporter pass, or the tour's day */
   perks: boolean
+  /** a code's pass (trial or supporter) is active: what "you're a Supporter" copy must check */
+  pass: boolean
+  /** the tour's ad-free day is on (and no code's pass is) */
+  tour: boolean
+  /** when the tour's day ends (unix seconds), 0 = none */
+  tourUntil: number
   kind: SupporterKind | null
   /** days the current pass has left (it renews itself); use `until` for when the code ends */
   daysLeft: number
@@ -225,13 +250,49 @@ export function useSupporter(): Supporter {
   const until = useSupporterStore((s) => s.until)
   const note = useSupporterStore((s) => s.note)
   const busy = useSupporterStore((s) => s.busy)
+  const tourUntil = useSupporterStore((s) => s.tourUntil)
   const code = useSettings((s) => s.settings.supporter?.code ?? null)
-  const perks = status === 'trial' || status === 'supporter'
-  return { status, perks, kind: perks ? status : null, daysLeft: perks ? daysLeft : 0, until: perks ? until : undefined, note, code, busy }
+  const pass = status === 'trial' || status === 'supporter'
+  const tour = !pass && tourUntil > 0
+  return { status, perks: pass || tour, pass, tour, tourUntil, kind: pass ? status : null, daysLeft: pass ? daysLeft : 0, until: pass ? until : undefined, note, code, busy }
 }
 
-/** Perks are on right now (outside React). */
+/** Perks are on right now (outside React): a code's pass or the tour's day. */
 export const hasPerks = () => {
-  const st = useSupporterStore.getState().status
-  return st === 'trial' || st === 'supporter'
+  const { status, tourUntil } = useSupporterStore.getState()
+  return status === 'trial' || status === 'supporter' || tourUntil * 1000 > Date.now()
+}
+
+/** The same check for selectors (primitives only). */
+export const perksOf = (s: Pick<SupporterState, 'status' | 'tourUntil'>) => s.status === 'trial' || s.status === 'supporter' || s.tourUntil > 0
+
+export type TourClaim = { ok: true; exp: number } | { ok: false; reason: 'offline' | 'limited' | 'unsupported' | 'server' | 'claimed' }
+
+/** This device already got the tour's ad-free day (it is kept after it ends): a replayed tour does not get another. */
+export const tourPassClaimed = () => !!getSettings().tourPass
+
+/**
+ * The Shasuta tour's gift: asks Shasta's server for a signed 24-hour ad-free pass and keeps it on this device. Once per
+ * device (`claimed` after that). Nothing about the person is sent; the server stores nothing. A copy of Shasta without
+ * its server (a Lite mirror) gets `offline` or `server`, and the caller says so.
+ */
+export async function claimTourPass(): Promise<TourClaim> {
+  if (tourPassClaimed()) return { ok: false, reason: 'claimed' }
+  let data: { token?: unknown; kind?: unknown; exp?: unknown }
+  try {
+    const res = await fetch('/api/supporter/tour', { method: 'POST', credentials: 'omit', headers: { 'content-type': 'application/json' }, body: '{}' })
+    if (res.status === 429) return { ok: false, reason: 'limited' }
+    if (!res.ok) return { ok: false, reason: 'server' }
+    data = await res.json()
+  } catch {
+    return { ok: false, reason: 'offline' }
+  }
+  if (typeof data.token !== 'string' || data.kind !== 'tour' || typeof data.exp !== 'number') return { ok: false, reason: 'server' }
+  const r = await check(data.token)
+  if (!r) return { ok: false, reason: 'offline' }
+  if (!r.ok && r.reason === 'unsupported') return { ok: false, reason: 'unsupported' }
+  if (!tourPassOk(r) || !r.payload) return { ok: false, reason: 'server' }
+  useSettings.getState().update({ tourPass: { token: data.token, exp: r.payload.exp } })
+  await useSupporterStore.getState().evaluate()
+  return { ok: true, exp: r.payload.exp }
 }

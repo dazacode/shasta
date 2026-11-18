@@ -71,7 +71,7 @@ export function PublishDemo() {
       {(s) => (
         <>
           <Window chrome="terminal" title="my-game — zsh" className="pbd-term">
-            <div className="ss-term pbd-lines">
+            <div className="sk-term pbd-lines">
               <Prompt path="~">
                 {s.cmd}
                 {s.lines === 0 && <Caret still={s.typing} />}

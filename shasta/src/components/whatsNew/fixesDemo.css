@@ -21,8 +21,8 @@
 }
 
 /* Every stage: transparent (the tile is the ground), Shasta's own type */
-.fx3-online .ss-stage, .fx3-qr .ss-stage, .fx3-fold .ss-stage {
-  --ss-font: 'Geist Variable', system-ui, sans-serif;
+.fx3-online .sk-stage, .fx3-qr .sk-stage, .fx3-fold .sk-stage {
+  --sk-font: 'Geist Variable', system-ui, sans-serif;
   background: transparent;
   overflow: hidden;
 }
@@ -47,8 +47,8 @@
 .fx3-pill__n { white-space: nowrap; }
 .fx3-pill__dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 0 3px rgb(16 185 129 / 0.25); }
 .fx3-pop {
-  --ss-popover-bg: var(--sh-surface);
-  --ss-popover-shadow: 0 0 0 1px var(--sh-line), 0 16px 40px -12px rgb(0 0 0 / 0.35);
+  --sk-popover-bg: var(--sh-surface);
+  --sk-popover-shadow: 0 0 0 1px var(--sh-line), 0 16px 40px -12px rgb(0 0 0 / 0.35);
   position: absolute;
   left: 52px;
   top: 52px;
@@ -87,8 +87,8 @@
 .fx3-btn[data-hover], .fx3-btn[data-open] { background: var(--sh-field); }
 .fx3-btn[data-pressed] { scale: 0.97; }
 .fx3-qrcard {
-  --ss-popover-bg: var(--sh-surface);
-  --ss-popover-shadow: 0 0 0 1px var(--sh-line), 0 16px 40px -12px rgb(0 0 0 / 0.35);
+  --sk-popover-bg: var(--sh-surface);
+  --sk-popover-shadow: 0 0 0 1px var(--sh-line), 0 16px 40px -12px rgb(0 0 0 / 0.35);
   position: absolute;
   left: 34px;
   top: 64px;
@@ -99,7 +99,7 @@
 .fx3-qrcode { display: block; width: 112px; height: 112px; padding: 4px; border-radius: 8px; }
 
 /* ── 3. the Store's holiday section folding away (index.css .ev-section / .ev-banner) ── */
-.fx3-fold .ss-stage { mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent); }
+.fx3-fold .sk-stage { mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent); }
 .fx3-page { position: absolute; inset: 16px 16px auto; color: var(--sh-fg); }
 .fx3-section { margin-top: 0; border-radius: 16px; }
 .fx3-banner .ev-banner { width: 100%; padding: 10px 14px; border: 0; margin: 0; font: inherit; color: #fff; }
@@ -113,6 +113,6 @@
 .fx3-shelf__title { opacity: 0; transition: opacity 300ms ease 150ms; }
 .fx3-shelf__title[data-show] { opacity: 1; }
 .fx3-shelf__title svg { width: 16px; height: 16px; color: var(--sh-muted); }
-.fx3-fold .ss-stage[data-layout='compact'] .fx3-shelf { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.fx3-fold .ss-stage[data-layout='compact'] .fx3-banner .ev-banner p { display: none; }
-.fx3-fold .ss-stage[data-layout='compact'] .fx3-banner .ev-title { font-size: 17px; }
+.fx3-fold .sk-stage[data-layout='compact'] .fx3-shelf { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.fx3-fold .sk-stage[data-layout='compact'] .fx3-banner .ev-banner p { display: none; }
+.fx3-fold .sk-stage[data-layout='compact'] .fx3-banner .ev-title { font-size: 17px; }

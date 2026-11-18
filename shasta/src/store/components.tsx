@@ -375,8 +375,8 @@ export function LoadError({ message, offline, onRetry }: { message: string; offl
 const STATUS_STYLE: Record<AppStatus | VersionState, string> = {
   draft: 'bg-shasta-field text-shasta-muted',
   pending: 'bg-amber-500/15 text-shasta-warn',
-  published: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-  live: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+  published: 'bg-shasta-success/15 text-shasta-success',
+  live: 'bg-shasta-success/15 text-shasta-success',
   unpublished: 'bg-shasta-field text-shasta-muted',
   archived: 'bg-shasta-field text-shasta-muted',
   rejected: 'bg-shasta-danger/15 text-shasta-danger',

@@ -1,11 +1,60 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
+    "build-design-system": {
+      "source": "design.how",
+      "sourceUrl": "https://design.how",
+      "sourceType": "well-known",
+      "computedHash": "b0fca5c25fbf7640c82ba5a289861e289c09fa4bfc7708c3a465c136266cbd3f",
+      "wellKnownDigest": "sha256:cd0298ea97c501f0387ea5aeef864580c06f5e01de1e8197c7d6376dfe7f568c"
+    },
+    "component-docs": {
+      "source": "design.how",
+      "sourceUrl": "https://design.how",
+      "sourceType": "well-known",
+      "computedHash": "e769b686e6a8e1955ae06085cee773ef70e2cbd502c0bf906a12e8483d66ab58",
+      "wellKnownDigest": "sha256:ed50d4af6037f8fcc54f0e1b863a0ef6456551928d0911ebe2d6c0bbabe7e006"
+    },
+    "design-system-boss": {
+      "source": "design.how",
+      "sourceUrl": "https://design.how",
+      "sourceType": "well-known",
+      "computedHash": "1b06e362de47f4b8eb54d2a9f84e89f5d2856f417f7190b07a6be96da1202752",
+      "wellKnownDigest": "sha256:041cb28de5f14846bd65b185e12059bee3472d24a27797eb23dde1660d5c45ce"
+    },
+    "make-font": {
+      "source": "design.how",
+      "sourceUrl": "https://design.how",
+      "sourceType": "well-known",
+      "computedHash": "9ecc8c909b172fe528e5ce9ce5258bd97a599a69035db1532bdbaa90ce334b26",
+      "wellKnownDigest": "sha256:a718a47b43aca673b08b7456f8f4caf378ef87c58986a565561880a6e46b0d81"
+    },
+    "migrate-design-system": {
+      "source": "design.how",
+      "sourceUrl": "https://design.how",
+      "sourceType": "well-known",
+      "computedHash": "b8d87e04df10fed46d0079a253799cf10bef82261099661df89b9c3a47cbf96a",
+      "wellKnownDigest": "sha256:cbf4b27491c8f06058def0e4f2b86c4a53b01edef15f68d0f000377101e8608a"
+    },
     "stageshow": {
       "source": "benjitaylor/skills",
       "sourceType": "github",
       "skillPath": "stageshow/SKILL.md",
-      "computedHash": "bf9f07985a62882deae7935b5b1162fb5bf66b248930bb14a75dcaf9d67291b7"
+      "computedHash": ""
+    },
+    "token-mapping": {
+      "source": "design.how",
+      "sourceUrl": "https://design.how",
+      "sourceType": "well-known",
+      "computedHash": "5b4efbdc1aa8e7ec903afbf8da4fb4db0e7c9bfa9db6b417c153ee46cf8d5ed7",
+      "wellKnownDigest": "sha256:6886cad4fe8fe1a7b706e28dd12105390a78460a38852b118084f42cbfc453e9"
+    },
+    "ui-review": {
+      "source": "design.how",
+      "sourceUrl": "https://design.how",
+      "sourceType": "well-known",
+      "computedHash": "16106d08018859dade85074982e831a11807352dfff74af72edeb6fe8df2f339",
+      "wellKnownDigest": "sha256:4c1c697ecde90b2b3463905237f910a577c25bbaf8064535066c07ab01638bf1"
     }
   }
 }

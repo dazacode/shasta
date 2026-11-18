@@ -1,4 +1,4 @@
-// Shasta Lite: the build hosted on a plain static host with no Shasta server of its own (Base44, `bun run deploy:base44`).
+// Shasta Lite: the build hosted on a plain static host with no Shasta server of its own (Vercel and jsDelivr).
 // Browsing uses the full site's Wisp relay (VITE_WISP_URL) and the Store, chat and the other /api features go to the
 // full site's backend across origins (lib/appApi.ts, allowed there by APP_ORIGINS, always anonymous). What cannot work
 // on such a host stays off: on-device AI (its runtime is left out to fit) and the offline shell (the host rewrites
@@ -21,8 +21,8 @@ export const BASE = import.meta.env.BASE_URL || '/'
 export const NOWGG_SELF = !LITE || import.meta.env.VITE_NOWGG_SELF === '1'
 
 /**
- * Where this host's own now.gg proxy lives when it is not `/nowgg`: Base44 serves it as a backend function, which
- * cannot take sub-paths, so the path goes in a query (`/functions/nowgg?p=`, scripts/base44-nowgg/entry.ts).
+ * Where this host's own now.gg proxy lives when it is not `/nowgg`: a host whose backend functions
+ * cannot take sub-paths gets the path in a query (`/functions/nowgg?p=`, as Base44 did until 2026-11-17).
  */
 export const NOWGG_PATH = String(import.meta.env.VITE_NOWGG_PATH || '/nowgg')
 

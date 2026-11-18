@@ -113,8 +113,8 @@ export function ActivityTab() {
       {error && <p className="mt-3 text-sm text-shasta-danger">{error}</p>}
       {more && entries.length > 0 && (
         <div className="mt-4 text-center">
-          <Button variant="secondary" disabled={loading} onClick={() => void load(entries[entries.length - 1].id)}>
-            {loading ? 'Loading…' : 'Load more'}
+          <Button busy={loading} variant="secondary" disabled={loading} onClick={() => void load(entries[entries.length - 1].id)}>
+            Load more
           </Button>
         </div>
       )}

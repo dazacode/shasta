@@ -1,5 +1,5 @@
 // Shasta Lite on Vercel: `bun run deploy:vercel-lite` (from the root, so the root .env is loaded) -> https://shasta-lite.vercel.app
-// Same build as Base44 (scripts/lib/liteBuild.ts), but Vercel sends real headers, so pages are cross-origin isolated
+// The Lite build (scripts/lib/liteBuild.ts) on Vercel, which sends real headers, so pages are cross-origin isolated
 // from the first load (the service worker's own headers are then a no-op). Vercel project `shasta-lite` in
 // dazaseals-projects (`VERCEL_SCOPE`, `SHASTA_LITE_PROJECT` override); the host must be in APP_ORIGINS on the VPS.
 import { copyFileSync, mkdirSync, writeFileSync } from "node:fs";

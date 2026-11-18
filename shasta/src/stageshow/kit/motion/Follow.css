@@ -1,7 +1,7 @@
 /* Follow */
 
 @layer stageshow {
-  .ss-follow {
+  .sk-follow {
     position: absolute;
     top: 0;
     left: 0;
@@ -11,7 +11,7 @@
     will-change: transform;
   }
 
-  .ss-follow[data-show] {
+  .sk-follow[data-show] {
     opacity: 1;
   }
 }

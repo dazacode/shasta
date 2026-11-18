@@ -155,7 +155,7 @@ export function StorefrontEditor() {
               </fieldset>
               {problem && <p role="alert" className="text-sm text-shasta-danger">{problem}</p>}
               <div className="flex flex-wrap items-center gap-3">
-                <Button disabled={!dirty || saving || form.name.trim().length < 2} onClick={() => void save()}>{saving ? 'Saving…' : 'Save storefront'}</Button>
+                <Button busy={saving} disabled={!dirty || saving || form.name.trim().length < 2} onClick={() => void save()}>Save storefront</Button>
                 {dirty && <Button variant="ghost" onClick={() => setForm(base)}>Discard changes</Button>}
               </div>
             </div>
@@ -170,7 +170,7 @@ export function StorefrontEditor() {
             <ul className="grid gap-2 text-sm">
               {checklist.map(([label, v]) => (
                 <li key={label} className={v ? 'flex items-center gap-2' : 'flex items-center gap-2 text-shasta-muted'}>
-                  {v ? <Check className="size-4 text-emerald-500" aria-hidden /> : <Circle className="size-4" aria-hidden />} {label}
+                  {v ? <Check className="size-4 text-shasta-success" aria-hidden /> : <Circle className="size-4" aria-hidden />} {label}
                 </li>
               ))}
             </ul>

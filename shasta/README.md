@@ -5,7 +5,7 @@ A browser-style shell (tabs, omnibox, bookmarks, history, downloads, settings) o
 ## Develop
 
 ```
-bun run dev            # from the repo root: Wisp + Vite on http://localhost:5173
+bun run dev            # from the repo root or shasta/: Wisp + Vite on http://localhost:5173 (plain Vite: bun run dev:vite)
 bun run test           # unit tests (vitest)
 bun run test:e2e       # Shasta's own behaviour, against a local fixture site (offline-safe)
 bun run test:compat    # real third-party sites through the proxy (needs network; failures may be the site's)

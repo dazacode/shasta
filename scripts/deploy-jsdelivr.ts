@@ -1,7 +1,7 @@
 // Shasta Lite on jsDelivr: `bun run deploy:jsdelivr` (from the root, so the root .env is loaded)
 //   -> https://cdn.jsdelivr.net/gh/dazacode/shasta-lite/index.svg
 // jsDelivr serves the files of a public GitHub repo (`SHASTA_JSDELIVR_REPO`, default dazacode/shasta-lite; created on
-// the first run with `gh`). Same Lite build as Base44/Vercel (scripts/lib/liteBuild.ts), with three differences:
+// the first run with `gh`). Same Lite build as Vercel (scripts/lib/liteBuild.ts), with three differences:
 //   - it lives in a folder (/gh/<repo>/), so it is built with that Vite base and the engine's prefix under it;
 //   - jsDelivr serves .html as text/plain, so the address people open is index.svg: a tiny SVG document that registers
 //     the service worker and reloads; from then on the worker answers that address with index.html as a real page,
@@ -13,7 +13,7 @@
 // its edge (a week in browsers): every file without a hash in its name is purged after the push.
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { BUNNY_RELAY, buildLite, FULL, ROOT, run } from "./lib/liteBuild";
+import { buildLite, FALLBACK_MIRRORS, FULL, ROOT, run } from "./lib/liteBuild";
 
 const REPO = process.env.SHASTA_JSDELIVR_REPO ?? "dazacode/shasta-lite";
 const BASE = `/gh/${REPO}/`;
@@ -27,12 +27,13 @@ const MAX_FILE = 20 * 1024 * 1024;
 
 // Umami website "Shasta Lite (jsDelivr)"
 // Ads: none (no Adsterra site for cdn.jsdelivr.net in scripts/lib/adCodes.ts; another host's codes must not run here)
-// jsDelivr runs no code, so it has no backend of its own: the bunny.net relay (bunny.run, scripts/bunny-relay) goes
+// jsDelivr runs no code, so it has no backend of its own: a FreeDNS mirror (scripts/mirrors/, another domain again) goes
 // FIRST for Wisp and the Store, so a network that blocks the full site's domains does not wait out two 6 s probes.
+const [mirror, ...otherMirrors] = FALLBACK_MIRRORS;
 buildLite(BUILD, "32359927-bca9-4b7e-82fe-d41315829b1a", BASE, {
 	VITE_SHARED_ORIGIN: "1",
-	VITE_WISP_URLS: [`wss://${BUNNY_RELAY}/wisp/`, `wss://${new URL(FULL).host}/wisp/`, "wss://edushasta.lol/wisp/", "wss://shasta-lite.vercel.app/wisp/"].join(","),
-	VITE_API_ORIGINS: [`https://${BUNNY_RELAY}`, FULL, "https://edushasta.lol"].join(","),
+	VITE_WISP_URLS: [mirror, new URL(FULL).host, "edushasta.lol", ...otherMirrors, "shasta-lite.vercel.app"].map((h) => `wss://${h}/wisp/`).join(","),
+	VITE_API_ORIGINS: [`https://${mirror}`, FULL, "https://edushasta.lol", ...otherMirrors.map((h) => `https://${h}`)].join(","),
 });
 
 // the service worker answers the entry addresses (public/sw.js CDN_BASE)
@@ -82,11 +83,11 @@ if (!existsSync(join(CLONE, ".git"))) {
 	mkdirSync(CLONE, { recursive: true });
 	run(["git", "init", "-q", "-b", "main"], CLONE);
 	run(["git", "remote", "add", "origin", `git@github.com:${REPO}.git`], CLONE);
-	if (exists) {
-		run(["git", "fetch", "-q", "origin"], CLONE);
-		if (Bun.spawnSync(["git", "rev-parse", "--verify", "-q", "origin/main"], { cwd: CLONE }).exitCode === 0) run(["git", "reset", "-q", "origin/main"], CLONE);
-	}
 }
+// start from what is published, not from this clone's last deploy: another machine may have deployed since, and its
+// chunks are among the ones to keep (and the push would be refused)
+run(["git", "fetch", "-q", "origin"], CLONE);
+if (Bun.spawnSync(["git", "rev-parse", "--verify", "-q", "origin/main"], { cwd: CLONE }).exitCode === 0) run(["git", "reset", "-q", "--hard", "origin/main"], CLONE);
 // Keep the chunks of the previous KEEP builds: browsers cache jsDelivr pages for up to a week, and a page from an
 // older build asks for its own lazy chunks ("Failed to fetch dynamically imported module" once they were deleted).
 // builds.json = each build's own assets/ list, newest first; before it existed, every commit was one pure build.

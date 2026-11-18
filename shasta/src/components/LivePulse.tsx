@@ -50,12 +50,12 @@ export function OnlineCount({ onOpenSite }: { onOpenSite: (url: string) => void 
         <button
           onClick={() => {
             trackEvent('newtab.chat')
-            openInternal('chat')
+            openInternal('social', 'chat')
           }}
           className={row}
         >
           <MessagesSquare className="size-5 text-shasta-muted" strokeWidth={1.5} />
-          <span>Say hi in Community chat</span>
+          <span>Say hi in the community chat</span>
         </button>
         {!data && !failed && <p className="px-2 py-3 text-xs text-shasta-muted">Loading…</p>}
         {failed && <p className="px-2 py-3 text-xs text-shasta-muted">Could not load what is popular right now.</p>}
@@ -134,7 +134,7 @@ export function LivePulse({ onOpenSite, embedded = false }: { onOpenSite: (url: 
           <button
             onClick={() => {
               trackEvent('newtab.chat')
-              openInternal('chat')
+              openInternal('social', 'chat')
             }}
             className="flex h-9 items-center gap-2 rounded-full bg-shasta-home pr-3.5 pl-2 text-sm text-shasta-fg ring-1 ring-shasta-line transition-colors duration-150 ease-shasta hover:bg-shasta-hover"
           >

@@ -178,15 +178,15 @@ export function Chart({ data, kind = 'line', width, height, show = true, area = 
   const top = max ?? Math.max(...data, 1)
   const pad = kind === 'line' && dot ? 4 : 1
   const h = height - pad * 2
-  if (!data.length) return <svg className={`ss-chart${className ? ` ${className}` : ''}`} data-kind={kind} data-show={show || undefined} width={width} height={height} style={style} aria-hidden />
+  if (!data.length) return <svg className={`sk-chart${className ? ` ${className}` : ''}`} data-kind={kind} data-show={show || undefined} width={width} height={height} style={style} aria-hidden />
   if (kind === 'bars') {
     const gap = Math.max(2, Math.round(width / data.length / 4))
     const bw = (width - gap * (data.length - 1)) / data.length
     return (
-      <svg className={`ss-chart${className ? ` ${className}` : ''}`} data-kind="bars" data-still={reduced || undefined} data-show={show || undefined} width={width} height={height} style={style} aria-hidden>
+      <svg className={`sk-chart${className ? ` ${className}` : ''}`} data-kind="bars" data-still={reduced || undefined} data-show={show || undefined} width={width} height={height} style={style} aria-hidden>
         {data.map((v, i) => {
           const bh = Math.max(2, (v / top) * h)
-          return <rect key={i} className="ss-chart__bar" x={i * (bw + gap)} width={bw} rx={Math.min(2, bw / 2)} style={{ y: height - (show ? bh : 0), height: show ? bh : 0, transitionDelay: `${i * 22}ms` } as CSSProperties} />
+          return <rect key={i} className="sk-chart__bar" x={i * (bw + gap)} width={bw} rx={Math.min(2, bw / 2)} style={{ y: height - (show ? bh : 0), height: show ? bh : 0, transitionDelay: `${i * 22}ms` } as CSSProperties} />
         })}
       </svg>
     )
@@ -198,11 +198,11 @@ export function Chart({ data, kind = 'line', width, height, show = true, area = 
   const fill = `${line}L${pts[pts.length - 1].x} ${height}L${pts[0].x} ${height}Z`
   const end = pts[pts.length - 1]
   return (
-    <svg className={`ss-chart${className ? ` ${className}` : ''}`} data-kind="line" data-still={reduced || undefined} data-show={show || undefined} width={width} height={height} style={style} aria-hidden>
+    <svg className={`sk-chart${className ? ` ${className}` : ''}`} data-kind="line" data-still={reduced || undefined} data-show={show || undefined} width={width} height={height} style={style} aria-hidden>
       <defs>
         <linearGradient id={`${id}-fill`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="var(--ss-accent)" stopOpacity="0.18" />
-          <stop offset="1" stopColor="var(--ss-accent)" stopOpacity="0" />
+          <stop offset="0" stopColor="var(--sk-accent)" stopOpacity="0.18" />
+          <stop offset="1" stopColor="var(--sk-accent)" stopOpacity="0" />
         </linearGradient>
         <clipPath id={`${id}-wipe`}>
           <rect ref={wipeRef} x={-6} y={-6} width={width + 12} height={height + 12} />
@@ -211,11 +211,11 @@ export function Chart({ data, kind = 'line', width, height, show = true, area = 
       {/* One wipe reveals the line and its fill together, so the fill never
           runs ahead of the line. d is also set as a style so a data change
           eases the shape */}
-      <g ref={drawRef} className="ss-chart__draw" clipPath={`url(#${id}-wipe)`}>
-        {area && pts.length > 1 && <path className="ss-chart__area" d={fill} style={{ d: `path("${fill}")` } as CSSProperties} fill={`url(#${id}-fill)`} />}
-        <path className="ss-chart__line" d={line} style={{ d: `path("${line}")` } as CSSProperties} />
+      <g ref={drawRef} className="sk-chart__draw" clipPath={`url(#${id}-wipe)`}>
+        {area && pts.length > 1 && <path className="sk-chart__area" d={fill} style={{ d: `path("${fill}")` } as CSSProperties} fill={`url(#${id}-fill)`} />}
+        <path className="sk-chart__line" d={line} style={{ d: `path("${line}")` } as CSSProperties} />
       </g>
-      {dot && <circle ref={dotRef} className="ss-chart__dot" data-lead="" cx={end.x} cy={end.y} r={3.5} style={{ cx: end.x, cy: end.y } as CSSProperties} />}
+      {dot && <circle ref={dotRef} className="sk-chart__dot" data-lead="" cx={end.x} cy={end.y} r={3.5} style={{ cx: end.x, cy: end.y } as CSSProperties} />}
     </svg>
   )
 }

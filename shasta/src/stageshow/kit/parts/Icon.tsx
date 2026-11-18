@@ -48,7 +48,7 @@ const FILLED: Partial<Record<IconName, string>> = {
  */
 export function Icon({ name, size = 16, stroke = 1.5, filled, className, style }: { name: IconName; size?: number; stroke?: number; filled?: boolean; className?: string; style?: CSSProperties }) {
   const solid = filled ? FILLED[name] : undefined
-  const cls = `ss-icon${className ? ` ${className}` : ''}`
+  const cls = `sk-icon${className ? ` ${className}` : ''}`
   if (!solid && name in LUCIDE) {
     const Glyph = LUCIDE[name as LucideName]
     return <Glyph size={size} strokeWidth={stroke} absoluteStrokeWidth className={cls} style={style} aria-hidden />

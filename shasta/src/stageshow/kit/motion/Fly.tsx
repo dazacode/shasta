@@ -59,7 +59,7 @@ export function Fly({ from: liveFrom, to: liveTo, go, held: shownAtRest = false,
     // Horizontal and vertical travel on slightly different curves make a gentle
     // arc. Far apart curves (a fast-out x) read as a skid sideways, then a drop.
     <div
-      className={`ss-fly${className ? ` ${className}` : ''}`}
+      className={`sk-fly${className ? ` ${className}` : ''}`}
       data-go={go || undefined}
       data-held={shownAtRest || undefined}
       style={{
@@ -82,7 +82,7 @@ export function Fly({ from: liveFrom, to: liveTo, go, held: shownAtRest = false,
           transition: `transform ${ms}ms cubic-bezier(0.3, 0.6, 0.15, 1)`,
         }}
       >
-        <div ref={body} className="ss-fly__lift" style={go ? { animationDuration: `${ms}ms` } : undefined}>
+        <div ref={body} className="sk-fly__lift" style={go ? { animationDuration: `${ms}ms` } : undefined}>
           {children}
         </div>
       </div>

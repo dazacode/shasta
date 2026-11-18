@@ -1,0 +1,11 @@
+# /etc/systemd/system/shasta-offsite-db.timer (source: scripts/vps/shasta-offsite-db.timer)
+[Unit]
+Description=Hourly off-site encrypted database backup
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=300
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
 import { motion, useReducedMotion } from 'motion/react'
-import { ArrowRight, AudioLines, Bookmark, ChevronLeft, Cloud, Gamepad2, Heart, LayoutGrid, Laptop, Smartphone, Sparkles } from 'lucide-react'
+import { ArrowRight, AudioLines, Bookmark, ChevronLeft, Cloud, Compass, Gamepad2, Heart, LayoutGrid, Laptop, Smartphone, Sparkles } from 'lucide-react'
 import { Logo } from '@/components/Logo'
 import { buttonVariants } from '@/components/ui/button'
 import { QrImage } from '@/components/DiscordQr'
@@ -13,7 +13,8 @@ import SaveDemo from '@/components/demos/SaveDemo'
 import { WelcomeDemo } from '@/components/whatsNew/WelcomeDemo'
 import { CloudDemo } from '@/components/whatsNew/CloudDemo'
 import { ShasutaDemo } from '@/components/whatsNew/ShasutaDemo'
-import { SHASUTA_BUILT } from '@/shasuta/state'
+import { SHASUTA_BUILT, requestTour } from '@/shasuta/state'
+import { ShasutaTourAd } from '@/shasuta/host'
 import { HomeDemo } from '@/components/whatsNew/HomeDemo'
 import { MediaDemo } from '@/components/whatsNew/MediaDemo'
 import { StoreDemo } from '@/components/whatsNew/StoreDemo'
@@ -25,7 +26,19 @@ import { useDark } from '@/components/whatsNew/useDark'
  *  slides (owner feedback 2026-10-31: the 15-slide tour was too long). Colour: ONE solid accent per slide, used only for the
  *  eyebrow and the bullet dots (default = Shasta's own accent). No gradient text, glow blobs, dot grids or two-colour
  *  gradient buttons (2026-10-31: people called that look "AI"); the demos carry the colour. */
-type Slide = { icon: ReactNode; demo?: ReactNode; eyebrow: string; title: string; body?: ReactNode; points?: string[]; accent?: string; cta?: 'save' }
+type Slide = { icon: ReactNode; demo?: ReactNode; eyebrow: string; title: string; body?: ReactNode; points?: string[]; accent?: string; cta?: 'save' | 'tour' }
+
+/** The tour with Peak, as a travel poster (shasuta/tour/TourAd.tsx): first for everybody, in a build with Shasuta only. Its
+ *  button opens Shasuta and starts the tour (after setup on a device that has never opened it). */
+const TOUR: Slide = {
+  icon: <Compass />,
+  demo: <ShasutaTourAd />,
+  eyebrow: 'New',
+  title: 'Take the tour with Peak',
+  body: <>Shasuta's buddy shows you around everything new in about three minutes. Watch it to the end for six gifts, a day without ads among them.</>,
+  accent: '#c0522f',
+  cta: 'tour',
+}
 
 /** Only for a browser that has never seen this page. */
 const WELCOME: Slide = {
@@ -144,7 +157,7 @@ export default function WhatsNewPage() {
   const still = useReducedMotion()
   const [viewport, embla] = useEmblaCarousel({ duration: still ? 1 : 28 })
   const [index, setIndex] = useState(0)
-  const SLIDES = useMemo(() => (firstVisit ? [WELCOME, ...UPDATE] : UPDATE), [])
+  const SLIDES = useMemo(() => [...(SHASUTA_BUILT ? [TOUR] : []), ...(firstVisit ? [WELCOME] : []), ...UPDATE], [])
   const phoneLink = phoneAddress()
   const last = index === SLIDES.length - 1
   const side = useSide()
@@ -265,6 +278,13 @@ export default function WhatsNewPage() {
                           </li>
                         ))}
                       </motion.ul>
+                    )}
+                    {s.cta === 'tour' && (
+                      <motion.div {...rise(0.32)} className="mt-6">
+                        <button className={buttonVariants({ size: 'lg' })} onClick={() => requestTour('ad')} tabIndex={on ? 0 : -1}>
+                          <Compass /> Start the tour
+                        </button>
+                      </motion.div>
                     )}
                     {s.cta === 'save' && phoneLink && (
                       <motion.div {...rise(0.32)} className="mt-6 flex items-center gap-4 text-left">

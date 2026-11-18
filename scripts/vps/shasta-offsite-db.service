@@ -1,0 +1,12 @@
+# /etc/systemd/system/shasta-offsite-db.service (source: scripts/vps/shasta-offsite-db.service), run by its timer.
+[Unit]
+Description=Hourly off-site encrypted database backup
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/shasta-offsite db
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=6h

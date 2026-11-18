@@ -65,25 +65,25 @@ export function Field({ label, value, placeholder, focused, password, status, ch
   }, [out])
   const shown = out ? held.current : value
   return (
-    <div {...rest} className={`ss-field${className ? ` ${className}` : ''}`} data-focused={focused || undefined} data-status={status} data-filled={value ? true : undefined} style={style}>
-      {label && <span className="ss-field__label">{label}</span>}
-      <div data-cursor="ibeam" {...box} className={`ss-field__box${box?.className ? ` ${box.className}` : ''}`}>
+    <div {...rest} className={`sk-field${className ? ` ${className}` : ''}`} data-focused={focused || undefined} data-status={status} data-filled={value ? true : undefined} style={style}>
+      {label && <span className="sk-field__label">{label}</span>}
+      <div data-cursor="ibeam" {...box} className={`sk-field__box${box?.className ? ` ${box.className}` : ''}`}>
         {leading}
-        <span className="ss-field__text">
-          {placeholder && <span className="ss-field__placeholder">{placeholder}</span>}
-          <span ref={text} className="ss-field__value" data-password={password || undefined} data-chip={chip || out || undefined} data-leaving={out || undefined} data-removable={remove !== undefined || undefined}>
-            <span className="ss-field__chars">{password ? '•'.repeat(shown.length) : shown}</span>
+        <span className="sk-field__text">
+          {placeholder && <span className="sk-field__placeholder">{placeholder}</span>}
+          <span ref={text} className="sk-field__value" data-password={password || undefined} data-chip={chip || out || undefined} data-leaving={out || undefined} data-removable={remove !== undefined || undefined}>
+            <span className="sk-field__chars">{password ? '•'.repeat(shown.length) : shown}</span>
             {remove !== undefined && (
-              <span className="ss-field__x" role="button" data-cursor="hand" data-target={remove || undefined}>
+              <span className="sk-field__x" role="button" data-cursor="hand" data-target={remove || undefined}>
                 <Icon name="close" size={10} stroke={1.8} />
               </span>
             )}
           </span>
           {/* Keyed on the value, so every keystroke restarts the blink from solid */}
-          {focused && <span key={value.length} className="ss-field__caret" />}
+          {focused && <span key={value.length} className="sk-field__caret" />}
         </span>
         {status === 'valid' && (
-          <svg className="ss-field__ok" viewBox="0 0 16 16" width="14" height="14" aria-hidden>
+          <svg className="sk-field__ok" viewBox="0 0 16 16" width="14" height="14" aria-hidden>
             <path d="M3.5 8.5 6.5 11.5 12.5 4.5" pathLength={1} />
           </svg>
         )}

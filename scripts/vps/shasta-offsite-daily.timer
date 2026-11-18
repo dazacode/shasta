@@ -1,0 +1,11 @@
+# /etc/systemd/system/shasta-offsite-daily.timer (source: scripts/vps/shasta-offsite-daily.timer)
+[Unit]
+Description=Daily off-site encrypted backup of secrets and Store files
+
+[Timer]
+OnCalendar=*-*-* 04:15:00
+RandomizedDelaySec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

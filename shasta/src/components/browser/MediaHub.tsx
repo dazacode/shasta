@@ -16,6 +16,7 @@ import { tabTitle, tabUrl } from '@/lib/tabModel'
 import { hostOf, isInternalUrl } from '@/lib/url'
 import { formatTime, isLive, orderSessions, pageTitleAsTrack, positionAt, trackIdentity, type MediaInfo } from '@/lib/media'
 import { useUi } from '@/stores/uiStore'
+import { useShasuta } from '@/shasuta/state'
 import { dismissMedia, mediaAction, mediaElement, setMediaMuted, togglePictureInPicture } from '@/proxy/mediaWatch'
 import { cn } from '@/lib/utils'
 
@@ -123,7 +124,9 @@ function useNowPlaying(front: MediaInfo | null, hubOpen: boolean) {
   useEffect(() => {
     if (!id || id === last.current) return
     last.current = id
-    if (hubOpen || useUi.getState().gameMode || document.fullscreenElement) return
+    // Shasuta on screen (or its island over a game) announces tracks itself
+    const os = useShasuta.getState()
+    if (hubOpen || useUi.getState().gameMode || document.fullscreenElement || (os.prefs.enabled && os.visible)) return
     setKey(frontKey)
     arm()
   }, [id, frontKey, hubOpen])

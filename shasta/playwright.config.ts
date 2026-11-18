@@ -29,7 +29,9 @@ export default defineConfig({
     },
     {
       // no bundled apps here: the Store flow counts on an empty catalog
-      command: 'rm -rf .e2e-store && PORT=4180 HOST=127.0.0.1 STORE_DIR=.e2e-store BUILTIN_APPS_DIR=.e2e-store/none OWNER_SETUP_CODE=E2E-SETUP-CODE STATIC_DIR=dist bun ../server/server.mjs',
+      // social: a throw-away DM key (production's lives in /etc/shasta, never in the data folder)
+      command:
+        "rm -rf .e2e-store && mkdir -p .e2e-store && bun -e \"require('fs').writeFileSync('.e2e-store/social.kek', require('crypto').randomBytes(32).toString('hex'))\" && PORT=4180 HOST=127.0.0.1 STORE_DIR=.e2e-store BUILTIN_APPS_DIR=.e2e-store/none OWNER_SETUP_CODE=E2E-SETUP-CODE SOCIAL_KEK_FILE=.e2e-store/social.kek STATIC_DIR=dist bun ../server/server.mjs",
       url: 'http://localhost:4180/healthz',
       reuseExistingServer: false,
       timeout: 30_000,

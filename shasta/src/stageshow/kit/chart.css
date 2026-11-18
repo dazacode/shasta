@@ -1,7 +1,7 @@
 /* Chart (chart.tsx). */
 
 @layer stageshow {
-  .ss-chart {
+  .sk-chart {
     display: block;
     overflow: visible;
   }
@@ -9,32 +9,32 @@
   /* Draws in: a wipe over the line and its fill, led by the dot riding the
      curve at the wipe's edge (Chart drives both on one timeline, through an SVG
      clip rect in the chart's own units). Hiding fades the whole chart at once. */
-  .ss-chart__draw {
+  .sk-chart__draw {
     opacity: 0;
     transition: opacity 0.25s ease;
   }
 
-  .ss-chart[data-show] .ss-chart__draw {
+  .sk-chart[data-show] .sk-chart__draw {
     opacity: 1;
     transition: opacity 0.15s ease;
   }
 
-  .ss-chart__line {
+  .sk-chart__line {
     fill: none;
-    stroke: var(--ss-accent);
+    stroke: var(--sk-accent);
     stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
     transition: d 0.8s cubic-bezier(0.45, 0, 0.2, 1);
   }
 
-  .ss-chart__area {
+  .sk-chart__area {
     transition: d 0.8s cubic-bezier(0.45, 0, 0.2, 1);
   }
 
-  .ss-chart__dot {
-    fill: var(--ss-accent);
-    stroke: var(--ss-surface);
+  .sk-chart__dot {
+    fill: var(--sk-accent);
+    stroke: var(--sk-surface);
     stroke-width: 2;
     opacity: 0;
     transform: scale(0.4);
@@ -43,17 +43,17 @@
     transition: opacity 0.2s ease, transform 0.2s ease, cx 0.8s cubic-bezier(0.45, 0, 0.2, 1), cy 0.8s cubic-bezier(0.45, 0, 0.2, 1);
   }
 
-  .ss-chart[data-show] .ss-chart__dot {
+  .sk-chart[data-show] .sk-chart__dot {
     opacity: 1;
     transform: none;
   }
 
-  .ss-chart__bar {
-    fill: var(--ss-accent);
+  .sk-chart__bar {
+    fill: var(--sk-accent);
     transition: y 0.7s cubic-bezier(0.25, 0.8, 0.25, 1), height 0.7s cubic-bezier(0.25, 0.8, 0.25, 1);
   }
 
-  .ss-chart[data-still] * {
+  .sk-chart[data-still] * {
     transition: none !important;
   }
 }

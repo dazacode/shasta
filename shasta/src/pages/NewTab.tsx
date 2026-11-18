@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
-import { consoleLookOn, useShasuta } from '@/shasuta/state'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { consoleLookOn, useShasuta, useTourGifts } from '@/shasuta/state'
+import { ShasutaHomeButton, ShasutaNewTabCamps, ShasutaNewTabScene } from '@/shasuta/host'
 import { LayoutGrid, Mic, Search, SlidersHorizontal, Square } from 'lucide-react'
 import { RibbonWallpaper } from '@/components/RibbonWallpaper'
 import { WALLPAPERS, effectiveWallpaper, isSeasonalWallpaper, wallpaperBackground } from '@/lib/wallpaper'
@@ -7,6 +8,7 @@ import { useSupporter } from '@/stores/supporterStore'
 import { Logo } from '@/components/Logo'
 import { NewTabCustomizer } from './NewTabCustomizer'
 import { cn } from '@/lib/utils'
+import { flairWanted, heroIn } from '@/lib/flair'
 import { MountainTile } from '@/components/MountainTile'
 import { useAssistant } from '@/ai/assistantStore'
 import { ai, useAi } from '@/ai/engine'
@@ -15,6 +17,7 @@ import { useUi } from '@/stores/uiStore'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useTabs } from '@/stores/tabsStore'
 import { useSettings } from '@/stores/settingsStore'
+import { useHome } from '@/stores/homeStore'
 import { hexLuma, usePicture } from '@/lib/newTabBackground'
 import { SEARCH_ENGINES, resolveInput } from '@/lib/url'
 import { useIsPrivateTab } from '@/hooks/usePrivateTab'
@@ -50,6 +53,10 @@ export function NewTab({ tabId }: { tabId: string }) {
   const settings = useSettings((s) => s.settings)
   const { perks } = useSupporter()
   const isPrivate = useIsPrivateTab()
+  // the GSAP intro (lib/flair.ts): the hero's pieces wait (data-flair) until it starts, then it clears the mark itself
+  const heroRef = useRef<HTMLDivElement>(null)
+  const [flairOn] = useState(flairWanted)
+  useLayoutEffect(() => (flairOn && heroRef.current ? heroIn(heroRef.current) : undefined), [flairOn])
   const submit = useTabs((s) => s.submit)
   const navigateTo = useTabs((s) => s.navigateTo)
 
@@ -91,7 +98,8 @@ export function NewTab({ tabId }: { tabId: string }) {
   const customImage = settings.newTabBg === 'image' && picture
   const customColor = settings.newTabBg === 'color'
   const custom = customImage || customColor
-  const wallpaper = custom ? 'none' : effectiveWallpaper(settings.wallpaper, perks, settings.claimedWallpapers)
+  const tourGifts = useTourGifts()
+  const wallpaper = custom ? 'none' : effectiveWallpaper(settings.wallpaper, perks, settings.claimedWallpapers, tourGifts)
   // the holiday photo replaces the wallpaper while its event is on (lib/events.ts) unless holiday looks are off, and
   // stays for people who claimed it; the person's own picture or colour always wins
   const season = useSeason()
@@ -99,12 +107,16 @@ export function NewTab({ tabId }: { tabId: string }) {
   const photo = seasonLook ? eventWallpaper(seasonLook) : isSeasonalWallpaper(wallpaper) ? wallpaper : null
   const offerClaim = seasonLook && !isPrivate && !settings.claimedWallpapers.includes(eventWallpaper(seasonLook)) ? seasonLook : null
   const ClaimIcon = offerClaim ? EVENT_ICON[offerClaim.event.id] : null
+  // one first-run prompt at a time: the holiday offer waits until "Make this page yours" (components/home) is answered
+  const introDone = useHome((s) => s.introDone)
   // text colour follows what is behind it, after the dimming
   const luma = customImage ? picture.luma : customColor ? hexLuma(settings.newTabBgColor) : 1
   const customDark = luma * (1 - settings.newTabBgDim / 100) < 0.5
   // Shasuta's console look (shasuta/browserLook.css): the default background becomes Shasuta's blue room. The person's
   // own wallpaper, picture, colour or a holiday photo always wins over it.
   const consoleRoom = useShasuta((s) => consoleLookOn(s.prefs)) && !photo && !custom && wallpaper === 'none'
+  // inside that room: the live mountain, the row of the person's games and the Home button are each theirs to switch off (Customize)
+  const sceneOn = consoleRoom && settings.newTabScene
   const dark = consoleRoom || immersive || !!photo || (custom ? customDark : !!WALLPAPERS[wallpaper].dark)
   // the page names itself (today's date over "Where to?"); holiday text only while its event is on
   const [today] = useState(() => new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }))
@@ -190,8 +202,10 @@ export function NewTab({ tabId }: { tabId: string }) {
   )
 
   return (
-    <div className={cn(immersive ? 'nt' : 'nt-plain', dark && 'dark', 'text-shasta-fg')} data-wallpaper={wallpaper} data-style={style} data-console={consoleRoom ? '' : undefined}>
-      {photo ? (
+    <div className={cn(immersive ? 'nt' : 'nt-plain', dark && 'dark', 'text-shasta-fg')} data-wallpaper={wallpaper} data-style={style} data-console={consoleRoom ? '' : undefined} data-scene={sceneOn ? '' : undefined}>
+      {sceneOn ? (
+        <ShasutaNewTabScene />
+      ) : photo ? (
         <SeasonPhoto id={photo} />
       ) : wallpaper === 'ribbon' ? (
         <RibbonWallpaper />
@@ -206,7 +220,7 @@ export function NewTab({ tabId }: { tabId: string }) {
       )}
       {custom && settings.newTabBgDim > 0 && <div className="nt-wall" style={{ background: `rgb(0 0 0 / ${settings.newTabBgDim / 100})` }} aria-hidden />}
       {!minimal && !isPrivate && settings.newTabLive && <OnlineCount onOpenSite={(url) => navigateTo(tabId, url)} />}
-      <div className="nt-hero">
+      <div ref={heroRef} className="nt-hero" data-flair={flairOn ? 'pending' : undefined}>
         {!minimal && settings.newTabClock !== 'off' && <Clock hour12={settings.newTabClock === '12'} />}
         {immersive && !photo && (
           <svg className="nt-ridge" viewBox="0 0 1600 260" preserveAspectRatio="none" aria-hidden>
@@ -232,6 +246,7 @@ export function NewTab({ tabId }: { tabId: string }) {
               <>
                 {fancySearch}
                 <p className="nt-hint" aria-live="polite">{aiRoute ? 'Questions go to Shasta AI, on this device. Web addresses open as usual.' : `Searches ${engine}`}</p>
+                {consoleRoom && settings.newTabCamps && !isPrivate && !minimal && <ShasutaNewTabCamps />}
               </>
             )}
           </>
@@ -253,7 +268,7 @@ export function NewTab({ tabId }: { tabId: string }) {
         )}
         {extras}
       </div>
-      {offerClaim && ClaimIcon && (
+      {offerClaim && ClaimIcon && (introDone || minimal || editing) && (
         <div className="nt-claim" role="region" aria-label={`${offerClaim.event.name} background`}>
           <ClaimIcon className="mt-0.5 size-5 shrink-0 text-white/80" aria-hidden />
           <div className="min-w-0">
@@ -268,6 +283,7 @@ export function NewTab({ tabId }: { tabId: string }) {
       )}
       {!editing && (
         <div className="nt-corner">
+          {consoleRoom && settings.newTabHome && <ShasutaHomeButton variant="page" />}
           {!minimal && (
             <button onClick={() => setEditing(true)} className="nt-customize" title="Add, move and resize widgets">
               <LayoutGrid className="size-4" /> <span>Edit page</span>

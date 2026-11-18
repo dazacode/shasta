@@ -19,6 +19,7 @@ ExecStart=/usr/bin/docker run --rm --name shasta --init \
 	--network shasta -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 \
 	--env-file /etc/shasta/shasta.env -e HOST=0.0.0.0 -e STORE_DIR=/data -e STATIC_DIR=/app/dist \
 	-v /var/lib/shasta/data:/data \
+	-v /etc/shasta/social.kek:/etc/shasta/social.kek:ro \
 	--user 999:989 --read-only --tmpfs /tmp:rw,nosuid,nodev,size=512m \
 	--cap-drop ALL --security-opt no-new-privileges \
 	--pids-limit 4096 --memory 16g --memory-reservation 12g --ulimit nofile=65536:65536 \

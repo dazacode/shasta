@@ -13,11 +13,11 @@ export function Tabs({ items, value, targets, className, style, ...rest }: { ite
     if (el) setBar({ x: el.offsetLeft, w: el.offsetWidth })
   }, [value, items.length])
   return (
-    <div {...rest} ref={row} className={`ss-tabs${className ? ` ${className}` : ''}`} style={style}>
+    <div {...rest} ref={row} className={`sk-tabs${className ? ` ${className}` : ''}`} style={style}>
       {/* A 1px line scaled to the tab's width: it slides on transform alone */}
-      <span className="ss-tabs__bar" style={{ transform: `translateX(${bar.x}px) scaleX(${bar.w})` }} />
+      <span className="sk-tabs__bar" style={{ transform: `translateX(${bar.x}px) scaleX(${bar.w})` }} />
       {items.map((t, i) => (
-        <span key={i} className="ss-tabs__tab" data-on={i === value || undefined} data-target={targets?.[i]}>
+        <span key={i} className="sk-tabs__tab" data-on={i === value || undefined} data-target={targets?.[i]}>
           {t}
         </span>
       ))}

@@ -52,7 +52,7 @@ export default function SupportPage() {
         <section aria-labelledby="support-heading" className="grid gap-2">
           <h2 id="support-heading" className="sh-heading">What support pays for</h2>
           <p className="text-shasta-muted">
-            Every page you open in Shasta travels through Shasta's servers, and the Store, the app hosting and the AI model downloads run there too. That costs money every month, and donations go toward that hosting and bandwidth. Shasta has no accounts and no trackers of its own, but it does show adverts on its own pages (the new tab, the Store and Watch) to help pay for them. They are the one third-party thing here; the privacy policy says exactly what they see.
+            Every page you open in Shasta travels through Shasta's servers, and the Store, the app hosting and the AI model downloads run there too. That costs money every month, and donations go toward that hosting and bandwidth. Shasta needs no account and has no trackers of its own, but it does show adverts on its own pages (the new tab, the Store and Watch) to help pay for them. They are the one third-party thing here; the privacy policy says exactly what they see.
           </p>
           <div>
             <Button variant="outline" onClick={() => useTabs.getState().openInternal('privacy')}>Privacy policy</Button>
@@ -62,7 +62,7 @@ export default function SupportPage() {
         <section aria-labelledby="support-tier" className="grid gap-3">
           <h2 id="support-tier" className="sh-heading">Supporter</h2>
 
-          {sup.perks ? (
+          {sup.pass ? (
             justAdded ? (
               <Done title="Code accepted, thank you">Ads are gone and the extras are on for this device ({term}). The pass renews on its own while your membership continues.</Done>
             ) : sup.kind === 'trial' ? (
@@ -112,7 +112,7 @@ export default function SupportPage() {
                   </p>
                   <form className="flex flex-wrap items-center gap-2" onSubmit={(e) => { e.preventDefault(); void redeem() }}>
                     <Input id="support-code" value={code} onChange={(e) => { setCode(e.target.value); setError('') }} placeholder="SHASTA-XXXX-XXXX-XXXX" className="w-64 font-mono" spellCheck={false} autoComplete="off" aria-invalid={!!error} />
-                    <Button type="submit" disabled={!code.trim() || sup.busy}>{sup.busy ? 'Checking…' : 'Redeem'}</Button>
+                    <Button busy={sup.busy} type="submit" disabled={!code.trim() || sup.busy}>Redeem</Button>
                   </form>
                   {error && <p role="alert" className="text-shasta-danger">{error}</p>}
                   <p className="text-shasta-muted">Codes are not case-sensitive. Already have one? It also works in Settings, then Supporter.</p>

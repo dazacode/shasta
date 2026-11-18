@@ -17,7 +17,7 @@ import './Expand.css'
  * the closed thing's own look (render the notification again). The whole app,
  * laid out full size, is scaled down onto it and zooms up to fill the screen,
  * its top showing first; the face blows up with it and fades, so the app grows
- * out of the banner. Give the app's background as `--ss-expand-bg`.
+ * out of the banner. Give the app's background as `--sk-expand-bg`.
  * `radius` is the card's corner. `duration` defaults to 520ms for a card and
  * 640ms for a launch.
  */
@@ -28,7 +28,7 @@ export function Expand({ open, from, radius = 16, duration, face, children, clas
   const [box, setBox] = useState({ w: 0, h: 0, x: 0, y: 0, k: 1, r: 0 })
   useLayoutEffect(() => {
     const p = ref.current?.parentElement
-    const stage = p?.closest<HTMLElement>('.ss-stage')
+    const stage = p?.closest<HTMLElement>('.sk-stage')
     if (!p || !stage) return
     const sr = stage.getBoundingClientRect()
     const pr = p.getBoundingClientRect()
@@ -36,7 +36,7 @@ export function Expand({ open, from, radius = 16, duration, face, children, clas
     const k = pr.width / p.offsetWidth || 1
     // Inside a Phone, open is the display's own corner, not square: the app
     // keeps its rounded corners all the way in and lands under the bezel's
-    const r = parseFloat(getComputedStyle(p).getPropertyValue('--ss-screen-r')) || 0
+    const r = parseFloat(getComputedStyle(p).getPropertyValue('--sk-screen-r')) || 0
     setBox({ w: p.clientWidth, h: p.clientHeight, x: (pr.left - sr.left) / s + (p.clientLeft * k) / s, y: (pr.top - sr.top) / s + (p.clientTop * k) / s, k: k / s, r })
   }, [from.x, from.y, from.width, from.height])
   const reduced = useReducedMotion()
@@ -77,13 +77,13 @@ export function Expand({ open, from, radius = 16, duration, face, children, clas
       <div
         {...rest}
         ref={ref}
-        className={`ss-expand${className ? ` ${className}` : ''}`}
+        className={`sk-expand${className ? ` ${className}` : ''}`}
         data-open={open || undefined}
         data-launch=""
-        style={{ ...(open ? wide : shut), ['--ss-expand-ms' as string]: `${ms}ms`, ['--ss-expand-ease' as string]: curve, ...(moving ? null : { transition: 'none' }), ...(unmeasured ? { visibility: 'hidden' } : null), ...style }}
+        style={{ ...(open ? wide : shut), ['--sk-expand-ms' as string]: `${ms}ms`, ['--sk-expand-ease' as string]: curve, ...(moving ? null : { transition: 'none' }), ...(unmeasured ? { visibility: 'hidden' } : null), ...style }}
       >
-        <div className="ss-expand__content">{children}</div>
-        <div className="ss-expand__face" style={{ width: w, height: h, transform: `scale(${1 / s})` }}>
+        <div className="sk-expand__content">{children}</div>
+        <div className="sk-expand__face" style={{ width: w, height: h, transform: `scale(${1 / s})` }}>
           {face}
         </div>
       </div>
@@ -97,11 +97,11 @@ export function Expand({ open, from, radius = 16, duration, face, children, clas
     <div
       {...rest}
       ref={ref}
-      className={`ss-expand${className ? ` ${className}` : ''}`}
+      className={`sk-expand${className ? ` ${className}` : ''}`}
       data-open={open || undefined}
       style={{ clipPath: clip, transition: moving ? `clip-path ${ease}` : 'none', visibility: unmeasured ? 'hidden' : undefined, ...style }}
     >
-      <div className="ss-expand__content" style={ride}>
+      <div className="sk-expand__content" style={ride}>
         {children}
       </div>
     </div>

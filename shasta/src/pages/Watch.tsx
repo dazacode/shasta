@@ -259,7 +259,7 @@ function TopNav({ scope, view, read, query, onQuery, onPick, onScope, onList }: 
           className={cn('sh-press flex h-9 items-center gap-1.5 rounded-[10px] px-2.5 text-sm', onList_ ? 'sh-selected' : 'text-shasta-muted hover:bg-shasta-hover hover:text-shasta-fg')}
         >
           <Bookmark className="size-4" />
-          <span className="hidden lg:inline">My List</span>
+          <span className="sr-only lg:not-sr-only">My List</span>
           {listCount > 0 && <span className="sh-meta hidden lg:inline">{listCount}</span>}
         </button>
       </div>

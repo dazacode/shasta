@@ -18,9 +18,9 @@ import './States.css'
 export function States<K extends string>({ value, states, align = 'center', className, style, ...rest }: { value: K; states: Record<K, ReactNode>; /** Where a smaller state sits in the box: start for text in a row, center for a button's label, end for a right-aligned value. */ align?: 'start' | 'center' | 'end'; className?: string; style?: CSSProperties } & Record<`data-${string}`, unknown>) {
   const reduced = useReducedMotion()
   return (
-    <span {...rest} className={`ss-states${className ? ` ${className}` : ''}`} data-align={align} data-reduced={reduced || undefined} style={style}>
+    <span {...rest} className={`sk-states${className ? ` ${className}` : ''}`} data-align={align} data-reduced={reduced || undefined} style={style}>
       {(Object.keys(states) as K[]).map((k) => (
-        <span key={k} className="ss-states__item" data-on={k === value || undefined} aria-hidden={k !== value || undefined}>
+        <span key={k} className="sk-states__item" data-on={k === value || undefined} aria-hidden={k !== value || undefined}>
           {states[k]}
         </span>
       ))}

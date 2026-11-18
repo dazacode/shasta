@@ -11,7 +11,7 @@ export type SearchEngine = keyof typeof SEARCH_ENGINES
 
 /** Shasta's own pages, rendered by the shell rather than by the proxy. */
 export const INTERNAL_SCHEME = 'shasta://'
-export const INTERNAL_PAGES = ['newtab', 'history', 'bookmarks', 'downloads', 'settings', 'store', 'library', 'watch', 'app', 'support', 'get-app', 'chat', 'discord', 'whats-new', 'privacy'] as const
+export const INTERNAL_PAGES = ['newtab', 'history', 'bookmarks', 'downloads', 'settings', 'store', 'library', 'watch', 'app', 'support', 'get-app', 'discord', 'whats-new', 'privacy', 'social'] as const
 export type InternalPage = (typeof INTERNAL_PAGES)[number]
 export const NEW_TAB_URL = `${INTERNAL_SCHEME}newtab`
 
@@ -47,17 +47,34 @@ export function appKeyOf(url: string): string {
 /** Shasta's own pages and installed-app addresses are rendered by the shell, never fetched through the proxy. */
 export const isInternalUrl = (url: string) => url.startsWith(INTERNAL_SCHEME) || parseAppAddress(url) !== null
 
+/**
+ * Old page names that still open their page (a saved tab, a bookmark, a link): shasta://friends became shasta://social
+ * and the community chat (shasta://chat) became its Chat section (2026-11-08). `section` is used when the old address
+ * has no `#section` of its own.
+ */
+const RENAMED: Record<string, { page: InternalPage; section?: string }> = { friends: { page: 'social' }, chat: { page: 'social', section: 'chat' } }
+
+const pageName = (url: string) => url.slice(INTERNAL_SCHEME.length).replace(/[/?#].*$/, '')
+
 export function internalPage(url: string): InternalPage | null {
   if (parseAppAddress(url)) return 'app'
   if (!url.startsWith(INTERNAL_SCHEME)) return null
-  const name = url.slice(INTERNAL_SCHEME.length).replace(/[/?#].*$/, '')
+  const raw = pageName(url)
+  // renamed pages: an old address (a saved tab, a bookmark) still opens the page
+  const name = RENAMED[raw]?.page ?? raw
   return (INTERNAL_PAGES as readonly string[]).includes(name) ? (name as InternalPage) : null
 }
 
 export const internalUrl = (page: InternalPage, section = '') => `${INTERNAL_SCHEME}${page}${section ? `#${section}` : ''}`
 
-/** The `#section` part of a Shasta page address (used by Settings), without the `#`. */
-export const internalSection = (url: string) => (isInternalUrl(url) ? (url.split('#')[1] ?? '') : '')
+/** The `#section` part of a Shasta page address (used by Settings), without the `#`. A renamed address without one
+ * gets the section its page became (shasta://chat -> "chat"). */
+export function internalSection(url: string): string {
+  if (!isInternalUrl(url)) return ''
+  const hash = url.split('#')[1]
+  if (hash) return hash
+  return url.startsWith(INTERNAL_SCHEME) ? (RENAMED[pageName(url)]?.section ?? '') : ''
+}
 
 export type Resolved =
   | { kind: 'empty' }
@@ -175,7 +192,7 @@ export function titleFor(url: string): string {
   if (page === 'support') return 'Support Shasta'
   if (page === 'privacy') return 'Privacy'
   if (page === 'get-app') return 'Get the Shasta app'
-  if (page === 'chat') return 'Chat'
+  if (page === 'social') return 'Social'
   if (page === 'discord') return 'Discord'
   if (page === 'whats-new') return "What's new"
   if (page) return page.charAt(0).toUpperCase() + page.slice(1)

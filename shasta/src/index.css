@@ -150,6 +150,7 @@
   --color-shasta-accent-fg: var(--sh-accent-fg);
   --color-shasta-danger: var(--sh-danger);
   --color-shasta-warn: var(--sh-warn);
+  --color-shasta-success: var(--sh-success);
   --spacing-tab-h: var(--sh-tab-h);
   --spacing-bar-h: var(--sh-bar-h);
 }
@@ -166,12 +167,13 @@
   --sh-line: rgb(17 24 39 / 0.1);
   --sh-fg: #111827;
   --sh-muted: #4b5565;
-  --sh-faint: #6b7487;
+  --sh-faint: #5a6275; /* 4.5:1+ on every surface, chrome included */
   --sh-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --sh-accent: oklch(0.55 0.18 var(--sh-hue));
   --sh-accent-fg: #ffffff;
   --sh-danger: #c2312d;
   --sh-warn: #8a5a00;
+  --sh-success: #05704f;
   --sh-tab-h: 2.25rem;
   --sh-bar-h: 2.5rem;
   --popover: #ffffff;
@@ -190,11 +192,12 @@
   --sh-line: rgb(238 240 245 / 0.09);
   --sh-fg: #eef0f5;
   --sh-muted: #a3a9b8;
-  --sh-faint: #7a8296;
+  --sh-faint: #9097aa; /* 4.5:1+ on every surface, raised included */
   --sh-accent: oklch(0.8 0.12 var(--sh-hue));
   --sh-accent-fg: #0f1218;
   --sh-danger: #ff8f8a;
   --sh-warn: #f5c451;
+  --sh-success: #34d399;
   --popover: #2b2f3a;
   --popover-foreground: #f1f3f8;
   color-scheme: dark;
@@ -333,6 +336,8 @@ body { overflow: hidden; }
   font-family: var(--font-sans);
 }
 .nt-ridge { position: absolute; inset-inline: 0; bottom: 0; z-index: -1; width: 100%; height: 26cqw; opacity: 0.55; pointer-events: none; }
+/* while the GSAP intro is about to start (lib/flair.ts) the hero's pieces wait, so nothing flashes before it plays */
+.nt-hero[data-flair='pending'] > * { opacity: 0; }
 .nt-hero {
   position: relative;
   display: flex;
@@ -510,4 +515,10 @@ body { overflow: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
   .ev-photo, .ev-snow, .ev-snow::after { animation: none; }
+}
+
+/* phone widths: while the address bar has focus it takes the whole toolbar row (the other buttons come back on blur),
+   so what you type and the suggestions under it are readable instead of squeezed to a few characters */
+@media (max-width: 39.99rem) {
+  [data-zone='toolbar']:has(> [data-omnibox]:focus-within) > :not([data-omnibox], [role='progressbar']) { display: none; }
 }

@@ -17,8 +17,8 @@ import { clamp, easeInOutCubic, isDev, warn } from './util'
 /** loop: repeats while on screen. once: plays when first seen, then holds the end. hover: plays while the pointer is over it, settles back when it leaves; on a screen with no hover (a phone) it plays once. */
 export type Play = 'loop' | 'once' | 'hover'
 
-/** Design tokens for a look: `--ss-accent`, `--ss-radius-md`, `--ss-font` and the rest. */
-export type LookTokens = { [token: `--ss-${string}`]: string }
+/** Design tokens for a look: `--sk-accent`, `--sk-radius-md`, `--sk-font` and the rest. */
+export type LookTokens = { [token: `--sk-${string}`]: string }
 
 export interface StageProps<S> {
   /** Design size. The stage scales down to fit its container, and only grows past it with `fill`. */
@@ -63,12 +63,12 @@ export interface StageProps<S> {
    * `cool` swaps them for cool ones, for a macOS scene or a blue ground, so
    * every gray shares one temperature. Light theme only. */
   greys?: 'warm' | 'cool'
-  /** A look as values: any `--ss-*` tokens (color, type, shape, density),
+  /** A look as values: any `--sk-*` tokens (color, type, shape, density),
    * set on the stage over its theme's. See `references/looks.md`. */
   tokens?: LookTokens
-  /** Grow past the design size to fill the container (up to 2x), for a hero or a docs plate. A host page can set data-ss-fill on any wrapper instead. */
+  /** Grow past the design size to fill the container (up to 2x), for a hero or a docs plate. A host page can set data-sk-fill on any wrapper instead. */
   fill?: boolean
-  /** The accent color for this stage (any CSS color). Sets --ss-accent, its soft fill and the gradient's second stop together. */
+  /** The accent color for this stage (any CSS color). Sets --sk-accent, its soft fill and the gradient's second stop together. */
   accent?: string
   /** What the scene sits on. `orbs`: a pale tile lit by a few huge, soft
    * color orbs behind the UI, so glass has color to take and white cards
@@ -175,13 +175,13 @@ export function Stage<S extends object>({
     const measure = () => {
       const w = fit.clientWidth
       // A host that sizes the stage by something other than the screen (a
-      // bento tile set by its row's height) marks a wrapper data-ss-wide to
+      // bento tile set by its row's height) marks a wrapper data-sk-wide to
       // keep the wide design, scaled, rather than the phone-width one
-      const wide = !!fit.parentElement?.closest('[data-ss-wide]')
+      const wide = !!fit.parentElement?.closest('[data-sk-wide]')
       const next: Layout = compact && !wide && w < compact.below ? 'compact' : 'wide'
       setLayout(next)
-      // fill (or a host wrapper marked data-ss-fill) lets the stage grow past its design size, within reason
-      const grow = fillProp || !!fit.parentElement?.closest('[data-ss-fill]')
+      // fill (or a host wrapper marked data-sk-fill) lets the stage grow past its design size, within reason
+      const grow = fillProp || !!fit.parentElement?.closest('[data-sk-fill]')
       setGrows(grow)
       const dw = next === 'compact' ? compact!.width : width
       const s = Math.min(grow ? 2 : 1, w / dw)
@@ -197,7 +197,7 @@ export function Stage<S extends object>({
     // width. Observe only those attributes on its ancestors, not the scene.
     const hosts = new MutationObserver(measure)
     for (let host = fit.parentElement; host; host = host.parentElement) {
-      hosts.observe(host, { attributes: true, attributeFilter: ['data-ss-wide', 'data-ss-fill'] })
+      hosts.observe(host, { attributes: true, attributeFilter: ['data-sk-wide', 'data-sk-fill'] })
     }
     return () => {
       ro.disconnect()
@@ -314,7 +314,8 @@ export function Stage<S extends object>({
       return pos.current
     }
     const r = rectOf(root, el, scaleRef.current)
-    const f = typeof t === 'string' ? { x: 0.5, y: 0.5 } : (t as { x: number; y: number })
+    // A name alone, or { at } without x and y, aims at the middle
+    const f = typeof t === 'string' ? { x: 0.5, y: 0.5 } : { x: (t as { x?: number }).x ?? 0.5, y: (t as { y?: number }).y ?? 0.5 }
     return { x: r.x + r.width * f.x, y: r.y + r.height * f.y }
   }, [])
 
@@ -567,10 +568,10 @@ export function Stage<S extends object>({
   const showCursor = cursor && (!script || !still || cursor.still)
 
   return (
-    <div ref={fitRef} className={`ss-fit${className ? ` ${className}` : ''}`} style={{ maxWidth: grows ? undefined : width, height: designH * scale }}>
+    <div ref={fitRef} className={`sk-fit${className ? ` ${className}` : ''}`} style={{ maxWidth: grows ? undefined : width, height: designH * scale }}>
       <div
         ref={rootRef}
-        className="ss-stage"
+        className="sk-stage"
         data-specimen={specimen || undefined}
         data-unframed={unframed || undefined}
         data-still={still || undefined}
@@ -586,16 +587,16 @@ export function Stage<S extends object>({
           marginLeft: inset || undefined,
           transform: `scale(${scale})`,
           ...tokens,
-          ...(accent ? { ['--ss-accent' as string]: accent, ['--ss-accent-2' as string]: accent, ['--ss-accent-soft' as string]: `color-mix(in srgb, ${accent} 14%, transparent)` } : null),
+          ...(accent ? { ['--sk-accent' as string]: accent, ['--sk-accent-2' as string]: accent, ['--sk-accent-soft' as string]: `color-mix(in srgb, ${accent} 14%, transparent)` } : null),
         }}
       >
         {ground && (
           <div
-            className="ss-ground"
+            className="sk-ground"
             aria-hidden
             style={
               Array.isArray(ground)
-                ? ({ ['--ss-orb-1' as string]: ground[0], ['--ss-orb-2' as string]: ground[1], ...(ground[2] ? { ['--ss-orb-3' as string]: ground[2] } : null) } as CSSProperties)
+                ? ({ ['--sk-orb-1' as string]: ground[0], ['--sk-orb-2' as string]: ground[1], ...(ground[2] ? { ['--sk-orb-3' as string]: ground[2] } : null) } as CSSProperties)
                 : undefined
             }
           />

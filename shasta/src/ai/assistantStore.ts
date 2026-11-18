@@ -97,8 +97,11 @@ export const useAssistant = create<AssistantState>()((set, get) => {
         if (e instanceof AbortedError || ctrl.signal.aborted) patch(reply.id, { pending: false, stage: undefined, content: get().messages.find((m) => m.id === reply.id)?.content || 'Stopped.' })
         else patch(reply.id, { pending: false, stage: undefined, error: true, content: e instanceof Error ? e.message : 'Something went wrong.' })
       } finally {
-        controller = null
-        set({ busy: false })
+        // only the send that still owns the assistant frees it: after Clear a new send may already be running
+        if (controller === ctrl) {
+          controller = null
+          set({ busy: false })
+        }
       }
     },
 
@@ -109,8 +112,10 @@ export const useAssistant = create<AssistantState>()((set, get) => {
     },
 
     clear() {
+      // the stopped answer settles later (the worker has to notice the abort); the next question need not wait for it
       controller?.abort()
-      set({ messages: [] })
+      controller = null
+      set({ messages: [], busy: false })
     },
 
     async startDictation() {

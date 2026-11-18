@@ -8,10 +8,10 @@ import './Badge.css'
  */
 export function Badge({ tone = 'neutral', dot, icon, children, className, ...rest }: HTMLAttributes<HTMLSpanElement> & { tone?: 'neutral' | 'accent' | 'success' | 'danger' | 'warning'; dot?: boolean; icon?: ReactNode }) {
   return (
-    <span {...rest} className={`ss-badge${className ? ` ${className}` : ''}`} data-tone={tone} data-lead={dot || icon ? '' : undefined}>
-      {dot && <span className="ss-badge__dot" />}
+    <span {...rest} className={`sk-badge${className ? ` ${className}` : ''}`} data-tone={tone} data-lead={dot || icon ? '' : undefined}>
+      {dot && <span className="sk-badge__dot" />}
       {icon}
-      <span className="ss-badge__label">{children}</span>
+      <span className="sk-badge__label">{children}</span>
     </span>
   )
 }

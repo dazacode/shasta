@@ -1,6 +1,6 @@
 /* Store -> Publish demo (PublishDemo.tsx). The page is the ground: no plate. The terminal fades out at its foot
    (a mask on the window, not the stage) and the Store card straddles its right edge below the output. */
-.pbd .ss-stage {
+.pbd .sk-stage {
   --g: 24px;
   overflow: hidden;
   background: transparent;
@@ -30,8 +30,8 @@
   gap: 12px;
   padding: 12px 14px 12px 12px;
   border-radius: 16px;
-  background: var(--ss-surface);
-  box-shadow: var(--ss-shadow-satellite), 0 24px 40px -20px rgb(0 0 0 / 0.35);
+  background: var(--sk-surface);
+  box-shadow: var(--sk-shadow-satellite), 0 24px 40px -20px rgb(0 0 0 / 0.35);
   opacity: 0;
   transform: translateY(14px);
   will-change: transform;
@@ -48,11 +48,11 @@
     linear-gradient(140deg, #312e81, #0e7490);
 }
 .pbd .pbd-text { display: grid; gap: 7px; min-width: 0; }
-.pbd .pbd-name { color: var(--ss-text-strong); font-size: 14px; font-weight: 600; line-height: 1.3; }
+.pbd .pbd-name { color: var(--sk-text-strong); font-size: 14px; font-weight: 600; line-height: 1.3; }
 
 /* compact: the terminal runs off the right, its lines wrap, the card sits under the output across the column */
-.pbd .ss-stage[data-layout='compact'] { --g: 16px; }
-.pbd .ss-stage[data-layout='compact'] .pbd-term { width: 400px; height: 440px; }
-.pbd .ss-stage[data-layout='compact'] .pbd-lines { font-size: 11px; }
-.pbd .ss-stage[data-layout='compact'] .pbd-lines > div { white-space: pre-wrap; max-width: 300px; }
-.pbd .ss-stage[data-layout='compact'] .pbd-card { top: 236px; width: 300px; right: auto; left: 29px; }
+.pbd .sk-stage[data-layout='compact'] { --g: 16px; }
+.pbd .sk-stage[data-layout='compact'] .pbd-term { width: 400px; height: 440px; }
+.pbd .sk-stage[data-layout='compact'] .pbd-lines { font-size: 11px; }
+.pbd .sk-stage[data-layout='compact'] .pbd-lines > div { white-space: pre-wrap; max-width: 300px; }
+.pbd .sk-stage[data-layout='compact'] .pbd-card { top: 236px; width: 300px; right: auto; left: 29px; }

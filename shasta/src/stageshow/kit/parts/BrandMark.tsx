@@ -34,10 +34,10 @@ export function BrandMark({ brand, name, src, size = 28, width, tile = true, sur
   // artwork on a light tile. Bare marks leave surface choice to the caller.
   const lightTile = tile && dark && assetSizing && asset.dark === asset.light
   return (
-    <span className={`ss-brand${className ? ` ${className}` : ''}`} data-tile={tile || undefined} data-light-tile={lightTile || undefined} data-brand={brand} style={{ width: frameWidth, height: size, borderRadius: Math.round(size * 0.24), background: tile && assetSizing ? asset.tileBackground : undefined, ...style }} role="img" aria-label={label}>
+    <span className={`sk-brand${className ? ` ${className}` : ''}`} data-tile={tile || undefined} data-light-tile={lightTile || undefined} data-brand={brand} style={{ width: frameWidth, height: size, borderRadius: Math.round(size * 0.24), background: tile && assetSizing ? asset.tileBackground : undefined, ...style }} role="img" aria-label={label}>
       {image && fidelity !== 'minimal'
         ? <img src={image} alt="" draggable={false} style={assetSizing && tile ? { width: `${asset.scale * 100}%`, height: `${asset.scale * 100}%` } : undefined} />
-        : <span className="ss-brand__initial" style={{ fontSize: Math.round(size * (size < 24 ? 0.5 : 0.42)) }}>{fidelity === 'minimal' ? '' : label.trim()[0]?.toUpperCase()}</span>}
+        : <span className="sk-brand__initial" style={{ fontSize: Math.round(size * (size < 24 ? 0.5 : 0.42)) }}>{fidelity === 'minimal' ? '' : label.trim()[0]?.toUpperCase()}</span>}
     </span>
   )
 }

@@ -16,6 +16,7 @@ import { appKeyOf, hostOf, internalPage, internalSection, isInternalUrl } from '
 import { cn } from '@/lib/utils'
 import { useSettings, type PageAccess } from '@/stores/settingsStore'
 import { useUi } from '@/stores/uiStore'
+import { useImmersive } from '@/shasuta/state'
 import { keysFor } from '@/lib/shortcuts'
 import { Gamepad2, SlidersHorizontal } from 'lucide-react'
 import { GameLaunchOverlay } from '@/components/game/GameSplash'
@@ -32,7 +33,7 @@ const PrivacyPage = lazy(() => import('@/pages/Privacy'))
 const GetAppPage = lazy(() => import('@/pages/GetApp'))
 const DiscordPage = lazy(() => import('@/pages/Discord'))
 const WhatsNewPage = lazy(() => import('@/pages/WhatsNew'))
-const ChatPage = lazy(() => import('@/pages/Chat'))
+const SocialPage = lazy(() => import('@/pages/Social'))
 const StorePage = lazy(() => import('@/store/StorePage').then((m) => ({ default: m.StorePage })))
 const WatchPage = lazy(() => import('@/pages/Watch').then((m) => ({ default: m.Watch })))
 
@@ -159,11 +160,11 @@ const TabView = memo(function TabView({ tab, active }: { tab: Tab; active: boole
           <PageBoundary resetKey={url}><AppRuntime tabId={tab.id} appKey={appKeyOf(url)} active={active} isGame={url.startsWith('game:')} /></PageBoundary>
         </div>
       )}
-      {/* the chat fills the tab and scrolls inside itself, unlike the document-style pages below */}
-      {active && page === 'chat' && (
+      {/* the social hub (friends, messages, posts, the community chat) fills the tab and its panes scroll inside themselves */}
+      {active && page === 'social' && (
         <div className="absolute inset-0 z-10 bg-shasta-bg">
           <PageBoundary resetKey={url}>
-            <Suspense fallback={null}><ChatPage /></Suspense>
+            <Suspense fallback={null}><SocialPage section={internalSection(url)} /></Suspense>
           </PageBoundary>
         </div>
       )}
@@ -175,7 +176,7 @@ const TabView = memo(function TabView({ tab, active }: { tab: Tab; active: boole
           </PageBoundary>
         </div>
       )}
-      {active && page && page !== 'app' && page !== 'chat' && page !== 'watch' && (
+      {active && page && page !== 'app' && page !== 'social' && page !== 'watch' && (
         <div className="absolute inset-0 z-10 overflow-auto bg-shasta-bg">
           <PageBoundary resetKey={url}>
           <Suspense fallback={null}>
@@ -206,13 +207,15 @@ export function BrowserView() {
   const tabs = useTabs((s) => s.tabs)
   const activeId = useTabs((s) => s.activeId)
   const gameMode = useUi((s) => s.gameMode)
+  // started from Shasuta and filling the window: its own bar (shasuta/PlayBar.tsx) replaces this pill
+  const immersive = useImmersive()
   const activeTab = tabs.find((t) => t.id === activeId)
   return (
     <main className="relative min-h-0 flex-1 bg-shasta-bg" id="browser-view">
       {tabs.map((tab) => (
         <TabView key={tab.id} tab={tab} active={tab.id === activeId} />
       ))}
-      {gameMode && (
+      {gameMode && !immersive && (
         <div className="absolute left-1/2 top-2 z-20 flex -translate-x-1/2 items-center rounded-full bg-black/70 text-xs text-white opacity-60 shadow backdrop-blur transition-opacity hover:opacity-100 focus-within:opacity-100">
           <button
             onClick={() => useUi.getState().setGameMode(false)}

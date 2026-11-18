@@ -25,7 +25,7 @@ function tokens(line: string): ReactNode[] {
     if (m.index > last) out.push(line.slice(last, m.index))
     const [text, com, str, num, call, word] = m
     const kind = com ? 'com' : str ? 'str' : num ? 'num' : call ? (KEYWORDS.test(call) ? 'key' : 'fn') : word && KEYWORDS.test(word) ? 'key' : null
-    out.push(kind ? <span key={k++} className={`ss-code__${kind}`}>{text}</span> : text)
+    out.push(kind ? <span key={k++} className={`sk-code__${kind}`}>{text}</span> : text)
     last = m.index + text.length
   }
   if (last < line.length) out.push(line.slice(last))
@@ -43,7 +43,7 @@ export function Code({ lines, start = 1, numbers = true, count, highlight = true
   const ref = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
     const mark = () =>
-      ref.current?.querySelectorAll<HTMLElement>('.ss-code__text').forEach((t) => {
+      ref.current?.querySelectorAll<HTMLElement>('.sk-code__text').forEach((t) => {
         t.toggleAttribute('data-over', t.scrollWidth > t.clientWidth + 1)
       })
     mark()
@@ -52,16 +52,16 @@ export function Code({ lines, start = 1, numbers = true, count, highlight = true
     return () => ro.disconnect()
   })
   return (
-    <div ref={ref} className={`ss-code${className ? ` ${className}` : ''}`} style={style}>
+    <div ref={ref} className={`sk-code${className ? ` ${className}` : ''}`} style={style}>
       {lines.map((raw, i) => {
         const line = typeof raw === 'string' ? { text: raw } : raw
         // A removed line keeps the old number; the line after it reuses it
         const num = line.kind === 'del' || line.number === false ? n : n++
         return (
-          <div key={i} className="ss-code__line" data-kind={line.kind} data-on={count === undefined || i < count || undefined}>
-            {numbers && <span className="ss-code__num">{line.kind === 'del' || line.number === false ? '' : num}</span>}
-            <span className="ss-code__mark">{line.kind === 'add' ? '+' : line.kind === 'del' ? '−' : ''}</span>
-            <span className="ss-code__text">{highlight ? tokens(line.text) : line.text}</span>
+          <div key={i} className="sk-code__line" data-kind={line.kind} data-on={count === undefined || i < count || undefined}>
+            {numbers && <span className="sk-code__num">{line.kind === 'del' || line.number === false ? '' : num}</span>}
+            <span className="sk-code__mark">{line.kind === 'add' ? '+' : line.kind === 'del' ? '−' : ''}</span>
+            <span className="sk-code__text">{highlight ? tokens(line.text) : line.text}</span>
           </div>
         )
       })}

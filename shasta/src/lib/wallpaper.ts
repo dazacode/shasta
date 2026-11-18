@@ -3,7 +3,7 @@ import { BASE } from '@/lib/edition'
 // New-tab wallpapers: plain CSS gradients tinted over the page colour, so text stays readable in light and dark themes
 // and nothing is downloaded or stored beyond the preset's name. Presets marked `supporter` are a cosmetic perk; a saved
 // one that is locked again (pass ended) is shown as the default without touching the saved choice.
-export type WallpaperName = 'none' | 'alpine' | 'dawn' | 'forest' | 'dusk' | 'ember' | 'ribbon' | 'aurora' | 'sunset' | 'lagoon' | 'prism' | 'nebula' | 'halloween' | 'thanksgiving' | 'winter' | 'newyear'
+export type WallpaperName = 'none' | 'trail' | 'alpine' | 'dawn' | 'forest' | 'dusk' | 'ember' | 'ribbon' | 'aurora' | 'sunset' | 'lagoon' | 'prism' | 'nebula' | 'halloween' | 'thanksgiving' | 'winter' | 'newyear'
 
 export interface WallpaperPreset {
   label: string
@@ -17,12 +17,21 @@ export interface WallpaperPreset {
   supporter?: true
   /** a seasonal wallpaper: shown for everyone during its season, kept afterwards only by people who claimed it */
   claim?: true
+  /** a gift for watching Shasuta's tour to the end (shasuta/tour/model.ts); only listed in a build with Shasuta */
+  tour?: true
 }
 
 const glow = (l: number, c: number, h: number, a: number) => `oklch(${l} ${c} ${h} / ${a})`
 
 export const WALLPAPERS: Record<WallpaperName, WallpaperPreset> = {
   none: { label: 'None', hue: null },
+  // the tour's gift: contour lines of a trail map over a pale paper
+  trail: {
+    label: 'Trail map',
+    hue: null,
+    tour: true,
+    css: `repeating-radial-gradient(circle at 72% 26%, transparent 0 21px, ${glow(0.62, 0.08, 175, 0.2)} 21px 22.5px), repeating-radial-gradient(ellipse 120% 90% at 16% 88%, transparent 0 17px, ${glow(0.62, 0.1, 40, 0.16)} 17px 18.5px), linear-gradient(160deg, ${glow(0.95, 0.04, 95, 0.55)}, ${glow(0.86, 0.06, 175, 0.4)})`,
+  },
   alpine: { label: 'Alpine', hue: 230 },
   dawn: { label: 'Dawn', hue: 50 },
   forest: { label: 'Forest', hue: 160 },
@@ -69,15 +78,16 @@ export const WALLPAPERS: Record<WallpaperName, WallpaperPreset> = {
 
 export const isWallpaper = (v: unknown): v is WallpaperName => typeof v === 'string' && Object.hasOwn(WALLPAPERS, v)
 
-export const isLockedWallpaper = (name: WallpaperName, perks: boolean) => !!WALLPAPERS[name]?.supporter && !perks
+/** Locked: a Supporter preset without perks, or the tour's gift before the tour was watched to the end. */
+export const isLockedWallpaper = (name: WallpaperName, perks: boolean, tourGifts = false) => (!!WALLPAPERS[name]?.supporter && !perks) || (!!WALLPAPERS[name]?.tour && !tourGifts)
 
 /** A seasonal wallpaper this person never claimed. */
 export const isUnclaimedWallpaper = (name: WallpaperName, claimed: readonly string[]) => !!WALLPAPERS[name]?.claim && !claimed.includes(name)
 
 /** The wallpaper to draw: a saved supporter preset falls back to the default while perks are off (the saved choice stays),
  *  and so does a seasonal one that was never claimed. */
-export function effectiveWallpaper(name: WallpaperName, perks: boolean, claimed: readonly string[] = []): WallpaperName {
-  return !isWallpaper(name) || isLockedWallpaper(name, perks) || isUnclaimedWallpaper(name, claimed) ? 'none' : name
+export function effectiveWallpaper(name: WallpaperName, perks: boolean, claimed: readonly string[] = [], tourGifts = false): WallpaperName {
+  return !isWallpaper(name) || isLockedWallpaper(name, perks, tourGifts) || isUnclaimedWallpaper(name, claimed) ? 'none' : name
 }
 
 /** The small swatch for the glossy ribbon wallpaper; the page draws the full version (components/RibbonWallpaper.tsx). */

@@ -1,0 +1,29 @@
+/* Shasta on your phone. Shasta's own tokens (index.css: --sh-*, shadcn's, the craft utilities) so the shared social
+   components look the same here and on the desktop; this file only undoes what is for the browser window (a fixed,
+   non-scrolling chrome) and adds the phone's safe areas. */
+@import "../index.css";
+@import "@fontsource-variable/nunito";
+
+html,
+body,
+#root {
+  height: auto;
+  min-height: 100%;
+  background: var(--sh-page);
+}
+body {
+  overflow: auto;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  font-size: 16px;
+}
+
+/* the very first paint, before main.tsx sets the class */
+@media (prefers-color-scheme: dark) {
+  html:not(.light) body { background: #0b0d14; color: #eef0f5; }
+}
+
+.me-safe-top { padding-top: env(safe-area-inset-top); }
+.me-safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.me-safe-x { padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); }

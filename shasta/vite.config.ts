@@ -73,6 +73,17 @@ export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(pkg.version), __ENGINE_VERSION__: JSON.stringify(engineVersion), __ENGINE_PATHS__: JSON.stringify(ENGINE_PATHS) },
   plugins: [
     {
+      // the phone app (me.html) lives at /me: the QR codes point there (docs/social-protocol.md). Production servers
+      // map it themselves (server.mjs, Pages); the dev server would otherwise answer /me with index.html.
+      name: 'me-route',
+      configureServer(server) {
+        server.middlewares.use((req, _res, next) => {
+          if (req.url && /^\/me\/?(\?|#|$)/.test(req.url)) req.url = req.url.replace(/^\/me\/?/, '/me.html')
+          next()
+        })
+      },
+    },
+    {
       name: 'engine-version',
       transformIndexHtml: (html) =>
         html.replaceAll('%ENGINE_VERSION%', engineVersion).replaceAll('%ENGINE_CORE%', ENGINE_PATHS.core).replaceAll('%ENGINE_API%', ENGINE_PATHS.api),
@@ -159,7 +170,8 @@ export default defineConfig({
   build: {
     rolldownOptions: {
       // pad.html = the phone controller (src/pad/main.ts): its own tiny page, none of the browser
-      input: { index: path.resolve(import.meta.dirname, 'index.html'), pad: path.resolve(import.meta.dirname, 'pad.html') },
+      // me.html = Shasta on your phone (src/me/main.tsx): account, friends, messages; its own bundle too
+      input: { index: path.resolve(import.meta.dirname, 'index.html'), pad: path.resolve(import.meta.dirname, 'pad.html'), me: path.resolve(import.meta.dirname, 'me.html') },
       output: {
         // Lite (VITE_NEUTRAL_ENGINE): the engine's glue chunks are named after their modules
         // (scramjet-external, controller-external); give them names a URL filter does not match
@@ -173,6 +185,13 @@ export default defineConfig({
             { name: 'transport-epoxy', test: /node_modules\/@mercuryworkshop\/epoxy-transport/, priority: 30 },
             { name: 'transport-libcurl', test: /node_modules\/@mercuryworkshop\/libcurl-transport/, priority: 30 },
             { name: 'adblocker', test: /node_modules\/@ghostery\//, priority: 30 },
+            // React gets its own chunk, above the others: groups take their dependencies with them, so React used to
+            // land inside `openui` and every page (me.html too) preloaded OpenUI to get React
+            { name: 'react', test: /node_modules\/(react|react-dom|scheduler|use-sync-external-store)\//, priority: 40 },
+            // same for zod (OpenUI's peer, and the phone app's forms) and Vite's preload helper (every lazy import
+            // uses it: inside `openui` it made any page with a dynamic import preload OpenUI)
+            { name: 'zod', test: /node_modules\/zod\//, priority: 40 },
+            { name: 'preload-helper', test: /vite\/preload-helper|preload-helper/, priority: 40 },
             { name: 'openui', test: /node_modules\/@openuidev\//, priority: 30 },
             { name: 'wisp', test: /shasta-wisp|\/wisp\//, priority: 30 },
           ],

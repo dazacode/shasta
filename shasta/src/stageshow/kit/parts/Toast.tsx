@@ -11,12 +11,12 @@ import './Toast.css'
 export function Toast({ show, icon, children, action, className, style, ...rest }: { show: boolean; icon?: ReactNode; children: ReactNode; action?: ReactNode; className?: string; style?: CSSProperties } & Record<`data-${string}`, unknown>) {
   const { fidelity } = useLook()
   // Minimal: words become a placeholder line, as everywhere else
-  if (fidelity === 'minimal' && typeof children === 'string') children = <span className="ss-bar" style={{ width: Math.min(160, children.length * 5.5), height: 6, borderRadius: 3, background: 'var(--ss-ink-3)', display: 'inline-block' }} />
+  if (fidelity === 'minimal' && typeof children === 'string') children = <span className="sk-bar" style={{ width: Math.min(160, children.length * 5.5), height: 6, borderRadius: 3, background: 'var(--sk-ink-3)', display: 'inline-block' }} />
   return (
-    <div {...rest} className={`ss-toast${className ? ` ${className}` : ''}`} data-show={show || undefined} style={style} role="status">
-      {icon && <span className="ss-toast__icon">{icon}</span>}
+    <div {...rest} className={`sk-toast${className ? ` ${className}` : ''}`} data-show={show || undefined} style={style} role="status">
+      {icon && <span className="sk-toast__icon">{icon}</span>}
       <span>{children}</span>
-      {action && <span className="ss-toast__action">{action}</span>}
+      {action && <span className="sk-toast__action">{action}</span>}
     </div>
   )
 }

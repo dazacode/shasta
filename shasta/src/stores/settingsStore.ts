@@ -5,7 +5,7 @@ import { canRunLocalRelay, defaultWispUrl, defaultWispUrls, type TransportName }
 import { available as directAvailable } from '@/proxy/directFrame'
 import { isWallpaper, type WallpaperName } from '@/lib/wallpaper'
 import type { Tier } from '@/ai/catalog'
-import { sanitizeRecord, type SupporterRecord } from '@/lib/supporter'
+import { sanitizeRecord, sanitizeTourPass, type SupporterRecord, type TourPassRecord } from '@/lib/supporter'
 import { LITE } from '@/lib/edition'
 
 export type ThemeMode = 'system' | 'light' | 'dark'
@@ -112,6 +112,10 @@ export interface Settings {
   /** online count and trending sites/apps on the new tab page */
   newTabLive: boolean
   newTabBookmarks: boolean
+  /** Shasuta's look only: the live mountain behind the new tab, the "Jump back in" row of your games, and the Home button on the page */
+  newTabScene: boolean
+  newTabCamps: boolean
+  newTabHome: boolean
   shortcuts: Shortcut[]
   // privacy
   saveHistory: boolean
@@ -150,6 +154,8 @@ export interface Settings {
   // supporter (cosmetic perks only; see lib/supporter.ts). Credential-like: never part of a profile export.
   /** the redeemed code and its signed pass, or null */
   supporter: SupporterRecord | null
+  /** the tour's 24-hour ad-free pass (kept after it ends: one per device). Credential-like, never exported. */
+  tourPass: TourPassRecord | null
   /** a supporter perk: try new features before everyone else (only a flag for now) */
   earlyPreviews: boolean
   /** holiday looks (lib/events.ts: new tab photo + greeting, Store colours/shelves, Watch section); off = all normal */
@@ -216,6 +222,9 @@ export const defaultSettings = (): Settings => liteSettings({
   newTabApps: true,
   newTabLive: true,
   newTabBookmarks: true,
+  newTabScene: true,
+  newTabCamps: true,
+  newTabHome: true,
   shortcuts: DEFAULT_SHORTCUTS,
   saveHistory: true,
   blockAds: true,
@@ -235,6 +244,7 @@ export const defaultSettings = (): Settings => liteSettings({
   offlineShell: true,
   offlineAiRuntime: false,
   supporter: null,
+  tourPass: null,
   earlyPreviews: false,
   seasonalLooks: true,
   claimedWallpapers: [],
@@ -271,6 +281,7 @@ export function migrateSettings(persisted: unknown, version: number): Partial<Se
   if (version < 2 && !old.settings?.wispUrl) settings.wispUrl = defaultWispUrl()
   // v4 -> v5: supporter pass and early previews (absent before; whatever is there is validated, never trusted)
   settings.supporter = sanitizeRecord(settings.supporter)
+  settings.tourPass = sanitizeTourPass(settings.tourPass)
   if (typeof settings.earlyPreviews !== 'boolean') settings.earlyPreviews = false
   // v5 -> v6: fallback Wisp endpoints (wispUrl stays the preferred one)
   settings.wispUrls = sanitizeUrls(settings.wispUrls)
@@ -295,6 +306,7 @@ export function mergeSettings(persisted: unknown, current: SettingsState): Setti
   settings.newTabBgBlur = clampNum(settings.newTabBgBlur, 0, 20)
   settings.newTabOrder = normalizeSectionOrder(settings.newTabOrder)
   settings.supporter = sanitizeRecord(settings.supporter)
+  settings.tourPass = sanitizeTourPass(settings.tourPass)
   if (typeof settings.earlyPreviews !== 'boolean') settings.earlyPreviews = false
   settings.wispUrls = sanitizeUrls(settings.wispUrls)
   if (typeof settings.seasonalLooks !== 'boolean') settings.seasonalLooks = true

@@ -71,7 +71,7 @@ export function ReviewPanel({ app, onApp }: { app: DevApp; onApp: (a: DevApp) =>
       {!target && <p className="text-sm text-shasta-muted">Create a draft version in step 3 to preview and publish it.</p>}
       {draft && (
         <ul className="mb-4 grid gap-1.5 text-sm" aria-label="Readiness checklist">
-          {checks.length === 0 && <li className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400"><Check className="size-4" /> Everything required is in place.</li>}
+          {checks.length === 0 && <li className="flex items-center gap-2 text-shasta-success"><Check className="size-4" /> Everything required is in place.</li>}
           {checks.map((c) => (
             <li key={c} className="flex items-center gap-2 text-shasta-muted"><Circle className="size-3.5 text-shasta-warn" /> {c}</li>
           ))}
@@ -83,7 +83,7 @@ export function ReviewPanel({ app, onApp }: { app: DevApp; onApp: (a: DevApp) =>
           <legend className="sr-only">What happens to version {app.version}</legend>
           <p><strong>This is an update.</strong> Once {draft!.version} is {direct ? 'published' : 'approved'}, version {app.version} stops working and everyone who has it moves to {draft!.version} the next time they open the app.</p>
           <label className="flex cursor-pointer items-start gap-2">
-            <input type="checkbox" className="mt-0.5 size-4 accent-[var(--shasta-accent)]" checked={keepPrevious} onChange={(e) => setKeepPrevious(e.target.checked)} />
+            <input type="checkbox" className="mt-0.5 size-4 accent-shasta-accent" checked={keepPrevious} onChange={(e) => setKeepPrevious(e.target.checked)} />
             <span>
               Keep version {app.version} available, so updating is optional
               <span className="mt-0.5 block text-xs text-shasta-muted">
@@ -148,7 +148,7 @@ export function HistoryPanel({ app, onApp }: { app: DevApp; onApp: (a: DevApp) =
                     {v.hasPackage && <span className="block text-xs">{v.fileCount} files · {formatBytes(v.sizeBytes)}</span>}
                     {v.state === 'archived' && (
                       <span className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
-                        <span className={v.keepAvailable ? 'text-emerald-600 dark:text-emerald-400' : ''}>{v.keepAvailable ? 'Kept available: people on it can stay' : 'Retired: people on it were moved up'}</span>
+                        <span className={v.keepAvailable ? 'text-shasta-success' : ''}>{v.keepAvailable ? 'Kept available: people on it can stay' : 'Retired: people on it were moved up'}</span>
                         <Button size="xs" variant="secondary" disabled={busy === v.id} onClick={() => void keep(v, !v.keepAvailable)}>{v.keepAvailable ? 'Retire' : 'Keep available'}</Button>
                       </span>
                     )}

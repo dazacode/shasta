@@ -91,7 +91,8 @@ function sample() {
     if (n) useUi.getState().toast(`Paused ${n} background tab${n > 1 ? 's' : ''} to keep your device responsive. They reload when you open them.`)
   }
   if (pressure === 'critical') {
-    const n = useTabs.getState().suspendBackground(1)
+    // pages first; only if that frees nothing may a game Quick Resume holds go (a crash would lose it anyway)
+    const n = useTabs.getState().suspendBackground(1) || useTabs.getState().suspendBackground(1, true)
     warn(
       n
         ? `Memory is almost full, so Shasta paused ${n} background tab${n > 1 ? 's' : ''}. Close tabs or heavy games to avoid a crash.`

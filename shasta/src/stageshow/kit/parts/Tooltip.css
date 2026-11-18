@@ -1,14 +1,14 @@
 /* Tooltip */
 
 @layer stageshow {
-  .ss-tooltip {
+  .sk-tooltip {
     position: absolute;
     z-index: 20;
     display: flex;
     align-items: center;
     height: 22px;
     padding: 0 8px;
-    border-radius: var(--ss-radius-sm);
+    border-radius: var(--sk-radius-sm);
     background: #26262a;
     color: #fff;
     font-size: 11px;
@@ -20,22 +20,22 @@
     transition: opacity 0.1s ease, transform 0.1s ease;
   }
 
-  .ss-tooltip[data-side='above'] {
+  .sk-tooltip[data-side='above'] {
     transform: translate(-50%, calc(-100% + 2px));
   }
 
-  .ss-tooltip[data-show] {
+  .sk-tooltip[data-show] {
     opacity: 1;
     transform: translate(-50%, 0);
     transition-duration: 0.15s;
   }
 
-  .ss-tooltip[data-side='above'][data-show] {
+  .sk-tooltip[data-side='above'][data-show] {
     transform: translate(-50%, -100%);
   }
 
   /* Centered on its letters, not its line box */
-  .ss-tooltip__label {
+  .sk-tooltip__label {
     display: block;
     text-box: trim-both cap alphabetic;
   }

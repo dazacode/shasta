@@ -92,7 +92,7 @@ export function QueueTab() {
                       <p className="break-all">{pending.linkedUrl}</p>
                     )}
                     {report && (
-                      <p className={report.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-shasta-danger'}>
+                      <p className={report.ok ? 'text-shasta-success' : 'text-shasta-danger'}>
                         Validation {report.ok ? 'passed' : 'failed'}
                         {report.warnings.length ? ` with ${report.warnings.length} warning${report.warnings.length > 1 ? 's' : ''}` : ''}
                       </p>

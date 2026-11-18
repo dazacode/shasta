@@ -43,6 +43,14 @@ const SHASUTA_DROP = [
 	"shasta/src/components/whatsNew/shasutaDemo",
 	"shasta/tests/shasuta",
 	"shasta/tsconfig.shasutaoff.json",
+	// Shasuta's tests and screenshots outside its folders (the name check below cannot see them; the import check can)
+	"shasta/tests/details.test.ts",
+	"shasta/tests/lyrics.test.ts",
+	"shasta/tests/musicNotes.test.ts",
+	"shasta/tests/queue.test.ts",
+	"shasta/tests/tourTerrain.test.ts",
+	"shasta/g-finale.png",
+	"shasta/g-stamp.png",
 ];
 const SHASUTA_STANDINS: Record<string, string> = {
 	"shasta/src/shasutaOff/state.ts": "shasta/src/shasuta/state.ts",
@@ -107,7 +115,15 @@ for (const [from, to] of Object.entries(SHASUTA_STANDINS)) {
 }
 // scripts/lib/shasutaGuard.ts (imported by the published deploy scripts) is only a name check on build folders, no Shasuta code
 const standins = new Set([...Object.values(SHASUTA_STANDINS), "scripts/lib/shasutaGuard.ts"]);
-const leaked = files.filter((f) => /shasuta/i.test(f) && !standins.has(f));
+// by name, and by content: a file importing a Shasuta module that has no stand-in here is Shasuta code (its tests
+// live in shasta/tests/ under ordinary names). Images and other binaries can only be caught by SHASUTA_DROP.
+const standinModules = new Set(Object.values(SHASUTA_STANDINS).filter((t) => t.startsWith("shasta/src/shasuta/")).map((t) => t.slice("shasta/src/shasuta/".length).replace(/\.tsx?$/, "")));
+const importsShasuta = (f: string) => {
+	if (!/\.(ts|tsx|js|jsx|mjs)$/.test(f)) return false;
+	const src = readFileSync(path.join(root, f), "utf8");
+	return [...src.matchAll(/@\/shasuta\/([A-Za-z0-9_/.-]+)/g)].some((m) => !standinModules.has(m[1]));
+};
+const leaked = files.filter((f) => (/shasuta/i.test(f) || importsShasuta(f)) && !standins.has(f) && f !== "scripts/publish-source.ts");
 if (leaked.length) {
 	console.error(`\x1b[31mShasuta files in the public snapshot, refusing to publish:\n  ${leaked.join("\n  ")}\x1b[0m`);
 	process.exit(1);

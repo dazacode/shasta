@@ -74,7 +74,7 @@ function NewAppDialog({ open, onClose }: { open: boolean; onClose: () => void })
           {error && <p role="alert" className="text-sm text-shasta-danger">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={busy || name.trim().length < 2}>{busy ? 'Creating…' : 'Create draft'}</Button>
+            <Button busy={busy} type="submit" disabled={busy || name.trim().length < 2}>Create draft</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -232,7 +232,7 @@ function DetailsPanel({ app, draft, onApp }: { app: DevApp; draft: DevApp['versi
           </div>
           {error && <p role="alert" className="text-sm text-shasta-danger">{error}</p>}
           <div className="flex items-center gap-3">
-            <Button type="submit" disabled={!dirty || saving}>{saving ? 'Saving…' : 'Save details'}</Button>
+            <Button busy={saving} type="submit" disabled={!dirty || saving}>Save details</Button>
             {dirty && <span className="text-xs text-shasta-muted" aria-live="polite">Unsaved changes</span>}
           </div>
         </form>

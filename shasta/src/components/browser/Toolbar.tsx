@@ -1,4 +1,4 @@
-import { SlidersHorizontal, Bookmark, BookmarkCheck, CircleQuestionMark, Flag, Gamepad2, HeartHandshake, History, Maximize2, MessagesSquare, PanelTop, Plus, RefreshCw, Settings, Share, ShieldCheck, Sparkles, Undo2, Users, VenetianMask, Film, Library, Store, ArrowLeft, Gauge, Camera, Joystick, ArrowRight, Download, Home, Keyboard, MoreVertical, Printer, RotateCw, X } from 'lucide-react'
+import { Contact, SlidersHorizontal, Bookmark, BookmarkCheck, CircleQuestionMark, Flag, Gamepad2, HeartHandshake, History, Maximize2, PanelTop, Plus, RefreshCw, Settings, Share, ShieldCheck, Sparkles, Undo2, Users, VenetianMask, Film, Library, Store, ArrowLeft, Gauge, Camera, Joystick, ArrowRight, Download, Home, Keyboard, MoreVertical, Printer, RotateCw, X } from 'lucide-react'
 import { openControls } from '@/stores/gameControlsStore'
 import { openSaveShasta, siteAddress } from '@/lib/saveShasta'
 import { shouldSuggestApp } from '@/lib/shastaApp'
@@ -30,6 +30,24 @@ import { openReport } from '@/store/ReportDialog'
 import { appShareLink, shareLink, shareLinkFor } from '@/lib/shareLink'
 import { exitBrowser, SHASUTA_BUILT, useShasuta } from '@/shasuta/state'
 import { captureActiveTab } from '@/shasuta/album'
+import { useSocialBadge } from '@/lib/socialBadge'
+
+/** "Social" (shasta://social: friends, messages, posts and the community chat), with how many messages and requests
+ * wait when this computer is linked. */
+function FriendsMenuItem({ onOpen }: { onOpen: () => void }) {
+  const { signedIn, unread, requests } = useSocialBadge()
+  const waiting = signedIn ? unread + requests : 0
+  return (
+    <DropdownMenuItem onClick={onOpen}>
+      <Contact /> Social
+      {waiting > 0 && (
+        <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-shasta-accent px-1.5 text-xs font-medium text-shasta-accent-fg" aria-label={`${unread} unread messages, ${requests} friend requests`}>
+          {waiting > 99 ? '99+' : waiting}
+        </span>
+      )}
+    </DropdownMenuItem>
+  )
+}
 
 const tabTitleOf = (t: { entries: { title: string }[]; index: number }) => t.entries[t.index]?.title ?? ''
 
@@ -58,7 +76,7 @@ export function Toolbar() {
       <IconButton label="Back" shortcut={keysFor('back')} onClick={() => back()} disabled={!canGoBack(tab)}>
         <ArrowLeft className="size-[18px]" strokeWidth={1.6} />
       </IconButton>
-      <IconButton label="Forward" shortcut={keysFor('forward')} onClick={() => forward()} disabled={!canGoForward(tab)}>
+      <IconButton label="Forward" className="max-[30rem]:hidden" shortcut={keysFor('forward')} onClick={() => forward()} disabled={!canGoForward(tab)}>
         <ArrowRight className="size-[18px]" strokeWidth={1.6} />
       </IconButton>
       <IconButton label="Share this page" className="max-sm:hidden" disabled={!shareUrl} onClick={() => shareUrl && void sharePage(shareUrl, tab.app?.name ?? tabTitleOf(tab))}>
@@ -73,7 +91,7 @@ export function Toolbar() {
           <RotateCw className="size-[18px]" strokeWidth={1.6} />
         </IconButton>
       )}
-      <IconButton label="Home" shortcut={keysFor('home')} onClick={() => home()}>
+      <IconButton label="Home" className="max-[30rem]:hidden" shortcut={keysFor('home')} onClick={() => home()}>
         <Home className="size-[18px]" strokeWidth={1.6} />
       </IconButton>
 
@@ -218,9 +236,7 @@ export function Toolbar() {
           <DropdownMenuItem onClick={() => openInternal('settings')}>
             <Settings /> Settings <DropdownMenuShortcut>{isMac ? '⌘,' : 'Ctrl+,'}</DropdownMenuShortcut>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => openInternal('chat')}>
-            <MessagesSquare /> Community chat
-          </DropdownMenuItem>
+          <FriendsMenuItem onOpen={() => openInternal('social')} />
           <DropdownMenuItem onClick={() => openInternal('discord')}>
             <Users /> Join our Discord
           </DropdownMenuItem>

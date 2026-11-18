@@ -18,7 +18,7 @@
 // Otherwise ON for everyone except supporters (owner decision 2026-10-31): an active Supporter pass or trial is the
 // ONLY way to turn adverts off — the old free "Show ads" toggle is gone (`settings.ads`/`adsBar` are ignored now).
 // Nothing loads before the saved pass has been checked, so a supporter never gets a pop-under while it is checked.
-import { hasPerks, useSupporterStore } from '@/stores/supporterStore'
+import { hasPerks, perksOf, useSupporterStore } from '@/stores/supporterStore'
 import { inInstalledApp } from './shastaApp'
 
 const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : '')
@@ -62,7 +62,17 @@ export const HAS_DISPLAY_ADS = !!ADSENSE_CLIENT || ADSTERRA_BANNERS.length > 0 |
 /** A provider is configured at all. */
 export const HAS_ADS = HAS_DISPLAY_ADS || AD_SCRIPTS.length > 0
 
-const AVAILABLE = HAS_ADS && import.meta.env.MODE !== 'test' && typeof document !== 'undefined' && !inInstalledApp()
+/** Hostnames these codes were registered for (`VITE_AD_HOSTS`, from scripts/lib/adCodes.ts), each also covering its
+ *  subdomains. The same build is served on hosts with no codes of their own (the FreeDNS mirrors, scripts/mirrors/),
+ *  and one host's codes must never run on another, so anywhere else this build shows no adverts. */
+const AD_HOSTS = list(import.meta.env.VITE_AD_HOSTS).map((h) => h.toLowerCase())
+
+const onAdHost = () => {
+  const host = location.hostname.toLowerCase()
+  return AD_HOSTS.some((h) => host === h || host.endsWith(`.${h}`))
+}
+
+const AVAILABLE = HAS_ADS && import.meta.env.MODE !== 'test' && typeof document !== 'undefined' && !inInstalledApp() && onAdHost()
 
 /** The banner for a placement: the first of `prefer` (sizes, best first) that this build has and that fits `width`. */
 export function pickBanner(prefer: string[], width: number): Banner | null {
@@ -109,7 +119,8 @@ export function adsEnabled(): boolean {
 /** The same, for components: false until the pass has been checked, and false for supporters. */
 export function useAdsOn(): boolean {
   const checked = useSupporterStore((s) => s.checked)
-  const perks = useSupporterStore((s) => s.status === 'trial' || s.status === 'supporter')
+  // the one perk check (a code's pass or the tour's day), as a primitive selector
+  const perks = useSupporterStore(perksOf)
   return checked && !perks
 }
 

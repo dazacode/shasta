@@ -51,7 +51,7 @@ export interface Act<S> {
    */
   click(to?: Target, opts?: { double?: boolean; right?: boolean }): Promise<void>
   /**
-   * Scroll a target that clips its content (give it the class ss-scroll), the
+   * Scroll a target that clips its content (give it the class sk-scroll), the
    * way a trackpad does: the cursor stays put and the content moves. `to` is
    * a scroll offset in px, or the name of a target inside it to bring to the
    * top (less `offset`). Once scrolled, its edges fade over what's hidden.
@@ -222,7 +222,7 @@ export function createAct<S>(signal: AbortSignal, env: ActEnv<S>): Act<S> {
     const stack = document.elementsFromPoint(box.left + p.x * s, box.top + p.y * s)
     root.removeAttribute('data-hit')
     const top = stack.find((el) => {
-      if (!root.contains(el) || el.closest('.ss-cursor, .ss-keys, .ss-ripple')) return false
+      if (!root.contains(el) || el.closest('.sk-cursor, .sk-keys, .sk-ripple')) return false
       // A layer that turned pointer-events off counts only where it is a
       // control or a target; a bare overlay (connectors, a flight layer)
       // must not cover what is under it
@@ -432,7 +432,7 @@ export function createAct<S>(signal: AbortSignal, env: ActEnv<S>): Act<S> {
         }
       }
       // A Scroll's overlay bar shows while it moves and fades once it rests
-      const wrap = el.parentElement?.classList.contains('ss-scroller') ? el.parentElement : null
+      const wrap = el.parentElement?.classList.contains('sk-scroller') ? el.parentElement : null
       wrap?.setAttribute('data-scrolling', '')
       const release = own(() => wrap?.removeAttribute('data-scrolling'))
       try {
@@ -561,7 +561,7 @@ export function createAct<S>(signal: AbortSignal, env: ActEnv<S>): Act<S> {
       if (finger) { cursorRef.current?.setAttribute('data-touching', ''); await wait(140); check() }
       // The trail: one streak from where the finger was a few frames ago to
       // where it is now, turned along the motion and fading toward its tail
-      const streak = finger ? cursorRef.current?.querySelector<HTMLElement>('.ss-cursor__streak') ?? null : null
+      const streak = finger ? cursorRef.current?.querySelector<HTMLElement>('.sk-cursor__streak') ?? null : null
       const trail: Point[] = []
       const drawTrail = (at: Point) => {
         trail.unshift({ ...at })

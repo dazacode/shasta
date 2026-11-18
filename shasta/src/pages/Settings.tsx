@@ -24,6 +24,7 @@ import { useStore } from '@/store/storeStore'
 import { clearTaste } from '@/store/tasteStore'
 import { cn } from '@/lib/utils'
 import { BASE } from '@/lib/edition'
+import { tourEnds } from '@/lib/supporter'
 import { ProxyDisclosureBody } from '@/components/ProxyDisclosure'
 import { SiteDataList } from '@/components/SiteDataList'
 import { Row, Toggle, Segmented, selectCls } from './settingsParts'
@@ -33,6 +34,7 @@ import { OfflineSection } from './OfflineSettings'
 import { ConsoleSection } from './ConsoleSection'
 import { SupporterBadge } from '@/components/SupporterBadge'
 import { useSupporter } from '@/stores/supporterStore'
+import { SocialAccountRow, SocialPrivacyRow } from './SocialSettings'
 
 /** where this build's source is offered (AGPL section 13); required for a public host, see NOTICE.md */
 const SOURCE_URL = (import.meta.env.VITE_SOURCE_URL as string | undefined)?.startsWith('https://') ? (import.meta.env.VITE_SOURCE_URL as string) : ''
@@ -202,7 +204,8 @@ function ProfileData() {
 
   return (
     <>
-      <Row title="Where your profile lives" desc="Shasta has no accounts. Your settings, bookmarks, history and installed apps are saved in this browser only, and nothing about them is sent to a server. Clearing this browser's site data, using a private window, or switching to another browser or device starts you from scratch, so export a profile if you want to keep or move it." />
+      <Row title="Where your profile lives" desc="Shasta needs no account. Your settings, bookmarks, history and installed apps are saved in this browser only, and nothing about them is sent to a server (the optional phone account for Friends holds your social profile, friends and messages, not this browser's data). Clearing this browser's site data, using a private window, or switching to another browser or device starts you from scratch, so export a profile if you want to keep or move it." />
+      <SocialAccountRow />
       <Row title="On this device" desc={`${count} bookmark${count === 1 ? '' : 's'}, ${local?.installs.length ?? 0} installed app${local?.installs.length === 1 ? '' : 's'}, ${local?.favorites.length ?? 0} favorite${local?.favorites.length === 1 ? '' : 's'}, ${local?.following.length ?? 0} followed storefront${local?.following.length === 1 ? '' : 's'}.`} />
       <Row title="Export profile" desc="Saves your appearance and browsing preferences, new tab shortcuts, bookmarks and the list of apps you installed (not the apps' own saved data). Never included: cookies, website logins, passwords, tokens, history, downloads.">
         <Button variant="outline" onClick={exportProfile}><Download /> Export profile</Button>
@@ -247,14 +250,16 @@ function AdsRow() {
     <Row
       title="Ads"
       desc={
-        sup.perks
+        sup.pass
           ? "You're a Supporter, so Shasta shows you no ads anywhere. Thank you for keeping it running."
-          : "Shasta shows ads on its own pages (the new tab, the Store, Watch, a strip along the bottom, and pop-unders) to pay for its servers. They never appear inside the sites you open. The ad network (Adsterra) sees your IP address, can set its own cookies and may follow you across the web to choose what to show. Supporters see no ads at all."
+          : sup.tour
+            ? `No ads until ${tourEnds(sup.tourUntil)}: your thank-you for finishing the tour. After that they come back, unless you become a Supporter.`
+            : "Shasta shows ads on its own pages (the new tab, the Store, Watch, a strip along the bottom, and pop-unders) to pay for its servers. They never appear inside the sites you open. The ad network (Adsterra) sees your IP address, can set its own cookies and may follow you across the web to choose what to show. Supporters see no ads at all."
       }
     >
       <div className="flex items-center gap-2">
         <Button size="sm" variant="ghost" onClick={() => open('privacy')}>Privacy policy</Button>
-        {!sup.perks && <Button size="sm" onClick={() => open('support')}>Remove ads</Button>}
+        {!sup.pass && <Button size="sm" onClick={() => open('support')}>Remove ads</Button>}
       </div>
     </Row>
   )
@@ -313,6 +318,7 @@ function Privacy() {
       <Row title="Play Watch through Shasta" desc="Watch (anime, TV and films) sends the video through Shasta's own server, so a school filter that blocks the streaming host still lets it play, the CDN's referer rules are met and its ads are stripped by Shasta's ad blocker. Turn it off to fetch video straight from the source (a little faster on an open network, but a filter or CORS can then stop it)." htmlFor="watchproxy">
         <Toggle id="watchproxy" label="Play Watch through Shasta" checked={s.watchProxy} onChange={(watchProxy) => update({ watchProxy })} />
       </Row>
+      <SocialPrivacyRow />
       <Row title="Direct phone connection" desc="A phone you use as a game controller connects straight to this window when the network allows it, so buttons arrive in a few milliseconds instead of going through Shasta's server. To find each other, the phone and this computer learn each other's network address, and Cloudflare's address server (the company that already serves Shasta) sees them too. Turn it off to send every button through Shasta's server: a little slower, and the phone never sees this computer's address." htmlFor="phonedirect">
         <Toggle id="phonedirect" label="Direct phone connection" checked={s.phoneDirect} onChange={(phoneDirect) => update({ phoneDirect })} />
       </Row>
@@ -342,8 +348,8 @@ function Privacy() {
             </label>
           ))}
         </div>
-        <Button variant="destructive" className="mt-3" disabled={!picked.size || busy} onClick={() => void run()}>
-          {busy ? 'Clearing…' : 'Clear selected data'}
+        <Button busy={busy} variant="destructive" className="mt-3" disabled={!picked.size || busy} onClick={() => void run()}>
+          Clear selected data
         </Button>
         <p className="mt-3 text-xs text-shasta-muted">
           Shasta can only clear what it stored. Your host browser's own cookies, cache and downloads are separate and managed in its settings. Shasta never stores your passwords; sites you sign in to keep their session cookies in the “site data” above.
@@ -357,7 +363,7 @@ function Privacy() {
 function ResourceMeter() {
   const r = useResources()
   const label = { ok: 'Healthy', high: 'Heavy', critical: 'Critical' }[r.pressure]
-  const color = { ok: 'bg-emerald-500', high: 'bg-amber-400', critical: 'bg-red-500' }[r.pressure]
+  const color = { ok: 'bg-shasta-success', high: 'bg-amber-400', critical: 'bg-red-500' }[r.pressure]
   return (
     <div className="text-right text-sm" role="status" aria-live="polite">
       <span className="flex items-center justify-end gap-2"><span className={cn('size-2.5 rounded-full', color)} aria-hidden />{label}</span>
@@ -454,7 +460,7 @@ function Advanced() {
   }
 
   const stateLabel = { idle: 'Not started', connecting: 'Connecting…', connected: 'Connected', reconnecting: 'Reconnecting…', disconnected: 'Disconnected', error: 'Failed' }[info.state]
-  const dot = info.state === 'connected' ? 'bg-emerald-500' : info.state === 'connecting' || info.state === 'reconnecting' ? 'bg-amber-400' : 'bg-red-500'
+  const dot = info.state === 'connected' ? 'bg-shasta-success' : info.state === 'connecting' || info.state === 'reconnecting' ? 'bg-amber-400' : 'bg-red-500'
 
   const copyLog = () => {
     const text = entries.map((e) => `${new Date(e.at).toISOString()} ${e.level.toUpperCase()} ${e.message}`).join('\n')
@@ -468,7 +474,7 @@ function Advanced() {
     <>
       <Row title="Proxy connection" desc={info.detail || undefined}>
         <span className="flex items-center gap-2 text-sm"><span className={cn('size-2.5 rounded-full', dot)} aria-hidden />{stateLabel}{info.latency != null && <span className="text-shasta-muted"> · {info.latency} ms</span>}</span>
-        <Button variant="outline" disabled={testing} onClick={async () => { setTesting(true); await reconnect(); setTesting(false) }}>{testing ? 'Checking…' : 'Reconnect'}</Button>
+        <Button busy={testing} variant="outline" disabled={testing} onClick={async () => { setTesting(true); await reconnect(); setTesting(false) }}>Reconnect</Button>
       </Row>
       {direct.available() && (
         <Row title="Page engine" desc="Direct loads each site as itself, so every site works, and private tabs keep their own cookies. Proxy runs sites through Shasta's engine and the on-device relay; some sites (those that build code at run time) do not work there. Open tabs reload in the engine you pick.">

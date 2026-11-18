@@ -306,7 +306,7 @@ export default function AppDetails({ slug }: { slug: string }) {
           <div className="rounded-2xl bg-shasta-home p-4 text-sm ring-1 ring-shasta-line">
             <p className="text-shasta-muted">{app.runtime.summary}</p>
             <ul className="mt-3 grid gap-1.5">
-              {app.runtime.can.map((c) => <li key={c} className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-[#4cc38a]" aria-hidden /> {c}</li>)}
+              {app.runtime.can.map((c) => <li key={c} className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0 text-shasta-success" aria-hidden /> {c}</li>)}
               {app.runtime.cannot.map((c) => <li key={c} className="flex gap-2 text-shasta-muted"><ShieldX className="mt-0.5 size-4 shrink-0" aria-hidden /> Cannot: {c.charAt(0).toLowerCase() + c.slice(1)}</li>)}
             </ul>
             <p className="mt-3 flex gap-2 border-t border-shasta-line pt-3 text-xs text-shasta-muted"><ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden /> {app.runtime.compatibility}</p>

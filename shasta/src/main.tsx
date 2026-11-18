@@ -5,7 +5,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
-import { isControllerUrl, onLaunch } from './lib/launchQueue'
+import { isControllerUrl, isPhoneAppUrl, onLaunch } from './lib/launchQueue'
 
 // Settings -> Advanced -> Console: Shasta's own console output, for people whose DevTools are blocked
 captureConsole(window, 'Shasta')
@@ -29,7 +29,8 @@ addEventListener('vite:preloadError', (e) => {
 // Shasta installed on a phone: a scanned controller QR code lands in this already-open window instead of loading
 // (lib/launchQueue.ts). Go to the controller page; the session is restored when the person comes back.
 onLaunch((url) => {
-  if (isControllerUrl(url)) location.assign(url.href)
+  // the phone app too: a scanned link or friend QR code (`/me#l=...`, `/me#f=...`) must open it, not this window
+  if (isControllerUrl(url) || isPhoneAppUrl(url)) location.assign(url.href)
 })
 
 createRoot(document.getElementById('root')!).render(

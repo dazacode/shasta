@@ -1,6 +1,6 @@
 /* Camera */
 
-@property --ss-feather {
+@property --sk-feather {
   syntax: '<length>';
   inherits: false;
   initial-value: 0px;
@@ -9,17 +9,17 @@
 @layer stageshow {
   /* The camera's frame: clips the zoomed scene and feathers its edges while
      zoomed (the feather eases in and out with the move) */
-  .ss-camera-view {
+  .sk-camera-view {
     position: absolute;
     inset: 0;
     overflow: clip;
     mask-image:
-      linear-gradient(to right, transparent, #000 var(--ss-feather), #000 calc(100% - var(--ss-feather)), transparent),
-      linear-gradient(to bottom, transparent, #000 var(--ss-feather), #000 calc(100% - var(--ss-feather)), transparent);
+      linear-gradient(to right, transparent, #000 var(--sk-feather), #000 calc(100% - var(--sk-feather)), transparent),
+      linear-gradient(to bottom, transparent, #000 var(--sk-feather), #000 calc(100% - var(--sk-feather)), transparent);
     mask-composite: intersect;
   }
 
-  .ss-camera {
+  .sk-camera {
     position: absolute;
     inset: 0;
     transform-origin: 0 0;

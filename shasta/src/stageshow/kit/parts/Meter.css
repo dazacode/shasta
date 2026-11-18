@@ -1,46 +1,46 @@
 /* Meter */
 
 @layer stageshow {
-  .ss-meter {
+  .sk-meter {
     display: block;
     height: 6px;
     overflow: hidden;
     border-radius: 3px;
-    background: var(--ss-ink-1);
+    background: var(--sk-ink-1);
   }
 
-  .ss-meter__fill {
+  .sk-meter__fill {
     display: block;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, var(--ss-accent), var(--ss-accent-2, var(--ss-accent)));
+    background: linear-gradient(90deg, var(--sk-accent), var(--sk-accent-2, var(--sk-accent)));
     transition: clip-path 0.8s cubic-bezier(0.45, 0, 0.2, 1);
   }
 
   /* Tones are a layer over the accent gradient that fades in and out: a
      gradient can't transition to a flat color, so swapping backgrounds snaps */
-  .ss-meter__fill {
+  .sk-meter__fill {
     position: relative;
   }
 
-  .ss-meter__fill::after {
+  .sk-meter__fill::after {
     content: '';
     position: absolute;
     inset: 0;
-    background-color: var(--ss-meter-tone, var(--ss-accent));
+    background-color: var(--sk-meter-tone, var(--sk-accent));
     opacity: 0;
     transition: opacity 0.4s ease, background-color 0.4s ease;
   }
 
-  .ss-meter[data-tone="danger"] { --ss-meter-tone: var(--ss-danger); }
+  .sk-meter[data-tone="danger"] { --sk-meter-tone: var(--sk-danger); }
 
-  .ss-meter[data-tone="warning"] { --ss-meter-tone: var(--ss-warning); }
+  .sk-meter[data-tone="warning"] { --sk-meter-tone: var(--sk-warning); }
 
-  .ss-meter[data-tone="success"] { --ss-meter-tone: var(--ss-success); }
+  .sk-meter[data-tone="success"] { --sk-meter-tone: var(--sk-success); }
 
-  .ss-meter[data-tone="ink"] { --ss-meter-tone: var(--ss-ink-5); }
+  .sk-meter[data-tone="ink"] { --sk-meter-tone: var(--sk-ink-5); }
 
-  .ss-meter:not([data-tone="accent"]) .ss-meter__fill::after {
+  .sk-meter:not([data-tone="accent"]) .sk-meter__fill::after {
     opacity: 1;
   }
 }

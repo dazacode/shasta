@@ -1,0 +1,134 @@
+#!/bin/bash
+# Off-site, encrypted backups (Docker host). Installed at /usr/local/bin/shasta-offsite (source: scripts/vps/shasta-offsite),
+# run by shasta-offsite-db.timer (hourly) and shasta-offsite-daily.timer. Docs: docs/notes/deploy.md "Backups".
+#
+#   shasta-offsite db [--to DIR]   consistent snapshot of every SQLite database (store.db, social.db when present):
+#                                  VACUUM INTO, integrity_check, manifest (sha256, size), tar | zstd | age.
+#                                  Uploaded to $OFFSITE_REMOTE/hourly/; the 00 UTC one is also copied to daily/,
+#                                  Sunday's to weekly/. --to DIR writes the encrypted file there instead (no upload).
+#   shasta-offsite daily           secrets bundle (secret.key, /etc/shasta/*.env, newest Umami dump) -> secrets/,
+#                                  and the uploaded Store files (data/storage) -> restic repository restic/.
+#   shasta-offsite status          what is configured, the newest objects in each prefix.
+#
+# Encryption: age to the PUBLIC key in /etc/shasta/backup.age.pub. The private key is NOT on this machine (the owner
+# keeps it), so neither this server nor Cloudflare can read old backups. The social DM key (social.kek) is never
+# included: a stolen backup plus the age key still cannot read messages. restic (Store files, public content anyway)
+# uses its own password, /etc/shasta/restic.pass, which the owner also keeps.
+#
+# Config, /etc/shasta/offsite.env (root 0600):
+#   OFFSITE_REMOTE=r2:shasta-backups        an rclone remote:bucket (rclone config in /etc/shasta/rclone.conf)
+#   RESTIC_REPOSITORY=s3:https://<account>.r2.cloudflarestorage.com/shasta-backups/restic
+#   AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=...   (same R2 key, for restic)
+# Without OFFSITE_REMOTE the db job only checks that a snapshot can be made and says so (exit 0).
+set -euo pipefail
+ENV=/etc/shasta/offsite.env
+[ -r "$ENV" ] && { set -a; . "$ENV"; set +a; }
+DATA=${DATA:-/var/lib/shasta/data}
+RECIPIENT=${AGE_RECIPIENT_FILE:-/etc/shasta/backup.age.pub}
+REMOTE=${OFFSITE_REMOTE:-}
+export RCLONE_CONFIG=${RCLONE_CONFIG:-/etc/shasta/rclone.conf}
+export RESTIC_PASSWORD_FILE=${RESTIC_PASSWORD_FILE:-/etc/shasta/restic.pass}
+APP_USER=shasta-app
+DBS=(store social)
+
+[ -r "$RECIPIENT" ] || { echo "missing $RECIPIENT (the owner's age public key)"; exit 1; }
+WORK=$(mktemp -d /var/tmp/shasta-offsite.XXXXXX)
+trap 'rm -rf "$WORK"' EXIT
+chown "$APP_USER:$APP_USER" "$WORK"
+chmod 0700 "$WORK"
+stamp=$(date -u +%Y%m%dT%H%M%SZ)
+
+upload() { # local-file remote-path
+	rclone copyto --s3-no-check-bucket --retries 5 --low-level-retries 10 "$1" "$REMOTE/$2"
+}
+
+db() {
+	local to=${1:-} snap="$WORK/snap" made=()
+	install -d -o "$APP_USER" -g "$APP_USER" -m 0700 "$snap"
+	for name in "${DBS[@]}"; do
+		local src="$DATA/$name.db" out="$snap/$name.db"
+		[ -f "$src" ] || continue
+		# as the app's user: sqlite may create -wal/-shm files, which must stay writable by the app
+		sudo -u "$APP_USER" sqlite3 -cmd ".timeout 10000" "$src" "VACUUM INTO '$out'"
+		local check
+		check=$(sudo -u "$APP_USER" sqlite3 "$out" "PRAGMA integrity_check")
+		[ "$check" = ok ] || { echo "integrity_check failed for $name.db: $check"; exit 1; }
+		made+=("$name.db")
+	done
+	[ ${#made[@]} -gt 0 ] || { echo "no databases in $DATA"; exit 1; }
+	(
+		cd "$snap"
+		{
+			printf '{"created":"%s","host":"%s","files":[' "$stamp" "$(hostname)"
+			local first=1
+			for f in "${made[@]}"; do
+				[ $first = 1 ] || printf ','
+				first=0
+				printf '{"name":"%s","bytes":%s,"sha256":"%s"}' "$f" "$(stat -c %s "$f")" "$(sha256sum "$f" | cut -d' ' -f1)"
+			done
+			printf ']}\n'
+		} > manifest.json
+	)
+	local enc="$WORK/db-$stamp.tar.zst.age"
+	tar -C "$snap" -cf - manifest.json "${made[@]}" | zstd -q -T0 -10 | age -R "$RECIPIENT" -o "$enc"
+	echo "snapshot: ${made[*]} -> $(du -h "$enc" | cut -f1) encrypted"
+	if [ -n "$to" ]; then
+		install -m 0644 "$enc" "$to/"
+		echo "written: $to/$(basename "$enc")"
+		return
+	fi
+	if [ -z "$REMOTE" ]; then
+		echo "OFFSITE_REMOTE not set in $ENV: snapshot made and checked, nothing uploaded"
+		return
+	fi
+	upload "$enc" "hourly/db-$stamp.tar.zst.age"
+	if [ "$(date -u +%H)" = 00 ]; then
+		rclone copyto "$REMOTE/hourly/db-$stamp.tar.zst.age" "$REMOTE/daily/db-$stamp.tar.zst.age"
+		[ "$(date -u +%u)" = 7 ] && rclone copyto "$REMOTE/hourly/db-$stamp.tar.zst.age" "$REMOTE/weekly/db-$stamp.tar.zst.age"
+	fi
+	echo "uploaded: hourly/db-$stamp.tar.zst.age"
+}
+
+daily() {
+	[ -n "$REMOTE" ] || { echo "OFFSITE_REMOTE not set in $ENV: nothing to do"; return; }
+	local sec="$WORK/secrets"
+	install -d -m 0700 "$sec"
+	cp "$DATA/secret.key" "$sec/"
+	for f in /etc/shasta/*.env; do
+		[ "$(basename "$f")" = offsite.env ] && continue # the backup's own credentials: the owner has them
+		cp "$f" "$sec/"
+	done
+	local umami
+	umami=$(ls -1t /var/lib/shasta/backups/umami-*.sql.gz 2>/dev/null | head -1 || true)
+	[ -n "$umami" ] && cp "$umami" "$sec/"
+	local enc="$WORK/secrets-$stamp.tar.zst.age"
+	tar -C "$sec" -cf - . | zstd -q -T0 -10 | age -R "$RECIPIENT" -o "$enc"
+	upload "$enc" "secrets/secrets-$stamp.tar.zst.age"
+	echo "uploaded: secrets/secrets-$stamp.tar.zst.age"
+	if [ -n "${RESTIC_REPOSITORY:-}" ]; then
+		restic cat config >/dev/null 2>&1 || restic init
+		restic backup --quiet --exclude "$DATA/storage/tmp" --tag storage "$DATA/storage"
+		# prune weekly (Sunday): keep 14 daily + 8 weekly snapshots
+		[ "$(date -u +%u)" = 7 ] && restic forget --quiet --tag storage --keep-daily 14 --keep-weekly 8 --prune
+		echo "restic: storage backed up"
+	fi
+}
+
+status() {
+	echo "recipient: $(cat "$RECIPIENT")"
+	echo "remote:    ${REMOTE:-not set}"
+	echo "restic:    ${RESTIC_REPOSITORY:-not set}"
+	[ -n "$REMOTE" ] || return 0
+	for p in hourly daily weekly secrets; do
+		echo "-- $p (newest 3)"
+		rclone lsl "$REMOTE/$p/" 2>/dev/null | sort -k2,3 | tail -3 || true
+	done
+	[ -n "${RESTIC_REPOSITORY:-}" ] && restic snapshots --compact --latest 3 || true
+}
+
+case "${1:-}" in
+	db) shift; [ "${1:-}" = --to ] && db "$2" || db ;;
+	daily) daily ;;
+	status) status ;;
+	*) sed -n '2,25p' "$0"; exit 1 ;;
+esac

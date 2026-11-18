@@ -1,0 +1,12 @@
+# /etc/systemd/system/shasta-offsite-daily.service (source: scripts/vps/shasta-offsite-daily.service), run by its timer.
+[Unit]
+Description=Daily off-site encrypted backup of secrets and Store files
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/shasta-offsite daily
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=6h

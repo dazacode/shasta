@@ -46,7 +46,7 @@ import { ImportHomeDialog } from '@/components/home/HomeDialogs'
 import { useFocusAlarms } from '@/components/home/Home'
 import { applyMediaWatch } from '@/proxy/mediaWatch'
 import { ShasutaHost, startShasuta } from '@/shasuta/host'
-import { useShasuta } from '@/shasuta/state'
+import { useImmersive, useShasuta } from '@/shasuta/state'
 
 function useBootstrap() {
   useEffect(() => {
@@ -58,6 +58,10 @@ function useBootstrap() {
     void useStore.getState().boot()
     // supporter pass: checked on the device, refreshed quietly when it is close to running out (cosmetic perks only)
     useSupporterStore.getState().boot()
+    // ad-free time about to end or just ended (a code or the tour's day): say so once, and Settings -> Supporter explains
+    void import('@/lib/perkNotice').then((m) =>
+      m.startPerkNotices((title) => useUi.getState().toast(title, { ms: 10000, action: { label: 'What happens', run: () => useTabs.getState().openInternal('settings', 'supporter') } })),
+    )
     // offline application shell: background download, update notices (lib/offline.ts)
     useOffline.getState().boot()
     startResourceGuard()
@@ -67,6 +71,8 @@ function useBootstrap() {
     // "online now" counts every open window, not only those showing a new tab
     startPulse()
     startMaintenance()
+    // friends and messages (shasta://social): signs a linked computer back in, presence, "Play on Chromebook"
+    void import('@/lib/socialDesktop').then((m) => m.startSocialDesktop()).catch(() => {})
     // Shasuta, the gaming mode: leaving the browser opens it (experimental, Settings -> Appearance)
     startShasuta()
     // a link someone shared (https://<site>/?app=<slug>) opens that Store page
@@ -115,12 +121,14 @@ export default function App() {
   const setHidden = useUi((s) => s.setChromeHidden)
   // Shasuta covers the browser: the browser stays loaded (tabs, pages, games keep their state) but out of reach
   const shasuta = useShasuta((s) => (s.visible || s.quick) && s.prefs.enabled)
+  // a game or app started from Shasuta fills the window: no tabs, toolbar or banners (the top edge brings them back)
+  const immersive = useImmersive()
 
   return (
     <MotionConfig reducedMotion={reducedMotion ? 'always' : 'user'}>
       <TooltipProvider delay={400}>
-        <div className="flex h-dvh flex-col overflow-hidden bg-shasta-chrome text-shasta-fg" data-zone="browser" inert={shasuta} aria-hidden={shasuta || undefined}>
-          {hidden ? (
+        <div className="flex h-dvh flex-col overflow-hidden bg-shasta-chrome text-shasta-fg" data-zone="browser" data-immersive={immersive ?? undefined} inert={shasuta} aria-hidden={shasuta || undefined}>
+          {immersive ? null : hidden ? (
             <button onClick={() => setHidden(false)} className="flex h-4 w-full shrink-0 items-center justify-center bg-shasta-chrome text-shasta-muted hover:bg-shasta-hover" aria-label="Show toolbar" title="Show toolbar">
               <ChevronDown className="size-3.5" />
             </button>
@@ -128,20 +136,20 @@ export default function App() {
             <TabBar />
           )}
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-shasta-bg" data-zone="column">
-            {!hidden && (
+            {!hidden && !immersive && (
               <>
                 <Toolbar />
                 {showBar && <BookmarksBar />}
               </>
             )}
-            <LiteBanner />
-            <ConnectionBanner />
+            {!immersive && <LiteBanner />}
+            {!immersive && <ConnectionBanner />}
             <div className="relative flex min-h-0 flex-1" data-zone="view">
               <BrowserView />
               <AssistantPanel />
             </div>
           </div>
-          <AdBar />
+          {!immersive && <AdBar />}
         </div>
         <ShortcutsDialog />
         <PrivateTabDialog />

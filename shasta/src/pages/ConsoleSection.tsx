@@ -262,7 +262,7 @@ function DevicePane({ sections, reading, refresh }: { sections: InfoSection[] | 
         </div>
       ))}
       <div className="flex gap-2">
-        <Button variant="outline" size="sm" disabled={reading} onClick={refresh}>{reading ? 'Reading…' : 'Read again'}</Button>
+        <Button busy={reading} variant="outline" size="sm" disabled={reading} onClick={refresh}>Read again</Button>
         <Button variant="ghost" size="sm" onClick={() => copyText(deviceText(sections), 'the device details')}>Copy</Button>
       </div>
     </div>

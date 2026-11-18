@@ -1,6 +1,6 @@
 /* What's new: the phone-controller demo (PhonePadDemo.tsx). Scoped under .ppd; the page is the ground, so the
    stage has no plate: the window fades out at its foot instead of being cut by a hard line mid-page. */
-.ppd .ss-stage {
+.ppd .sk-stage {
   --g: 28px;
   overflow: hidden;
   background: transparent;
@@ -13,7 +13,7 @@
   top: var(--g);
   width: 472px;
   height: 400px;
-  box-shadow: var(--ss-shadow-hero);
+  box-shadow: var(--sk-shadow-hero);
 }
 
 /* ── the game (Clumsy Bird's daytime scene) ── */
@@ -141,7 +141,7 @@
   position: absolute;
   right: var(--g);
   top: 64px;
-  box-shadow: var(--ss-shadow-satellite), 0 30px 50px -20px rgb(0 0 0 / 0.45);
+  box-shadow: var(--sk-shadow-satellite), 0 30px 50px -20px rgb(0 0 0 / 0.45);
   border-radius: 48px;
 }
 .ppd .ppd-pad {
@@ -218,14 +218,14 @@
 .ppd .ppd-btn[data-pressed] { background: #fff; color: #000; transform: scale(0.94); }
 
 /* ── compact: the phone stands lower, over the window's right half; the card keeps its title only ── */
-.ppd .ss-stage[data-layout='compact'] { --g: 16px; }
-.ppd .ss-stage[data-layout='compact'] .ppd-window { width: 420px; }
-.ppd .ss-stage[data-layout='compact'] .ppd-phone { top: 150px; }
-.ppd .ss-stage[data-layout='compact'] .ppd-card:not([data-joined]) { width: 200px; }
-.ppd .ss-stage[data-layout='compact'] .ppd-card__scan { width: 180px; }
-.ppd .ss-stage[data-layout='compact'] .ppd-card__sub { display: none; }
-.ppd .ss-stage[data-layout='compact'] .ppd-score { left: 232px; top: 10px; }
-.ppd .ss-stage[data-layout='compact'] .ppd-card:not([data-joined]) { height: 84px; }
+.ppd .sk-stage[data-layout='compact'] { --g: 16px; }
+.ppd .sk-stage[data-layout='compact'] .ppd-window { width: 420px; }
+.ppd .sk-stage[data-layout='compact'] .ppd-phone { top: 150px; }
+.ppd .sk-stage[data-layout='compact'] .ppd-card:not([data-joined]) { width: 200px; }
+.ppd .sk-stage[data-layout='compact'] .ppd-card__scan { width: 180px; }
+.ppd .sk-stage[data-layout='compact'] .ppd-card__sub { display: none; }
+.ppd .sk-stage[data-layout='compact'] .ppd-score { left: 232px; top: 10px; }
+.ppd .sk-stage[data-layout='compact'] .ppd-card:not([data-joined]) { height: 84px; }
 
 /* ── variant 'card': a short strip over the real "Use your phone as a controller" button (PhonePadCard) ── */
 .ppd .ppd-tile {
@@ -238,7 +238,7 @@
   background: rgb(255 255 255 / 0.1);
 }
 .ppd .ppd-tile svg { width: 20px; height: 20px; }
-.ppd--card .ss-stage { --g: 20px; mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent); }
+.ppd--card .sk-stage { --g: 20px; mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent); }
 .ppd--card .ppd-window { width: 400px; height: 300px; }
 .ppd--card .ppd-phone { top: var(--g); }
 /* the score belongs to the game once a player is in; before that the card sits over it */
@@ -248,11 +248,11 @@
 .ppd--card .ppd-card__scan { width: 190px; }
 .ppd--card .ppd-score { left: 176px; }
 .ppd--card .ppd-controls { padding-top: 24px; }
-.ppd--card .ss-stage[data-layout='compact'] { --g: 14px; }
-.ppd--card .ss-stage[data-layout='compact'] .ppd-window { width: 380px; height: 300px; }
-.ppd--card .ss-stage[data-layout='compact'] .ppd-phone { top: var(--g); right: var(--g); }
-.ppd--card .ss-stage[data-layout='compact'] .ppd-card__title { font-size: 11.5px; }
-.ppd--card .ss-stage[data-layout='compact'] .ppd-card:not([data-joined]) { width: 164px; height: 56px; }
-.ppd--card .ss-stage[data-layout='compact'] .ppd-card__scan { width: 148px; gap: 10px; left: 8px; top: 8px; }
-.ppd--card .ss-stage[data-layout='compact'] .ppd-tile { width: 36px; height: 36px; }
-.ppd--card .ss-stage[data-layout='compact'] .ppd-score { left: 166px; }
+.ppd--card .sk-stage[data-layout='compact'] { --g: 14px; }
+.ppd--card .sk-stage[data-layout='compact'] .ppd-window { width: 380px; height: 300px; }
+.ppd--card .sk-stage[data-layout='compact'] .ppd-phone { top: var(--g); right: var(--g); }
+.ppd--card .sk-stage[data-layout='compact'] .ppd-card__title { font-size: 11.5px; }
+.ppd--card .sk-stage[data-layout='compact'] .ppd-card:not([data-joined]) { width: 164px; height: 56px; }
+.ppd--card .sk-stage[data-layout='compact'] .ppd-card__scan { width: 148px; gap: 10px; left: 8px; top: 8px; }
+.ppd--card .sk-stage[data-layout='compact'] .ppd-tile { width: 36px; height: 36px; }
+.ppd--card .sk-stage[data-layout='compact'] .ppd-score { left: 166px; }

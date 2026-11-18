@@ -125,7 +125,16 @@ let info: ConnectionInfo = { state: 'idle', detail: '', latency: null, endpoint:
 let activeWisp: string | null = null
 let probeTimer: number | null = null
 let retryDelay = 2000
-let probing = false
+/** the epoch of the health probe in flight (one at a time per transport), null when none is */
+let probing: number | null = null
+/**
+ * Bumped whenever the transport is replaced on purpose (applyOptions, reconnect). A health probe that started before
+ * that drops its result instead of acting on it: otherwise a probe in flight while the user applies new settings saw
+ * 'reconnecting' and swapped the OLD endpoint back in after the new one, or reported a state for the old transport.
+ */
+let transportEpoch = 0
+/** an applyOptions is choosing the new transport: probes wait for it (it schedules one when done) */
+let applying = false
 /** failed health probes in a row; one alone never counts (see checkConnection) */
 let misses = 0
 /** probes that must fail in a row before the connection counts as lost */
@@ -341,10 +350,14 @@ export async function selectWisp(endpoints: readonly string[], from = 0): Promis
 /** Moves to the next endpoint that answers (after the active one) and swaps the transport live. */
 export async function rotateWisp(): Promise<{ url: string; rtt: number }> {
   if (!controller || !currentOptions) throw new Error('Proxy is not ready')
+  const epoch = transportEpoch
   const endpoints = await endpointsFor(currentOptions)
   const at = activeWisp ? endpoints.indexOf(activeWisp) : -1
   const next = await selectWisp(endpoints, at + 1)
-  controller.setTransport(await makeTransport(next.url, currentOptions.transport))
+  const transport = await makeTransport(next.url, currentOptions.transport)
+  // new settings were applied meanwhile: they chose their own endpoint
+  if (epoch !== transportEpoch || !controller) throw new Error('The connection settings changed meanwhile')
+  controller.setTransport(transport)
   if (next.url !== activeWisp) log('info', `Switched to Wisp server ${hostOf(next.url)}`)
   activeWisp = next.url
   return next
@@ -367,24 +380,32 @@ export function scheduleProbe(delay: number) {
 
 /** Health check. Recovers a dropped connection by swapping in a fresh transport, without a reload. */
 export async function checkConnection(): Promise<void> {
-  if (!controller || !currentOptions || probing) return
+  // a probe still out for a REPLACED transport does not block one for the new transport
+  if (!controller || !currentOptions || probing === transportEpoch || applying) return
   if (info.state === 'connecting' || info.state === 'error') return
-  probing = true
+  const epoch = transportEpoch
+  probing = epoch
+  /** the settings changed while this probe was out: its answer is about a transport that is gone */
+  const stale = () => epoch !== transportEpoch
   try {
     if (!navigator.onLine) throw new Error('This device is offline')
     let rtt: number
     try {
       // 15 s: a busy link (a game pulling 100+ MB through the tunnel) opens a NEW socket slowly while the old one is fine
       rtt = await probeWisp(activeWisp ?? (await endpointsFor(currentOptions))[0], HEALTH_PROBE_TIMEOUT_MS)
+      if (stale()) return
       // Only after a REAL loss (several probes in a row) is the transport replaced: swapping it, or rotating to another
       // server, drops every download in flight. A single slow probe used to do that mid-download (a game's 100 MB wasm
       // broke off with libcurl error 56 and the game stayed black).
       if (info.state === 'disconnected' || info.state === 'reconnecting') {
         log('info', 'Wisp reachable again; creating a fresh transport')
         const at = activeWisp ?? (await endpointsFor(currentOptions))[0]
-        controller.setTransport(await makeTransport(at, currentOptions.transport))
+        const transport = await makeTransport(at, currentOptions.transport)
+        if (stale()) return
+        controller.setTransport(transport)
       }
     } catch (e) {
+      if (stale()) return
       misses++
       if (misses < MISSES_BEFORE_LOST && navigator.onLine) {
         // one miss: probably a busy link, not a dead one. Keep everything as it is and look again soon.
@@ -393,25 +414,31 @@ export async function checkConnection(): Promise<void> {
       }
       // the active endpoint is down (or blocked): try the others before backing off
       if ((await endpointsFor(currentOptions)).length < 2) throw e
+      if (stale()) return
       rtt = (await rotateWisp()).rtt
+      if (stale()) return
     }
     misses = 0
     retryDelay = 2000
     setConnection('connected', '', rtt)
     scheduleProbe(PROBE_INTERVAL_MS)
   } catch (e) {
+    if (stale()) return
     const message = e instanceof Error ? e.message : String(e)
     if (info.state !== 'disconnected' && info.state !== 'reconnecting') log('warn', `Connection lost: ${message}`)
     setConnection(info.state === 'connected' ? 'reconnecting' : 'disconnected', message, null)
     scheduleProbe(retryDelay)
     retryDelay = Math.min(retryDelay * 2, 30_000)
   } finally {
-    probing = false
+    if (probing === epoch) probing = null
   }
 }
 
 window.addEventListener('online', () => void checkConnection())
-window.addEventListener('offline', () => setConnection('disconnected', 'This device is offline', null))
+// while the engine starts (or after it failed to) the boot reports its own outcome; offline must not overwrite it
+window.addEventListener('offline', () => {
+  if (info.state !== 'connecting' && info.state !== 'error') setConnection('disconnected', 'This device is offline', null)
+})
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) void checkConnection()
 })
@@ -513,19 +540,30 @@ export function init(options: ProxyOptions): Promise<void> {
 export async function applyOptions(options: ProxyOptions): Promise<void> {
   currentOptions = options
   if (!controller) return
+  // a newer apply (or a probe that started before this one) must not act on this transport afterwards
+  const epoch = ++transportEpoch
+  if (probeTimer) clearTimeout(probeTimer)
+  probeTimer = null
+  misses = 0
+  applying = true
   setConnection('reconnecting', 'Applying new connection settings')
   retryDelay = 2000
   try {
     const { url } = await selectWisp(await endpointsFor(options))
-    controller.setTransport(await makeTransport(url, options.transport))
+    const transport = await makeTransport(url, options.transport)
+    if (epoch !== transportEpoch) return
+    controller.setTransport(transport)
     activeWisp = url
     setConnection('connected', '', null)
     log('info', `Transport switched to ${options.transport}`)
     scheduleProbe(500)
   } catch (e) {
+    if (epoch !== transportEpoch) return
     const message = e instanceof Error ? e.message : String(e)
     setConnection('disconnected', message, null)
     scheduleProbe(retryDelay)
+  } finally {
+    if (epoch === transportEpoch) applying = false
   }
 }
 
@@ -775,6 +813,9 @@ export function back(tabId: string) {
   if (direct.owns(tabId)) return direct.back(tabId)
   const entry = byTab.get(tabId)
   if (!entry) return
+  // like `beforeunload`: a step to another document commits again (init.pre), a step inside a single-page site never
+  // does, and then the tentative timer ends the spinner. Without the reset the PREVIOUS page's commit would count.
+  entry.committed = false
   entry.events.navStart({ committed: false })
   armNavTimer(entry, TENTATIVE_NAV_MS, false)
   entry.frame.back()
@@ -784,6 +825,9 @@ export function forward(tabId: string) {
   if (direct.owns(tabId)) return direct.forward(tabId)
   const entry = byTab.get(tabId)
   if (!entry) return
+  // like `beforeunload`: a step to another document commits again (init.pre), a step inside a single-page site never
+  // does, and then the tentative timer ends the spinner. Without the reset the PREVIOUS page's commit would count.
+  entry.committed = false
   entry.events.navStart({ committed: false })
   armNavTimer(entry, TENTATIVE_NAV_MS, false)
   entry.frame.forward()

@@ -6,6 +6,7 @@
 // VPS setup (Docker, firewall, systemd unit, shasta-ctl) lives in scripts/vps/.
 import { existsSync, statSync } from 'node:fs'
 import path from 'node:path'
+import { assertNoShasuta } from './lib/shasutaGuard'
 
 const root = path.resolve(import.meta.dir, '..')
 const HOST = process.env.SHASTA_SSH ?? 'shasta'
@@ -28,6 +29,8 @@ for (const need of ['shasta/dist/index.html', 'server/src', 'wisp/src', 'apps'])
 		process.exit(1)
 	}
 }
+// the gaming mode is unreleased: never ship a build that has it (same net as scripts/deploy.ts)
+assertNoShasuta(path.join(root, 'shasta/dist'), 'shasta/dist')
 const emulators = out(['sh', '-c', 'ls -d apps/emu-*/ 2>/dev/null | wc -l'])
 if (emulators === '0') console.warn('\x1b[33mno apps/emu-* (bun run build:emulators): the emulators would be unpublished from this release\x1b[0m')
 const dirty = out(['git', 'status', '--porcelain', '--', 'server', 'wisp', 'Dockerfile']) ? '-dirty' : ''
@@ -36,7 +39,7 @@ const id = `${stamp}-${out(['git', 'rev-parse', '--short', 'HEAD'])}${dirty}`
 console.log(`release ${id} -> ${HOST}  (dist built ${statSync(path.join(root, 'shasta/dist/index.html')).mtime.toISOString()})`)
 
 const rsync = ['rsync', '-a', '--delete', '--relative', '--exclude', 'node_modules', '--exclude', '.DS_Store', ...(dry ? ['--dry-run', '--stats'] : [])]
-run([...rsync, 'Dockerfile', 'server/package.json', 'server/bun.lock', 'server/server.mjs', 'server/turn-gate.ts', 'server/src', 'wisp/package.json', 'wisp/LICENSE', 'wisp/src', 'apps', 'shasta/dist', `${HOST}:${BUILD}/`])
+run([...rsync, 'Dockerfile', 'server/package.json', 'server/bun.lock', 'server/server.mjs', 'server/turn-gate.ts', 'server/src', 'server/drizzle', 'wisp/package.json', 'wisp/LICENSE', 'wisp/src', 'apps', 'shasta/dist', `${HOST}:${BUILD}/`])
 if (dry) process.exit(0)
 run(['ssh', HOST, `shasta-ctl build ${id} && shasta-ctl activate ${id} && shasta-ctl prune 5`])
 console.log(`\n\x1b[32mlive: ${id}\x1b[0m  (rollback: ssh ${HOST} shasta-ctl rollback)`)

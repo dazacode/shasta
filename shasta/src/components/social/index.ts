@@ -1,0 +1,17 @@
+// The shared social components (phone app src/me/ and the desktop's friends page). Presentational: data in through
+// props, actions out through callbacks, so either side can feed them from social/queries.ts or anything else.
+export { SocialAvatar, type SocialAvatarProps } from './SocialAvatar'
+export { FriendRow, PresenceLine, type FriendRowProps, type PresenceLineProps } from './FriendRow'
+export { ProfileView, type ProfileViewProps } from './ProfileView'
+export { ShowcaseShelf, AppIcon, type ShowcaseShelfProps } from './ShowcaseShelf'
+export { GuestbookList, type GuestbookListProps } from './GuestbookList'
+export { PostCard, type PostCardProps, type PostActions } from './PostCard'
+export { Feed, PostComposer, type FeedProps, type PostComposerProps } from './Feed'
+export { MessageThread, FirstMessageCard, type MessageThreadProps, type FirstMessageCardProps } from './MessageThread'
+export { Composer, type ComposerProps } from './Composer'
+export { ReportDialog, type ReportDialogProps } from './ReportDialog'
+export { LinkQrCard, type LinkQrCardProps } from './LinkQrCard'
+export { StickerImg, StickerPicker, type StickerPickerProps } from './Stickers'
+export { Sheet, type SheetProps } from './Sheet'
+export { CountdownRing, useNow } from './Countdown'
+export { ProfileCard, bandStyle, type ProfileCardProps } from './ProfileCard'

@@ -92,8 +92,8 @@ function ApplyForm({ onSent }: { onSent: (ticket: string) => void }) {
         </p>
       )}
       <div>
-        <Button type="submit" disabled={busy || !rules || !name.trim() || about.trim().length < 20}>
-          <Send /> {busy ? 'Sending…' : 'Send application'}
+        <Button busy={busy} type="submit" disabled={busy || !rules || !name.trim() || about.trim().length < 20}>
+          <Send /> Send application
         </Button>
       </div>
       <p className="text-xs text-shasta-muted">No account is created. This browser keeps a private ticket to see the answer. Answered applications are deleted after 30 days, unanswered ones after 90.</p>
@@ -166,8 +166,8 @@ function Status({ app, onReset }: { app: MyApplication; onReset: () => void }) {
       body={`${app.message ? `The owner wrote: “${app.message}” ` : ''}${app.code ? `Accept to set up contributor access on this device. ${app.canPublish ? 'You may publish without review.' : 'Your first submissions are reviewed by the owner before they go live.'}` : 'The invite has been used or has expired. Ask the owner for a new code and enter it under Account → “I have a code”.'}`}
       action={
         app.code ? (
-          <Button onClick={accept} disabled={busy}>
-            <Wrench /> {busy ? 'Setting up…' : 'Become a contributor'}
+          <Button busy={busy} onClick={accept} disabled={busy}>
+            <Wrench /> Become a contributor
           </Button>
         ) : (
           <Button variant="secondary" onClick={() => go('/account')}>

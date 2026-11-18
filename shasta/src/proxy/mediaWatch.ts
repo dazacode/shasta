@@ -6,9 +6,15 @@
 //
 // Nothing is injected into the page's scripts and nothing leaves the device: this reads the frame from the shell,
 // which can, because every proxied document is same-origin with it.
-import { NO_ACTIONS, isWorthShowing, pickArtwork, type MediaActions, type MediaInfo } from '@/lib/media'
+import { artworkCandidates } from '@/lib/artwork'
+import { NO_ACTIONS, classifyKind, isWorthShowing, pickArtwork, type MediaActions, type MediaInfo } from '@/lib/media'
 import { useMedia } from '@/stores/mediaStore'
 import { useTabs } from '@/stores/tabsStore'
+import { tabUrl } from '@/lib/tabModel'
+import { hostOf } from '@/lib/url'
+import { effectiveGain, sourceKey } from '@/lib/mixer'
+import { useMixer } from '@/stores/mixerStore'
+import { SHASUTA_BUILT } from '@/shasuta/state'
 
 type Action = keyof MediaActions | 'play' | 'pause'
 type ActionHandler = MediaSessionActionHandler | null
@@ -44,15 +50,15 @@ const sessionOf = (win: Window): WindowSession => {
   return s
 }
 
-/** The Shasta tab an element is shown in: climb the frame chain to the shell's DOM, which marks each tab. */
-function tabOf(h: Handle): string | null {
+/** The Shasta tab a window (a proxied frame, or the shell) belongs to: climb the frame chain to the shell's DOM, which marks each tab. */
+function tabOfWin(start: Window, hint: string | null, first: Element | null = null): string | null {
   try {
-    let node: Element | null = h.el
-    let win: Window | null = h.win
+    let node: Element | null = first
+    let win: Window | null = start
     for (let i = 0; i < 12 && win; i++) {
       if (win === window) {
         const marked = (node as Element | null)?.closest?.('[data-media-tab]')
-        return marked?.getAttribute('data-media-tab') ?? h.hint
+        return marked?.getAttribute('data-media-tab') ?? hint
       }
       node = win.frameElement
       win = win.parent === win ? null : win.parent
@@ -60,7 +66,189 @@ function tabOf(h: Handle): string | null {
   } catch {
     /* a cross-origin ancestor: fall back to the plugin's id */
   }
-  return h.hint
+  return hint
+}
+
+const tabOf = (h: Handle): string | null => tabOfWin(h.win, h.hint, h.el)
+
+// ---- the sound mixer ------------------------------------------------------------------------------------------------
+// The mixer (stores/mixerStore.ts, shown in Shasuta's Quick Menu) scales what a page plays. Two places, both inside the page's
+// own window so nothing else changes: an element's `volume` (the page keeps reading and writing ITS value; the speaker gets
+// value x gain), and the connection of any WebAudio node to `destination` (routed through one gain node per context: games and
+// emulators play this way). Only in a build with Shasuta; elsewhere the pages are untouched.
+
+const pageVolume = new WeakMap<HTMLMediaElement, number>()
+const nativeVolume = new WeakMap<Window, PropertyDescriptor>()
+const clamp01 = (n: number) => Math.min(1, Math.max(0, n))
+
+/** How loud a tab's pages come out (1 = as they asked): the master level times its source's level. */
+function gainOfTab(tabId: string | null): number {
+  const { master, levels, muted } = useMixer.getState()
+  if (!tabId) return clamp01(master)
+  const tab = useTabs.getState().tabs.find((t) => t.id === tabId)
+  if (!tab) return clamp01(master)
+  return effectiveGain(master, levels, muted, sourceKey({ id: tab.id, appId: tab.app?.id ?? null, url: tabUrl(tab) }))
+}
+
+function applyGainToHandle(h: Handle) {
+  const d = nativeVolume.get(h.win)
+  if (!d?.get || !d.set) return
+  try {
+    const pv = pageVolume.get(h.el) ?? d.get.call(h.el)
+    pageVolume.set(h.el, pv)
+    d.set.call(h.el, clamp01(pv * gainOfTab(tabOf(h))))
+  } catch {
+    /* the element is gone */
+  }
+}
+
+interface OutGain {
+  win: Window
+  hint: string | null
+  ctx: BaseAudioContext
+  node: GainNode
+}
+const outGains = new Set<OutGain>()
+const contextsByWin = new Map<Window, Set<BaseAudioContext>>()
+
+/** The WebAudio contexts a frame window has made (only filled where the mixer is built in), so a paused game can silence them. */
+export const audioContextsOf = (win: Window): BaseAudioContext[] => [...(contextsByWin.get(win) ?? [])]
+
+/** Which tabs have a running WebAudio context right now (games, emulators): the mixer lists them. */
+function refreshAudioTabs() {
+  const tabs: Record<string, boolean> = {}
+  for (const [win, ctxs] of contextsByWin) {
+    for (const ctx of ctxs) {
+      if (ctx.state !== 'running') continue
+      const hint = [...outGains].find((o) => o.win === win)?.hint ?? null
+      const tab = tabOfWin(win, hint)
+      if (tab) tabs[tab] = true
+    }
+  }
+  useMedia.getState().setAudioTabs(tabs)
+}
+
+function applyGainToContext(o: OutGain) {
+  try {
+    const g = gainOfTab(tabOfWin(o.win, o.hint))
+    o.node.gain.setTargetAtTime(g, o.ctx.currentTime, 0.02)
+  } catch {
+    /* closed context */
+  }
+}
+
+/** Re-applies the mixer to everything that is playing. Called when a level changes and when tabs change. */
+export function applyMixer() {
+  if (!SHASUTA_BUILT) return
+  for (const h of handles.values()) applyGainToHandle(h)
+  for (const o of outGains) applyGainToContext(o)
+}
+
+/** Development only: the gain each WebAudio output is at right now (the browser test reads it). */
+export const mixerProbe = () => (import.meta.env.DEV ? [...outGains].map((g) => g.node.gain.value) : [])
+
+let applyQueued = 0
+const scheduleApply = () => {
+  if (applyQueued) return
+  applyQueued = requestAnimationFrame(() => {
+    applyQueued = 0
+    applyMixer()
+  })
+}
+if (SHASUTA_BUILT) {
+  useMixer.subscribe(() => applyMixer())
+  // a tab that navigates to another site is another source with its own level
+  useTabs.subscribe((s, prev) => {
+    if (s.tabs !== prev.tabs) scheduleApply()
+  })
+}
+
+function patchMixer(win: Window, W: Window & typeof globalThis, hint: string | null) {
+  // an element's volume: the page's value is kept, the speaker gets value x gain
+  try {
+    const proto = W.HTMLMediaElement.prototype
+    const d = Object.getOwnPropertyDescriptor(proto, 'volume')
+    if (d?.get && d.set) {
+      nativeVolume.set(win, d)
+      Object.defineProperty(proto, 'volume', {
+        configurable: true,
+        enumerable: d.enumerable,
+        get(this: HTMLMediaElement) {
+          return pageVolume.get(this) ?? d.get!.call(this)
+        },
+        set(this: HTMLMediaElement, v: number) {
+          const n = Number(v)
+          // anything the browser would reject is left to the browser to reject
+          if (!(n >= 0 && n <= 1)) {
+            d.set!.call(this, v)
+            return
+          }
+          pageVolume.set(this, n)
+          const h = byElement.get(this)
+          d.set!.call(this, clamp01(n * gainOfTab(h ? tabOf(h) : tabOfWin(win, hint, this))))
+        },
+      })
+    }
+  } catch {
+    /* frozen prototype */
+  }
+  // WebAudio: everything connected to the speakers goes through one gain node per context
+  try {
+    const NodeProto = W.AudioNode.prototype
+    const connect = NodeProto.connect as (this: AudioNode, ...a: unknown[]) => unknown
+    const disconnect = NodeProto.disconnect as (this: AudioNode, ...a: unknown[]) => void
+    const made = new WeakMap<BaseAudioContext, OutGain>()
+    const outFor = (ctx: BaseAudioContext): OutGain | null => {
+      if (ctx instanceof W.OfflineAudioContext) return null
+      let o = made.get(ctx)
+      if (!o) {
+        const node = new W.GainNode(ctx)
+        connect.call(node, ctx.destination)
+        o = { win, hint, ctx, node }
+        made.set(ctx, o)
+        outGains.add(o)
+        let set = contextsByWin.get(win)
+        if (!set) contextsByWin.set(win, (set = new Set()))
+        set.add(ctx)
+        ctx.addEventListener('statechange', refreshAudioTabs)
+        applyGainToContext(o)
+        refreshAudioTabs()
+      }
+      return o
+    }
+    NodeProto.connect = function (this: AudioNode, dest: unknown, ...rest: unknown[]) {
+      try {
+        if (dest instanceof W.AudioDestinationNode) {
+          const o = outFor(this.context)
+          if (o) {
+            connect.call(this, o.node, ...rest)
+            return dest
+          }
+        }
+      } catch {
+        /* fall through to the page's own connection */
+      }
+      return connect.call(this, dest, ...rest)
+    } as typeof NodeProto.connect
+    NodeProto.disconnect = function (this: AudioNode, ...args: unknown[]) {
+      try {
+        if (args[0] instanceof W.AudioDestinationNode) {
+          const o = made.get(this.context)
+          if (o) return disconnect.call(this, o.node, ...args.slice(1))
+        }
+      } catch {
+        /* fall through */
+      }
+      return disconnect.apply(this, args)
+    } as typeof NodeProto.disconnect
+    win.addEventListener('pagehide', () => {
+      for (const o of [...outGains]) if (o.win === win) outGains.delete(o)
+      contextsByWin.delete(win)
+      refreshAudioTabs()
+    })
+  } catch {
+    /* no WebAudio, or a frozen prototype */
+  }
 }
 
 // ---- publishing ---------------------------------------------------------------------------------------------------
@@ -104,7 +292,13 @@ function readMetadata(win: Window) {
 // Artwork lives on the site's own hosts. The FRAME's fetch goes through the proxy (Scramjet patches it), so the
 // picture is fetched there once and shown from a blob: URL in the shell. Memory only; failures fall back to the tab's icon.
 const artwork = new Map<string, string | null>()
-const MAX_ART = 40
+const MAX_ART = 200 // the media hub, plus a queue's worth of covers (up to ~50)
+const artworkListeners = new Set<() => void>()
+/** Called whenever a picture finishes loading (the queue re-reads its covers then). Returns the unsubscribe. */
+export function onArtwork(fn: () => void): () => void {
+  artworkListeners.add(fn)
+  return () => void artworkListeners.delete(fn)
+}
 
 function artworkFor(h: Handle, src: string): string | null {
   const real = h.art(src)
@@ -119,17 +313,35 @@ function artworkFor(h: Handle, src: string): string | null {
   }
   void (async () => {
     try {
-      const res = await h.win.fetch(real, { credentials: 'omit' })
-      const type = res.headers.get('content-type') ?? ''
-      if (!res.ok || !type.startsWith('image/')) return
-      const blob = await res.blob()
-      if (!artwork.has(real)) return
-      artwork.set(real, URL.createObjectURL(blob))
-      markHandle(h)
+      // services serve one cover at many sizes and put the size in the address: try the bigger ones first, then the page's own
+      for (const url of artworkCandidates(real)) {
+        try {
+          const res = await h.win.fetch(url, { credentials: 'omit' })
+          const type = res.headers.get('content-type') ?? ''
+          if (!res.ok || !type.startsWith('image/')) continue
+          const blob = await res.blob()
+          if (!artwork.has(real)) return
+          artwork.set(real, URL.createObjectURL(blob))
+          markHandle(h)
+          artworkListeners.forEach((f) => f())
+          return
+        } catch {
+          /* this size does not exist: the next one */
+        }
+      }
     } catch {
       /* stays null: the hub shows the tab's icon */
     }
   })()
+  return null
+}
+
+/**
+ * A picture from a tab's page, for the shell to show: the page's own address (an image in its queue) becomes a blob: URL once the
+ * frame has fetched it through the proxy. Null until then (and for a tab with no live media), so callers show their own placeholder.
+ */
+export function tabArtwork(tabId: string, src: string): string | null {
+  for (const h of handles.values()) if (tabOf(h) === tabId && alive(h)) return artworkFor(h, src)
   return null
 }
 
@@ -199,9 +411,11 @@ function flush() {
       if (!cur || h.lastPlayed > cur.lastPlayed) newestInWindow.set(h.win, h)
     }
     const infos: MediaInfo[] = []
+    const tab = useTabs.getState().tabs.find((t) => t.id === tabId)
+    const host = tab ? hostOf(tabUrl(tab)) : ''
     for (const h of list) {
       const info = snapshot(h, newestInWindow.get(h.win) === h, now)
-      if (info) infos.push({ ...info, tabId })
+      if (info) infos.push({ ...info, tabId, kind: classifyKind(info.kind, { host, album: info.album }) })
     }
     setTab(tabId, infos)
   }
@@ -247,6 +461,7 @@ function track(el: HTMLMediaElement, win: Window, hint: string | null, art: Hand
     h.lastPlayed = performance.now()
     if (!el.muted && el.volume > 0) h.everAudible = true
   }
+  if (SHASUTA_BUILT) applyGainToHandle(h)
   return h
 }
 
@@ -258,6 +473,8 @@ export function applyMediaWatch(win: Window, hint: string | null, art: (src: str
   if (watched.has(win)) return
   watched.add(win)
   const W = win as Window & typeof globalThis
+  // the shell's own sounds (system clicks, Shasta's pages) are never the mixer's: only pages inside tabs
+  if (SHASUTA_BUILT && win !== window) patchMixer(win, W, hint)
   // media events do not bubble, but a capture listener on the window sees every element in the document
   const discover = (e: Event) => {
     const el = e.target
@@ -355,6 +572,12 @@ export function applyMediaWatch(win: Window, hint: string | null, art: (src: str
 // ---- controls -----------------------------------------------------------------------------------------------------
 
 const SKIP_SECONDS = 10
+
+/** A live window of a tab's page (to read the queue from its document), or null when it has no media. */
+export function frameWindowOf(tabId: string): Window | null {
+  for (const h of handles.values()) if (tabOf(h) === tabId && alive(h)) return h.win
+  return null
+}
 
 /** The element behind a session, for the hub's live video preview. */
 export const mediaElement = (key: string): HTMLMediaElement | null => handles.get(key)?.el ?? null

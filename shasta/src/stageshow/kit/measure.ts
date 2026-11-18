@@ -9,7 +9,7 @@ export type Rect = { x: number; y: number; width: number; height: number }
  * named element with x and y as fractions of its box ({ at: 'apply', x: 0.8, y: 0.7 }),
  * or a point in stage pixels.
  */
-export type Target = string | Point | { at: string; x: number; y: number } | { wide: Target; compact: Target }
+export type Target = string | Point | { at: string; x?: number; y?: number } | { wide: Target; compact: Target }
 
 export const EMPTY: Rect = { x: 0, y: 0, width: 0, height: 0 }
 
@@ -112,11 +112,11 @@ export function sameRects(a: Record<string, Rect>, b: Record<string, Rect>) {
 /** Places a Scroll's bar thumb for the element's current scroll position. */
 export function thumb(el: HTMLElement) {
   const wrap = el.parentElement
-  if (!wrap?.classList.contains('ss-scroller')) return
+  if (!wrap?.classList.contains('sk-scroller')) return
   const h = el.clientHeight
   const total = el.scrollHeight
   const size = total > h ? Math.max(24, (h / total) * h) : 0
   const y = total > h ? (el.scrollTop / (total - h)) * (h - size) : 0
-  wrap.style.setProperty('--ss-thumb-h', `${size}px`)
-  wrap.style.setProperty('--ss-thumb-y', `${y}px`)
+  wrap.style.setProperty('--sk-thumb-h', `${size}px`)
+  wrap.style.setProperty('--sk-thumb-y', `${y}px`)
 }

@@ -1,7 +1,7 @@
 /* Swap */
 
 @layer stageshow {
-  .ss-swap {
+  .sk-swap {
     position: relative;
     display: inline-block;
     vertical-align: top;
@@ -13,12 +13,12 @@
 
   /* While the box resizes, its edge is soft: a word passing it fades out
      rather than being sliced */
-  .ss-swap[data-swapping] {
+  .sk-swap[data-swapping] {
     mask-image: linear-gradient(to right, #000 calc(100% - 8px), transparent);
   }
 
-  .ss-swap__in,
-  .ss-swap__out {
+  .sk-swap__in,
+  .sk-swap__out {
     display: block;
     width: max-content;
     max-width: 100%;
@@ -27,22 +27,22 @@
     text-box: inherit;
   }
 
-  .ss-swap__out {
+  .sk-swap__out {
     position: absolute;
     top: 0;
     left: 0;
-    animation: ss-swap-out ease forwards;
+    animation: sk-swap-out ease forwards;
   }
 
-  .ss-swap__in {
-    animation: ss-swap-in cubic-bezier(0.25, 0.8, 0.25, 1) both;
+  .sk-swap__in {
+    animation: sk-swap-in cubic-bezier(0.25, 0.8, 0.25, 1) both;
   }
 
-  @keyframes ss-swap-out { to { opacity: 0; filter: blur(2px); } }
+  @keyframes sk-swap-out { to { opacity: 0; filter: blur(2px); } }
 
-  @keyframes ss-swap-in { 0%, 30% { opacity: 0; filter: blur(2px); } 100% { opacity: 1; filter: none; } }
+  @keyframes sk-swap-in { 0%, 30% { opacity: 0; filter: blur(2px); } 100% { opacity: 1; filter: none; } }
 
   @media (prefers-reduced-motion: reduce) {
-    .ss-swap__in, .ss-swap__out { animation-duration: 1ms !important; }
+    .sk-swap__in, .sk-swap__out { animation-duration: 1ms !important; }
   }
 }

@@ -88,7 +88,7 @@ export function Thread({ app = 'imessage', className, style, children }: ThreadP
   })
   return (
     <Ready.Provider value={ready}>
-      <div ref={ref} className={`ss-thread${className ? ` ${className}` : ''}`} data-app={app} style={style}>
+      <div ref={ref} className={`sk-thread${className ? ` ${className}` : ''}`} data-app={app} style={style}>
         {out}
       </div>
     </Ready.Provider>
@@ -154,7 +154,7 @@ export function Bubble({ avatar, from, typing = false, tail, source, tapback, cl
     size.current = now
     if (!was || (was.w === now.w && was.h === now.h)) return
     // The words keep their final line breaks while the box grows around them
-    const text = el.querySelector<HTMLElement>('.ss-bubble__text')
+    const text = el.querySelector<HTMLElement>('.sk-bubble__text')
     if (text) text.style.width = getComputedStyle(text).width
     el.style.transition = 'none'
     el.style.width = `${was.w}px`
@@ -176,9 +176,9 @@ export function Bubble({ avatar, from, typing = false, tail, source, tapback, cl
   useLayoutEffect(() => {
     const el = ref.current
     if (!el || !arrived || !source) return
-    const stage = el.closest('.ss-stage') ?? document
+    const stage = el.closest('.sk-stage') ?? document
     const src = stage.querySelector<HTMLElement>(`[data-target="${source}"]`) ?? stage.querySelector<HTMLElement>(source)
-    const text = el.querySelector<HTMLElement>('.ss-bubble__text')
+    const text = el.querySelector<HTMLElement>('.sk-bubble__text')
     if (!src || !text) return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || el.closest('[data-still]')) return
     // Measure where it rests, not where an earlier run already moved it
@@ -210,28 +210,28 @@ export function Bubble({ avatar, from, typing = false, tail, source, tapback, cl
     return () => el.removeEventListener('transitionend', end)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   let body = children
-  if (fidelity === 'minimal' && typeof children === 'string') body = <span className="ss-bar ss-bubble__bar" style={{ width: Math.min(180, children.length * 5.5) }} />
+  if (fidelity === 'minimal' && typeof children === 'string') body = <span className="sk-bar sk-bubble__bar" style={{ width: Math.min(180, children.length * 5.5) }} />
   return (
-    <div className={`ss-bubble-row${className ? ` ${className}` : ''}`} data-from={from} data-avatar={avatar ? '' : undefined} style={style}>
-      {avatar && from !== 'me' && <span className="ss-bubble__avatar" aria-hidden>{avatar}</span>}
-      <div {...data} ref={ref} className="ss-bubble" data-arrived={arrived || undefined} data-source={source ? '' : undefined} data-tail={tail || undefined} data-typing={typing || undefined} data-grew={grew.current || undefined} data-tapback={tapback && tapback.show !== false ? '' : undefined}>
+    <div className={`sk-bubble-row${className ? ` ${className}` : ''}`} data-from={from} data-avatar={avatar ? '' : undefined} style={style}>
+      {avatar && from !== 'me' && <span className="sk-bubble__avatar" aria-hidden>{avatar}</span>}
+      <div {...data} ref={ref} className="sk-bubble" data-arrived={arrived || undefined} data-source={source ? '' : undefined} data-tail={tail || undefined} data-typing={typing || undefined} data-grew={grew.current || undefined} data-tapback={tapback && tapback.show !== false ? '' : undefined}>
         {tapback && (
-          <span className="ss-tapback" data-show={tapback.show !== false || undefined} aria-hidden>
-            <span className="ss-tapback__emoji">{tapback.emoji}</span>
+          <span className="sk-tapback" data-show={tapback.show !== false || undefined} aria-hidden>
+            <span className="sk-tapback__emoji">{tapback.emoji}</span>
           </span>
         )}
         {typing ? (
-          <span className="ss-bubble__dots" aria-label="typing">
+          <span className="sk-bubble__dots" aria-label="typing">
             <i />
             <i />
             <i />
           </span>
         ) : (
-          <span className="ss-bubble__text">{body}</span>
+          <span className="sk-bubble__text">{body}</span>
         )}
         {/* Always drawn, so a tail grows out of the corner when its bubble
             becomes the last of a run, and retracts when it stops being */}
-        <svg className="ss-bubble__tail" viewBox="0 0 18 16" aria-hidden>
+        <svg className="sk-bubble__tail" viewBox="0 0 18 16" aria-hidden>
           <path d={from === 'me' ? 'M0 0H12V8.5C12 12.6 14 15 17.5 16C15 16.7 12.2 16.5 9.8 15.3L0 15Z' : 'M18 0H6V8.5C6 12.6 4 15 0.5 16C3 16.7 5.8 16.5 8.2 15.3L18 15Z'} />
         </svg>
       </div>
@@ -241,7 +241,7 @@ export function Bubble({ avatar, from, typing = false, tail, source, tapback, cl
 
 /** A centered timestamp between runs ("Today 9:41"). */
 export function Stamp({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={`ss-stamp${className ? ` ${className}` : ''}`}>{children}</div>
+  return <div className={`sk-stamp${className ? ` ${className}` : ''}`}>{children}</div>
 }
 
 /**
@@ -250,7 +250,7 @@ export function Stamp({ children, className }: { children: ReactNode; className?
  */
 export function Receipt({ show = true, children, className }: { show?: boolean; children: string; className?: string }) {
   return (
-    <div className={`ss-receipt${className ? ` ${className}` : ''}`} data-show={show || undefined}>
+    <div className={`sk-receipt${className ? ` ${className}` : ''}`} data-show={show || undefined}>
       <span>
         <Roll variant="fade">{children}</Roll>
       </span>

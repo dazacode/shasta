@@ -13,12 +13,15 @@ import { useSupporter } from '@/stores/supporterStore'
 import { useTabs } from '@/stores/tabsStore'
 import { cn } from '@/lib/utils'
 import { Row, Segmented, Toggle } from './settingsParts'
+import { consoleLookOn, requestTour, SHASUTA_BUILT, useShasuta, useTourGifts } from '@/shasuta/state'
+import { ShasutaNewTabLook } from '@/shasuta/host'
 
 export function WallpaperPicker() {
   const wallpaper = useSettings((x) => x.settings.wallpaper)
   const claimed = useSettings((x) => x.settings.claimedWallpapers)
   const update = useSettings((x) => x.update)
   const { perks } = useSupporter()
+  const gifts = useTourGifts()
   const season = useSeason()
   const current = season && eventWallpaper(season)
   return (
@@ -27,17 +30,20 @@ export function WallpaperPicker() {
       {(Object.keys(WALLPAPERS) as WallpaperName[]).map((w) => {
         // a holiday photo shows only to people who claimed it, or while its event is on (picking it claims it)
         if (isUnclaimedWallpaper(w, claimed) && w !== current) return null
-        const locked = isLockedWallpaper(w, perks)
-        const label = locked ? `${WALLPAPERS[w].label} (Supporter perk, locked)` : WALLPAPERS[w].label
+        // the tour's gift exists only where the tour does
+        const tour = !!WALLPAPERS[w].tour
+        if (tour && !SHASUTA_BUILT) return null
+        const locked = isLockedWallpaper(w, perks, gifts)
+        const label = locked ? `${WALLPAPERS[w].label} (${tour ? 'a gift from the tour' : 'Supporter perk'}, locked)` : WALLPAPERS[w].label
         return (
           <button
             key={w}
             role="radio"
             aria-checked={wallpaper === w}
             aria-label={label}
-            title={locked ? `${WALLPAPERS[w].label}: a Supporter perk. Click to learn more.` : label}
+            title={locked ? (tour ? `${WALLPAPERS[w].label}: a gift for watching the tour with Peak to the end. Click to take it.` : `${WALLPAPERS[w].label}: a Supporter perk. Click to learn more.`) : label}
             // a locked preset explains itself instead of being picked
-            onClick={() => (locked ? useTabs.getState().openInternal('settings', 'supporter') : season && w === current && isUnclaimedWallpaper(w, claimed) ? claimSeasonWallpaper(season) : update({ wallpaper: w }))}
+            onClick={() => (locked ? (tour ? requestTour('ad') : useTabs.getState().openInternal('settings', 'supporter')) : season && w === current && isUnclaimedWallpaper(w, claimed) ? claimSeasonWallpaper(season) : update({ wallpaper: w }))}
             className={cn('relative grid size-10 place-items-center overflow-hidden rounded-xl bg-shasta-field text-[11px] text-shasta-muted ring-offset-2 ring-offset-shasta-bg', wallpaper === w && 'ring-2 ring-shasta-fg')}
             style={{ background: wallpaperBackground(w), backgroundColor: 'var(--sh-field)' }}
           >
@@ -211,6 +217,9 @@ export function NewTabCustomizer({ onEditPage }: { onEditPage?: () => void } = {
   const minimal = s.newTabStyle === 'minimal'
   const season = useSeason()
   const d = defaultSettings()
+  // Shasuta's own pieces of this page exist only in its console look, over the plain background
+  const shasutaLook = useShasuta((x) => consoleLookOn(x.prefs))
+  const inRoom = SHASUTA_BUILT && shasutaLook && s.wallpaper === 'none' && s.newTabBg === 'preset'
   return (
     <div className="min-w-0">
       <Group title="Look">
@@ -286,6 +295,24 @@ export function NewTabCustomizer({ onEditPage }: { onEditPage?: () => void } = {
         </Group>
       )}
 
+      {SHASUTA_BUILT && shasutaLook && (
+        <Group title="Shasuta">
+          {!inRoom && <p className="py-2 text-sm text-shasta-muted">These show on the plain background (Background: Built-in, None). A wallpaper, colour, picture or holiday photo takes the page over.</p>}
+          <Row title="Mountain scene" desc="The Shasuta mountain behind this page. It follows your clock, and the weather if you turned it on. Off keeps the plain Shasuta slab." htmlFor="nt-scene">
+            <Toggle id="nt-scene" label="Show the mountain scene" checked={s.newTabScene} onChange={(newTabScene) => update({ newTabScene })} />
+          </Row>
+          {!minimal && (
+            <Row title="Jump back in" desc="The games you played last, from your Shasuta library, under the search bar." htmlFor="nt-camps">
+              <Toggle id="nt-camps" label="Show Jump back in" checked={s.newTabCamps} onChange={(newTabCamps) => update({ newTabCamps })} />
+            </Row>
+          )}
+          <Row title="Home button on the page" desc="The tab strip always has one: this is a second, down in the corner." htmlFor="nt-home">
+            <Toggle id="nt-home" label="Show the Home button" checked={s.newTabHome} onChange={(newTabHome) => update({ newTabHome })} />
+          </Row>
+          {s.newTabScene && <ShasutaNewTabLook />}
+        </Group>
+      )}
+
       <Group title="Start over">
         <Row title="Reset the look" desc="Your widgets and shortcuts stay. A picture you chose is removed from this device.">
           <Button
@@ -295,7 +322,7 @@ export function NewTabCustomizer({ onEditPage }: { onEditPage?: () => void } = {
               update({
                 newTabBg: d.newTabBg, newTabBgColor: d.newTabBgColor, newTabBgImage: null, newTabBgDim: 0, newTabBgBlur: 0, newTabClock: d.newTabClock, newTabOrder: d.newTabOrder,
                 newTabStyle: d.newTabStyle, wallpaper: d.wallpaper, newTabLogo: d.newTabLogo, newTabSearch: d.newTabSearch, newTabGreeting: d.newTabGreeting, newTabShortcuts: d.newTabShortcuts,
-                newTabGreetingText: '', newTabHeadlineText: '', newTabApps: d.newTabApps, newTabLive: d.newTabLive, newTabBookmarks: d.newTabBookmarks, newTabRecent: d.newTabRecent,
+                newTabGreetingText: '', newTabHeadlineText: '', newTabApps: d.newTabApps, newTabLive: d.newTabLive, newTabBookmarks: d.newTabBookmarks, newTabRecent: d.newTabRecent, newTabScene: d.newTabScene, newTabCamps: d.newTabCamps, newTabHome: d.newTabHome,
               })
             }}
           >

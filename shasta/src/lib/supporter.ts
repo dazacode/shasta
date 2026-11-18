@@ -6,7 +6,16 @@
 // the server's public Ed25519 key. Nothing about browsing is ever sent or linked to the code.
 
 export type SupporterKind = 'trial' | 'supporter'
+/** What a signed pass can be: a code's (trial, supporter), or the code-less 24-hour pass the tour gives. */
+export type PassKind = SupporterKind | 'tour'
 export type SupporterStatus = 'none' | SupporterKind | 'expired'
+
+/** The Shasuta tour's gift, kept on this device: the signed pass and when it ends (unix seconds). Kept after it ends,
+ *  so the device knows it already had one. Credential-like: never part of a profile export. */
+export interface TourPassRecord {
+  token: string
+  exp: number
+}
 
 /** What settings keep on this device. token null = the server said the code ended (shown as "ended"). */
 export interface SupporterRecord {
@@ -16,7 +25,7 @@ export interface SupporterRecord {
 
 export interface TokenPayload {
   v: 1
-  kind: SupporterKind
+  kind: PassKind
   /** issued at, unix seconds */
   iat: number
   /** this pass must be renewed by then, unix seconds (at most ~35 days ahead) */
@@ -80,7 +89,7 @@ export function decodeToken(token: string): { payload: TokenPayload; payloadByte
   const p = raw as Partial<TokenPayload> | null
   if (!p || typeof p !== 'object') return { error: 'malformed' }
   if (p.v !== 1) return { error: 'version' }
-  if ((p.kind !== 'trial' && p.kind !== 'supporter') || !Number.isFinite(p.iat) || !Number.isFinite(p.exp)) return { error: 'malformed' }
+  if ((p.kind !== 'trial' && p.kind !== 'supporter' && p.kind !== 'tour') || !Number.isFinite(p.iat) || !Number.isFinite(p.exp)) return { error: 'malformed' }
   const until = p.until === null ? null : typeof p.until === 'number' && Number.isFinite(p.until) ? p.until : undefined
   return { payload: { v: 1, kind: p.kind, iat: p.iat as number, exp: p.exp as number, until }, payloadBytes, signature }
 }
@@ -156,7 +165,25 @@ export function termText(until: number | null | undefined, passDaysLeft: number,
 export function statusOf(record: SupporterRecord | null, result: VerifyResult | null): SupporterStatus {
   if (!record) return 'none'
   if (!record.token || !result) return 'expired'
-  return result.ok ? result.payload.kind : 'expired'
+  // a tour pass is not a code's pass: in the code's slot it counts for nothing
+  return result.ok && result.payload.kind !== 'tour' ? result.payload.kind : 'expired'
+}
+
+/** True when a tour pass checked out, is of kind tour and has not ended. */
+export const tourPassOk = (result: VerifyResult | null, now = Date.now() / 1000): boolean => !!result?.ok && result.payload.kind === 'tour' && result.payload.exp > now
+
+/** When the tour's ad-free day ends, for copy: "3:40 PM" today, "Tue 3:40 PM" later. */
+export function tourEnds(exp: number, now = Date.now()): string {
+  const d = new Date(exp * 1000)
+  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  return d.toDateString() === new Date(now).toDateString() ? time : `${d.toLocaleDateString(undefined, { weekday: 'short' })} ${time}`
+}
+
+/** Validates a tour pass read back from storage (never trusted). */
+export function sanitizeTourPass(raw: unknown): TourPassRecord | null {
+  const r = raw as Partial<TourPassRecord> | null
+  if (!r || typeof r !== 'object' || typeof r.token !== 'string' || r.token.length > 2048 || typeof r.exp !== 'number' || !Number.isFinite(r.exp)) return null
+  return { token: r.token, exp: r.exp }
 }
 
 /** Refresh when the pass is missing, invalid, over, or has under a week left. An ended code (no token) is left alone. */

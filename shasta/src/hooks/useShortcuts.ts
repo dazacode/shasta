@@ -73,6 +73,15 @@ export function useShortcuts() {
     const unsubTabs = useTabs.subscribe((s, prev) => {
       if (s.activeId !== prev.activeId || s.tabs !== prev.tabs) onTabs()
     })
+    // a game started from Shasuta fills the screen: the browser's X (peek) leaves game mode so the browser works normally,
+    // "Back to the game" turns it on again (the tab's own rule above does that once its dismissal is cleared)
+    const unsubPlay = useShasuta.subscribe((s, prev) => {
+      if (s.play?.peek && !prev.play?.peek) useUi.getState().setGameMode(false)
+      else if (s.play && !s.play.peek && (!prev.play || prev.play.peek || prev.play.tabId !== s.play.tabId)) {
+        dismissedFor = null
+        onTabs()
+      }
+    })
     // in game mode + full screen the page may have every key, including Esc-less combos the browser reserves
     setGameControl(useUi.getState().gameMode)
     const unsubGame = useUi.subscribe((s, prev) => {
@@ -95,6 +104,7 @@ export function useShortcuts() {
       document.removeEventListener('pointerlockchange', onPointerLock)
       unsubGame()
       unsubTabs()
+      unsubPlay()
     }
   }, [])
 }

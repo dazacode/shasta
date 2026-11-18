@@ -57,6 +57,34 @@ export interface Tab {
   private: boolean
 }
 
+// ---- the frame lifecycle --------------------------------------------------------------------------
+// A tab's frame flags (`frame`, `suspended`, `loading`, `pendingCommit`) only ever take these combinations:
+//   no frame     frame=false suspended=false  a Shasta page (newtab, settings...) with no site behind it
+//   suspended    frame=false suspended=true   a site whose frame was released; selecting the tab reloads it
+//   waiting      frame=true  loading pendingCommit   asked the network, nothing on screen yet
+//   loading      frame=true  loading !pendingCommit  the new document is arriving
+//   live         frame=true  !loading               a site (or a Shasta page with the site kept behind it for Back)
+// The moves between "no frame", "suspended" and the rest are the three functions below; navigation and the frame's
+// own events (tabsStore `frameEvents`) move between waiting, loading and live.
+// Rule: only a tab whose CURRENT page is a site may be `suspended`. A Shasta page shows no frame, so it has nothing to
+// reload; when it is selected nothing would ever finish loading and the tab would spin forever.
+
+/** Give a tab a fresh frame (the TabFrame component attaches it and sends it to the tab's page). */
+export function wakeFrame(t: Tab): Tab {
+  return t.frame && !t.suspended ? t : { ...t, frame: true, suspended: false, frameKey: t.frameKey + 1 }
+}
+
+/** The tab is being looked at: a suspended site reloads; anything else just records the time. */
+export function activateTab(t: Tab, now = Date.now()): Tab {
+  if (t.suspended && !isInternalUrl(t.entries[t.index].url)) return { ...wakeFrame(t), loading: true, pendingCommit: true, expectReplace: true, lastActiveAt: now }
+  return { ...t, suspended: false, lastActiveAt: now }
+}
+
+/** Frees a background tab's frame (memory). A site becomes `suspended`; a Shasta page only drops the site behind it. */
+export function releaseFrame(t: Tab): Tab {
+  return { ...t, frame: false, suspended: !isInternalUrl(t.entries[t.index].url), frameUrl: '' }
+}
+
 export interface TabGroup {
   id: string
   title: string

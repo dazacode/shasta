@@ -45,7 +45,7 @@ export function BookmarksBar() {
 
   return (
     <nav aria-label="Bookmarks bar" data-zone="bookmarks" className="flex h-8 items-center gap-0.5 overflow-hidden border-t border-shasta-line bg-shasta-tab px-2 text-[13px]">
-      {roots.length === 0 && <span className="px-2 text-xs text-shasta-faint">Bookmarks you save appear here. Press the star in the address bar</span>}
+      {roots.length === 0 && <span className="min-w-0 truncate px-2 text-xs text-shasta-faint">Bookmarks you save appear here. Press the star in the address bar</span>}
       {roots.map((n) =>
         n.type === 'folder' ? (
           <DropdownMenu key={n.id}>

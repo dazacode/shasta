@@ -14,11 +14,11 @@ export function Scroll({ name, bar = 'overlay', className, style, children, ...r
     if (ref.current) thumb(ref.current)
   })
   return (
-    <div {...rest} className={`ss-scroller${className ? ` ${className}` : ''}`} data-bar={bar} style={style}>
-      <div ref={ref} className="ss-scroll" data-target={name}>
+    <div {...rest} className={`sk-scroller${className ? ` ${className}` : ''}`} data-bar={bar} style={style}>
+      <div ref={ref} className="sk-scroll" data-target={name}>
         {children}
       </div>
-      {bar !== 'none' && <span className="ss-scroller__thumb" />}
+      {bar !== 'none' && <span className="sk-scroller__thumb" />}
     </div>
   )
 }

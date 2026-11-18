@@ -217,6 +217,84 @@ describe('supporter store', () => {
   })
 })
 
+describe("tour pass (the Shasuta tour's 24-hour ad-free day)", () => {
+  beforeEach(() => {
+    mem.clear()
+    vi.stubGlobal('localStorage', memStorage)
+    useSettings.persist.setOptions({ storage: createJSONStorage(() => memStorage) })
+    useSettings.setState({ settings: defaultSettings() })
+  })
+  const serve = (r: Record<string, () => Response>) => {
+    const all: Record<string, () => Response> = { '/api/supporter/public-key': () => Response.json({ key: base64urlEncode(pub) }), ...r }
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => (all[url] ?? (() => new Response(null, { status: 500 })))()))
+  }
+
+  it("a tour pass in the code's slot counts for nothing; in its own slot it is checked", async () => {
+    const exp = NOW + DAY
+    const token = await sign({ v: 1, kind: 'tour', iat: NOW, exp, until: exp })
+    const r = await verifyToken(token, pub, NOW)
+    expect(r.ok).toBe(true)
+    expect(statusOf({ code: 'SHASTA-ABCD-EFGH-JKMN', token }, r)).toBe('expired')
+    expect(sup.tourPassOk(r, NOW)).toBe(true)
+    expect(sup.tourPassOk(r, exp + 1)).toBe(false)
+    const trial = await verifyToken(await sign({ v: 1, kind: 'trial', iat: NOW, exp }), pub, NOW)
+    expect(sup.tourPassOk(trial, NOW)).toBe(false)
+  })
+
+  it('is validated from storage and never exported', () => {
+    const current = { settings: defaultSettings(), update: () => undefined, reset: () => undefined }
+    expect(mergeSettings({ settings: { tourPass: { token: 'a.b', exp: 5 } } }, current).settings.tourPass).toEqual({ token: 'a.b', exp: 5 })
+    expect(mergeSettings({ settings: { tourPass: { token: 7 } } }, current).settings.tourPass).toBeNull()
+    expect(migrateSettings({ settings: {} }, 4).settings!.tourPass).toBeNull()
+    expect(PORTABLE_SETTINGS).not.toContain('tourPass' as never)
+    const text = JSON.stringify(buildProfile({ ...defaultSettings(), tourPass: { token: 'secret.tour', exp: 1 } }, [], emptyLocal()))
+    expect(text).not.toContain('secret.tour')
+  })
+
+  it('claimed once: perks for the day, then a second claim is refused; the code slot is untouched', async () => {
+    const { useSupporterStore, claimTourPass, hasPerks, tourPassClaimed } = await import('@/stores/supporterStore')
+    const exp = Math.floor(Date.now() / 1000) + DAY
+    const token = await sign({ v: 1, kind: 'tour', iat: exp - DAY, exp, until: exp })
+    serve({ '/api/supporter/tour': () => Response.json({ token, kind: 'tour', exp }) })
+    expect(tourPassClaimed()).toBe(false)
+    expect(await claimTourPass()).toEqual({ ok: true, exp })
+    expect(useSettings.getState().settings.tourPass).toEqual({ token, exp })
+    expect(useSettings.getState().settings.supporter).toBeNull()
+    expect(useSupporterStore.getState()).toMatchObject({ status: 'none', tourUntil: exp })
+    expect(hasPerks()).toBe(true)
+    expect(await claimTourPass()).toEqual({ ok: false, reason: 'claimed' })
+  })
+
+  it('an ended tour pass gives no perks', async () => {
+    const { useSupporterStore, hasPerks } = await import('@/stores/supporterStore')
+    serve({})
+    const exp = Math.floor(Date.now() / 1000) - 10
+    useSettings.getState().update({ tourPass: { token: await sign({ v: 1, kind: 'tour', iat: exp - DAY, exp, until: exp }), exp } })
+    await useSupporterStore.getState().evaluate()
+    expect(useSupporterStore.getState().tourUntil).toBe(0)
+    expect(hasPerks()).toBe(false)
+  })
+
+  it('fails soft: no server (Lite), rate limited, a forged or wrong-kind pass', async () => {
+    const { claimTourPass } = await import('@/stores/supporterStore')
+    serve({ '/api/supporter/tour': () => { throw new TypeError('offline') } })
+    expect(await claimTourPass()).toEqual({ ok: false, reason: 'offline' })
+    serve({ '/api/supporter/tour': () => new Response(null, { status: 429 }) })
+    expect(await claimTourPass()).toEqual({ ok: false, reason: 'limited' })
+    serve({ '/api/supporter/tour': () => new Response('<html>', { status: 404 }) })
+    expect(await claimTourPass()).toEqual({ ok: false, reason: 'server' })
+    const other = (await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify'])) as CryptoKeyPair
+    const exp = Math.floor(Date.now() / 1000) + DAY
+    const forged = await sign({ v: 1, kind: 'tour', iat: exp - DAY, exp, until: exp }, other.privateKey)
+    serve({ '/api/supporter/tour': () => Response.json({ token: forged, kind: 'tour', exp }) })
+    expect(await claimTourPass()).toEqual({ ok: false, reason: 'server' })
+    const trial = await sign({ v: 1, kind: 'trial', iat: exp - DAY, exp })
+    serve({ '/api/supporter/tour': () => Response.json({ token: trial, kind: 'tour', exp }) })
+    expect(await claimTourPass()).toEqual({ ok: false, reason: 'server' })
+    expect(useSettings.getState().settings.tourPass).toBeNull()
+  })
+})
+
 describe('shasta://support', () => {
   it('is a Shasta page', async () => {
     const { internalPage, resolveInput, titleFor } = await import('@/lib/url')

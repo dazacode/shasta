@@ -30,6 +30,10 @@ at the commit pinned by the `scramjet/` submodule and named in `engine.pin` (the
 | @mercuryworkshop/wisp-js (server, the fallback relay) | LGPL-3.0-or-later | npm / https://github.com/MercuryWorkshop/wisp-js |
 | Geist, Poppins, Urbanist fonts (Fontsource) | SIL OFL 1.1 | license texts shipped at `/licenses/` in every build |
 | New tab quotes and jokes (`shasta/src/lib/quotes.data.json`, built by `scripts/build-quotes.ts` at pinned commits): popular-movie-quotes by NikhilNamal17, AniQuotesAPI by Shinei Nouze, inspirational-quotes by vinitshahdeo, Inspirational-Quotes by akhiltak, Official Joke API by 15Dkatz | MIT | https://github.com/NikhilNamal17/popular-movie-quotes, https://github.com/Shineii86/AniQuotesAPI, https://github.com/vinitshahdeo/inspirational-quotes, https://github.com/akhiltak/inspirational-quotes, https://github.com/15Dkatz/official_joke_api |
+| Social stickers: Noto Emoji (Google), 48 SVGs at tag v2.047 in `shasta/public/social/stickers/` | Apache-2.0 (images) / SIL OFL 1.1 (font files) | https://github.com/googlefonts/noto-emoji; both texts at `/licenses/` |
+| Social avatars: DiceBear core + the styles lorelei, notionists, open-peeps, thumbs, pixel-art | MIT (code), CC0 1.0 (those styles' artwork) | https://github.com/dicebear/dicebear |
+| QR scanning on the phone: barcode-detector (Sec-ant) + zxing-wasm, built from zxing-cpp; the wasm is served from Shasta's own `/assets/` | MIT (barcode-detector, zxing-wasm), Apache-2.0 (zxing-cpp) | https://github.com/Sec-ant/barcode-detector, https://github.com/Sec-ant/zxing-wasm, https://github.com/zxing-cpp/zxing-cpp |
+| Social client: better-auth client, @hpke/core, @tanstack/react-query, @tanstack/react-virtual | MIT | https://github.com/better-auth/better-auth, https://github.com/dajiaji/hpke-js, https://github.com/TanStack/query, https://github.com/TanStack/virtual |
 | Other npm dependencies (React, Base UI, Zustand, Motion, Lucide, transformers.js, ONNX Runtime, pdf.js, ...) | MIT / Apache-2.0 / ISC | their npm packages |
 
 AI model weights downloaded on the device (SmolLM2, Qwen3, SmolVLM, Whisper, MiniLM) carry their own licenses on

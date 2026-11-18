@@ -22,6 +22,7 @@ import { noteDocument } from './frameCheck'
 import { hasMemory64, installMemory64Shim } from './memory64Shim'
 import { prependBody, workerPrelude } from './workerPrelude'
 import { lowerWasmIfNeeded } from './wasmLower'
+import { watchDownloadBody } from './downloadWatch'
 import { ERROR_META, TENTATIVE_NAV_MS, armNavTimer, byTab, clearNavTimer, emit, log, scheduleProbe, type Entry } from './scramjetAdapter'
 
 const SLOW_REQUEST_MS = 10_000
@@ -408,23 +409,9 @@ function trackDownload(response: { body: unknown; headers: { get(k: string): str
   emit({ type: 'download', download: { ...base, phase: 'start', received: 0 } })
   const body = response.body
   if (body instanceof ReadableStream) {
-    let received = 0
-    let last = 0
-    response.body = body.pipeThrough(
-      new TransformStream<Uint8Array, Uint8Array>({
-        transform(chunk, ctrl) {
-          received += chunk.byteLength
-          ctrl.enqueue(chunk)
-          const now = performance.now()
-          if (now - last > 250) {
-            last = now
-            emit({ type: 'download', download: { ...base, phase: 'progress', received } })
-          }
-        },
-        flush() {
-          emit({ type: 'download', download: { ...base, phase: 'complete', received, total: total || received } })
-        },
-      }),
+    const encoding = (response.headers.get('content-encoding') ?? '').trim().toLowerCase()
+    response.body = watchDownloadBody(body, { total, encoded: !!encoding && encoding !== 'identity' }, (e) =>
+      emit({ type: 'download', download: { ...base, ...e, total: e.total ?? total } }),
     )
   } else {
     const size = typeof body === 'string' ? new Blob([body]).size : body instanceof Blob ? body.size : body instanceof ArrayBuffer ? body.byteLength : 0

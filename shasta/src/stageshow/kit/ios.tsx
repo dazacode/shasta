@@ -53,9 +53,9 @@ function Glyph({ name }: { name: 'shift' | 'shift-on' | 'delete' | 'return' | 'e
       return (
         <svg viewBox="0 0 28 28" width="28" height="28" aria-hidden>
           <circle cx="14" cy="14" r="12.5" fill="currentColor" />
-          <ellipse cx="10" cy="10.6" rx="1.5" ry="2.1" fill="var(--ss-kb-sheet)" />
-          <ellipse cx="18" cy="10.6" rx="1.5" ry="2.1" fill="var(--ss-kb-sheet)" />
-          <path d="M7.4 15.2c.9 3.6 3.6 5.8 6.6 5.8s5.7-2.2 6.6-5.8Z" fill="var(--ss-kb-sheet)" />
+          <ellipse cx="10" cy="10.6" rx="1.5" ry="2.1" fill="var(--sk-kb-sheet)" />
+          <ellipse cx="18" cy="10.6" rx="1.5" ry="2.1" fill="var(--sk-kb-sheet)" />
+          <path d="M7.4 15.2c.9 3.6 3.6 5.8 6.6 5.8s5.7-2.2 6.6-5.8Z" fill="var(--sk-kb-sheet)" />
         </svg>
       )
     case 'mic':
@@ -89,46 +89,46 @@ export function Keyboard({ typed = '', shift, suggestions = ['I', 'The', 'I’m'
   const upper = shift ?? auto
   const down = (k: string) => pressed === k || (k.length === 1 && pop?.ch === k)
   return (
-    <div className={`ss-kb${className ? ` ${className}` : ''}`} data-dark={dark || undefined} style={style}>
-      <div className="ss-kb__suggest">
+    <div className={`sk-kb${className ? ` ${className}` : ''}`} data-dark={dark || undefined} style={style}>
+      <div className="sk-kb__suggest">
         {suggestions.map((w, i) => (
           <span key={i}>{w}</span>
         ))}
       </div>
       {ROWS.map((row, r) => (
-        <div key={r} className="ss-kb__row" data-row={r}>
+        <div key={r} className="sk-kb__row" data-row={r}>
           {r === 2 && (
-            <span className="ss-kb__key ss-kb__key--wide" data-down={down('shift') || undefined}>
+            <span className="sk-kb__key sk-kb__key--wide" data-down={down('shift') || undefined}>
               <Glyph name={upper ? 'shift-on' : 'shift'} />
             </span>
           )}
           {row.split('').map((k) => (
-            <span key={k} className="ss-kb__key" data-down={down(k) || undefined}>
+            <span key={k} className="sk-kb__key" data-down={down(k) || undefined}>
               {upper ? k.toUpperCase() : k}
               {pop?.ch === k && (
-                <span key={pop.n} className="ss-kb__callout" aria-hidden>
+                <span key={pop.n} className="sk-kb__callout" aria-hidden>
                   {upper ? k.toUpperCase() : k}
                 </span>
               )}
             </span>
           ))}
           {r === 2 && (
-            <span className="ss-kb__key ss-kb__key--wide" data-down={down('delete') || undefined}>
+            <span className="sk-kb__key sk-kb__key--wide" data-down={down('delete') || undefined}>
               <Glyph name="delete" />
             </span>
           )}
         </div>
       ))}
-      <div className="ss-kb__row ss-kb__row--bottom">
-        <span className="ss-kb__key ss-kb__key--mode" data-down={down('123') || undefined}>
+      <div className="sk-kb__row sk-kb__row--bottom">
+        <span className="sk-kb__key sk-kb__key--mode" data-down={down('123') || undefined}>
           123
         </span>
-        <span className="ss-kb__key ss-kb__key--space" data-down={down('space') || down(' ') || undefined} />
-        <span className="ss-kb__key ss-kb__key--mode" data-down={down('return') || undefined}>
+        <span className="sk-kb__key sk-kb__key--space" data-down={down('space') || down(' ') || undefined} />
+        <span className="sk-kb__key sk-kb__key--mode" data-down={down('return') || undefined}>
           <Glyph name="return" />
         </span>
       </div>
-      <div className="ss-kb__below">
+      <div className="sk-kb__below">
         <Glyph name="emoji" />
         <Glyph name="mic" />
       </div>

@@ -4,10 +4,11 @@ import { useTabs } from '@/stores/tabsStore'
 import { cn } from '@/lib/utils'
 import { termText } from '@/lib/supporter'
 
-/** A small "Supporter" (or "Trial") pill. Renders nothing unless perks are on; opens the Supporter settings. */
+/** A small "Supporter" (or "Trial") pill. Renders nothing unless a code's pass is on (the tour's ad-free day is not a
+ *  Supporter); opens the Supporter settings. */
 export function SupporterBadge({ className }: { className?: string }) {
-  const { perks, kind, daysLeft, until } = useSupporter()
-  if (!perks) return null
+  const { pass, kind, daysLeft, until } = useSupporter()
+  if (!pass) return null
   const label = kind === 'trial' ? 'Trial' : 'Supporter'
   return (
     <button

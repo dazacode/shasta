@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { displayUrl, internalPage, redactUrl, resolveInput, searchUrl } from '@/lib/url'
+import { displayUrl, internalPage, internalSection, redactUrl, resolveInput, searchUrl, titleFor } from '@/lib/url'
 
 describe('resolveInput', () => {
   it('treats empty input as empty', () => {
@@ -52,6 +52,20 @@ describe('resolveInput', () => {
     expect(internalPage('shasta://app#3f9c')).toBe('app')
     expect(internalPage('shasta://store/../x')).toBe('store')
     expect(internalPage('https://example.com')).toBeNull()
+  })
+
+  it('opens Social for the old friends and chat addresses (saved tabs, bookmarks, typed)', () => {
+    expect(internalPage('shasta://social')).toBe('social')
+    expect(internalPage('shasta://friends')).toBe('social')
+    expect(internalPage('shasta://chat')).toBe('social')
+    expect(internalSection('shasta://chat')).toBe('chat')
+    expect(internalSection('shasta://friends')).toBe('')
+    expect(internalSection('shasta://chat#messages')).toBe('messages')
+    expect(internalSection('shasta://social#you')).toBe('you')
+    expect(resolveInput('shasta://chat', 'google')).toEqual({ kind: 'internal', url: 'shasta://social#chat' })
+    expect(resolveInput('shasta://friends', 'google')).toEqual({ kind: 'internal', url: 'shasta://social' })
+    expect(resolveInput('shasta://social#friends', 'google')).toEqual({ kind: 'internal', url: 'shasta://social#friends' })
+    expect(titleFor('shasta://chat')).toBe('Social')
   })
 
   it('does not treat a phrase containing a URL as an address', () => {

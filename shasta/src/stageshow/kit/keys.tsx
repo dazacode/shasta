@@ -22,9 +22,9 @@ export function Keycaps({ rows, at }: { rows: (Keys | null)[]; at: KeysAt }) {
       {rows.map(
         (row) =>
           row && (
-            <div key={row.id} className="ss-keys" data-show={row.show} data-at={at} aria-hidden>
+            <div key={row.id} className="sk-keys" data-show={row.show} data-at={at} aria-hidden>
               {row.caps.map((c, i) => (
-                <kbd key={i} className="ss-key" data-down={row.down}>
+                <kbd key={i} className="sk-key" data-down={row.down}>
                   {c}
                 </kbd>
               ))}

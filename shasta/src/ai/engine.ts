@@ -119,20 +119,30 @@ function spawn(): Worker {
   const w = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })
   w.onmessage = (e: MessageEvent<WorkerEvent>) => onWorkerEvent(e.data)
   w.onerror = (e) => {
-    const job = running
     e.preventDefault()
-    killWorker()
-    if (job) fail(job, new Error('The AI engine stopped unexpectedly. It may have run out of memory; try the Light model.'))
+    killWorker(new Error('The AI engine stopped unexpectedly. It may have run out of memory; try the Light model.'))
   }
   return w
 }
 
-function killWorker() {
+/**
+ * The end of a worker's life, whatever the reason (a crash, "Remove downloads"). The worker holds three kinds of
+ * job: the init (behind `initDone`), the `running` one and the `queue`d ones. Every one of them is settled here with
+ * `reason`, so no caller waits forever on a worker that is gone (that used to leave the assistant "busy" and the
+ * one-step setup "running" until the page was reloaded). The next job spawns a fresh worker.
+ */
+function killWorker(reason: Error) {
   worker?.terminate()
   worker = null
   initDone = null
+  const pending = [...jobs.values()]
+  jobs.clear()
+  queue.length = 0
+  running = null
   fileProgress.clear()
   useAi.setState({ models: { chat: idle(), vision: idle(), speech: idle(), embed: idle() } })
+  for (const job of pending) job.reject(reason)
+  schedule()
 }
 
 function fail(job: Job, err: Error) {
@@ -324,7 +334,8 @@ export const ai = {
       }
       setup({ running: false, progress: 1, step: '' })
     } catch (e) {
-      setup({ running: false, error: e instanceof Error ? e.message : 'The download failed.' })
+      // stopped on purpose (the downloads were removed meanwhile): back to the start, not an error
+      setup({ running: false, error: e instanceof AbortedError ? null : e instanceof Error ? e.message : 'The download failed.' })
       throw e
     } finally {
       unsub()
@@ -424,9 +435,8 @@ export const ai = {
 
   /** Deletes every downloaded model from this device. */
   async removeDownloads() {
-    killWorker()
-    queue.length = 0
-    running = null
+    // an answer or download in progress is stopped, as if Stop was pressed
+    killWorker(new AbortedError())
     try {
       await caches.delete('transformers-cache')
     } catch {

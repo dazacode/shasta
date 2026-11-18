@@ -3,3 +3,19 @@ export function startShasuta() {}
 export function ShasutaHost(): null {
   return null
 }
+export function ShasutaNewTabScene(): null {
+  return null
+}
+export function ShasutaNewTabCamps(): null {
+  return null
+}
+export function ShasutaHomeButton(_props: { variant?: 'tab' | 'page' }): null {
+  return null
+}
+export function ShasutaNewTabLook(): null {
+  return null
+}
+
+export function ShasutaTourAd(): null {
+  return null
+}

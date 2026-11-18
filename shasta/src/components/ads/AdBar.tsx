@@ -10,8 +10,9 @@ export function AdBar() {
   const chromeHidden = useUi((s) => s.chromeHidden)
   if (!HAS_DISPLAY_ADS || !on || chromeHidden) return null
 
+  // hidden when the slot collapsed (no ad arrived), so no empty strip is left behind
   return (
-    <div className="shrink-0 border-t border-shasta-line bg-shasta-chrome" data-ad-bar>
+    <div className="shrink-0 border-t border-shasta-line bg-shasta-chrome [&:not(:has([data-ad-slot-wrap]))]:hidden" data-ad-bar>
       <AdSlot format="horizontal" minHeight={56} className="mx-auto w-full max-w-6xl px-3 py-1" />
     </div>
   )

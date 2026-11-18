@@ -43,9 +43,9 @@ const digitsFromRight = (text: string) => {
  * spinning back. Unchanged digits and the punctuation hold still. Tabular
  * figures keep every column the same width. A unit the format writes after
  * the figure ("21°", "240ms", "40%") sits in a box of its own
- * (`.ss-count__unit`), a hair from the last digit, or a word space when the
+ * (`.sk-count__unit`), a hair from the last digit, or a word space when the
  * format has one ("12 min"); restyle it there for a smaller or lighter unit,
- * and set `--ss-count-unit-gap` to widen the hair. Inside an `act.snap` or an
+ * and set `--sk-count-unit-gap` to widen the hair. Inside an `act.snap` or an
  * offscreen reset it jumps to the value, so unseen resets stay unseen.
  */
 export function Count({ value, format = (n) => Math.round(n).toLocaleString('en-US'), duration = 700, stagger = 45, className, style, ...rest }: CountProps) {
@@ -81,7 +81,7 @@ export function Count({ value, format = (n) => Math.round(n).toLocaleString('en-
     node.toggleAttribute('data-snap', instant)
     if (!instant) {
       // Settle the old transforms in the browser first, so the new ones transition
-      for (const strip of Array.from(node.querySelectorAll<HTMLElement>('.ss-count__strip'))) void getComputedStyle(strip).transform
+      for (const strip of Array.from(node.querySelectorAll<HTMLElement>('.sk-count__strip'))) void getComputedStyle(strip).transform
       node.setAttribute('data-rolling', '')
     }
     shown.current = { text, value, idx: next }
@@ -111,7 +111,7 @@ export function Count({ value, format = (n) => Math.round(n).toLocaleString('en-
     const node = el.current
     if (!node || !homing.current) return
     homing.current = false
-    for (const strip of Array.from(node.querySelectorAll<HTMLElement>('.ss-count__strip'))) void getComputedStyle(strip).transform
+    for (const strip of Array.from(node.querySelectorAll<HTMLElement>('.sk-count__strip'))) void getComputedStyle(strip).transform
     node.removeAttribute('data-snap')
   }, [idx])
 
@@ -119,15 +119,15 @@ export function Count({ value, format = (n) => Math.round(n).toLocaleString('en-
   // digits it already had rolling in place and only the new leading one appears
   let fromRight = digits.length
   return (
-    <span {...rest} ref={el} className={`ss-count${className ? ` ${className}` : ''}`} style={style} aria-label={text}>
+    <span {...rest} ref={el} className={`sk-count${className ? ` ${className}` : ''}`} style={style} aria-label={text}>
       {chars.map((c, i) => {
-        if (c < '0' || c > '9') return <span key={`s${i}-${c}`} className="ss-count__char" aria-hidden>{c}</span>
+        if (c < '0' || c > '9') return <span key={`s${i}-${c}`} className="sk-count__char" aria-hidden>{c}</span>
         const column = --fromRight
         const at = idx[column] ?? MIDDLE + Number(c)
         return (
-          <span key={`d${column}`} className="ss-count__digit" data-crop aria-hidden>
+          <span key={`d${column}`} className="sk-count__digit" data-crop aria-hidden>
             <span
-              className="ss-count__strip"
+              className="sk-count__strip"
               style={{ transform: `translateY(${-at}em)`, transitionDuration: `${duration}ms`, transitionDelay: `${column * stagger}ms` }}
             >
               {STRIP.map((n, k) => <span key={k}>{n}</span>)}
@@ -135,7 +135,7 @@ export function Count({ value, format = (n) => Math.round(n).toLocaleString('en-
           </span>
         )
       })}
-      {unit && <span className="ss-count__unit" data-space={space || undefined} aria-hidden>{unit}</span>}
+      {unit && <span className="sk-count__unit" data-space={space || undefined} aria-hidden>{unit}</span>}
     </span>
   )
 }

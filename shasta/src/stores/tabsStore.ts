@@ -1,8 +1,10 @@
+import { audibleTabIds } from '@/stores/mediaStore'
 import { create } from 'zustand'
 import * as proxy from '@/proxy/scramjetAdapter'
 import type { FrameEvents } from '@/proxy/scramjetAdapter'
 import { NEW_TAB_URL, appAddress, internalPage, internalUrl, isInternalUrl, resolveInput, titleFor, type InternalPage } from '@/lib/url'
 import {
+  activateTab,
   applyFrameUrl,
   canGoBack,
   canGoForward,
@@ -12,6 +14,7 @@ import {
   persistableTabs,
   pickNeighbour,
   pushEntry,
+  releaseFrame,
   setEntryTitle,
   shouldRecordVisit,
   tabTitle,
@@ -22,6 +25,7 @@ import {
   inAppScope,
   type Tab,
   type TabGroup,
+  wakeFrame,
 } from '@/lib/tabModel'
 import { ACCENTS, getSettings, type AccentName } from './settingsStore'
 import { useLibrary } from './libraryStore'
@@ -63,8 +67,10 @@ interface TabsState {
   pinTab: (id: string, pinned: boolean) => void
   resetFrame: (id: string) => void
   suspendIdle: () => void
-  /** release background pages, least recently used first, until at most `keepLive` pages remain loaded */
-  suspendBackground: (keepLive: number) => number
+  /** release background pages, least recently used first, until at most `keepLive` pages remain loaded; games Quick Resume holds are skipped unless `force` */
+  suspendBackground: (keepLive: number, force?: boolean) => number
+  /** release exactly these pages (never the one in front); returns how many were released */
+  suspendTabs: (ids: string[]) => number
 
   // groups
   groupTabs: (ids: string[], title?: string) => string | null
@@ -96,6 +102,10 @@ export const registerAppLauncher = (fn: typeof appLauncher) => (appLauncher = fn
 /** Closing the last tab is leaving the browser: Shasuta (shasuta/host.tsx) takes over when it is on. */
 let lastTabClosed: (() => void) | null = null
 export const registerLastTabClosed = (fn: typeof lastTabClosed) => (lastTabClosed = fn)
+
+/** Tabs the idle and pressure sweeps must leave alone (Shasuta's Quick Resume registers the games it holds ready). */
+let suspendGuard: ((tabs: Tab[]) => Set<string>) | null = null
+export const registerSuspendGuard = (fn: typeof suspendGuard) => (suspendGuard = fn)
 
 function startTabs(): { tabs: Tab[]; activeId: string; groups: TabGroup[]; closed: ClosedTab[] } {
   const fresh = () => {
@@ -207,11 +217,8 @@ export const useTabs = create<TabsState>()((set, get) => {
     return s.tabs.find((t) => t.id === (id ?? s.activeId))
   }
 
-  /** A tab whose content must come from the proxy gets a frame; the TabFrame component attaches it. */
-  const wake = (t: Tab): Tab => (t.frame && !t.suspended ? t : { ...t, frame: true, suspended: false, frameKey: t.frameKey + 1 })
-  /** Marks a tab as the one being looked at; a suspended tab reloads its page. */
-  const activate = (t: Tab): Tab =>
-    t.suspended ? { ...wake(t), loading: true, pendingCommit: true, expectReplace: true, lastActiveAt: Date.now() } : { ...t, lastActiveAt: Date.now() }
+  // the frame lifecycle (no frame / suspended / live) and its rules are in lib/tabModel.ts
+  const activate = (t: Tab): Tab => activateTab(t)
 
   return {
     ...initial,
@@ -392,32 +399,46 @@ export const useTabs = create<TabsState>()((set, get) => {
       const { suspendTabs, suspendAfterMinutes } = getSettings()
       if (!suspendTabs) return
       const cutoff = Date.now() - suspendAfterMinutes * 60_000
+      const audible = audibleTabIds()
       set((s) => {
         let changed = false
+        const held = suspendGuard?.(s.tabs) ?? new Set<string>()
         const tabs = s.tabs.map((t) => {
-          if (t.id === s.activeId || !t.frame || t.suspended || t.loading || t.lastActiveAt > cutoff) return t
+          if (t.id === s.activeId || !t.frame || t.suspended || t.loading || t.lastActiveAt > cutoff || audible.has(t.id) || held.has(t.id)) return t
           changed = true
-          return { ...t, frame: false, suspended: true, frameUrl: '' }
+          return releaseFrame(t)
         })
         return changed ? { tabs } : s
       })
     },
 
-    suspendBackground: (keepLive) => {
+    suspendBackground: (keepLive, force = false) => {
       let released = 0
+      const audible = audibleTabIds()
       set((s) => {
         const live = s.tabs.filter((t) => t.frame && !t.suspended)
         const excess = live.length - Math.max(1, keepLive)
         if (excess <= 0) return s
+        const held = force ? new Set<string>() : (suspendGuard?.(s.tabs) ?? new Set<string>())
         const victims = new Set(
           live
-            .filter((t) => t.id !== s.activeId && !t.loading)
+            .filter((t) => t.id !== s.activeId && !t.loading && !audible.has(t.id) && !held.has(t.id))
             .sort((a, b) => a.lastActiveAt - b.lastActiveAt)
             .slice(0, excess)
             .map((t) => t.id),
         )
         released = victims.size
-        return { tabs: s.tabs.map((t) => (victims.has(t.id) ? { ...t, frame: false, suspended: true, frameUrl: '' } : t)) }
+        return { tabs: s.tabs.map((t) => (victims.has(t.id) ? releaseFrame(t) : t)) }
+      })
+      return released
+    },
+
+    suspendTabs: (ids) => {
+      let released = 0
+      set((s) => {
+        const victims = new Set(s.tabs.filter((t) => ids.includes(t.id) && t.id !== s.activeId && t.frame && !t.suspended).map((t) => t.id))
+        released = victims.size
+        return victims.size ? { tabs: s.tabs.map((t) => (victims.has(t.id) ? releaseFrame(t) : t)) } : s
       })
       return released
     },
@@ -453,7 +474,8 @@ export const useTabs = create<TabsState>()((set, get) => {
 
     updateGroup: (groupId, patch) => set((s) => ({ groups: s.groups.map((g) => (g.id === groupId ? { ...g, ...patch } : g)) })),
 
-    toggleGroup: (groupId) =>
+    toggleGroup: (groupId) => {
+      let switchedTo: string | null = null
       set((s) => {
         const group = s.groups.find((g) => g.id === groupId)
         if (!group) return s
@@ -463,11 +485,14 @@ export const useTabs = create<TabsState>()((set, get) => {
         let activeId = s.activeId
         if (collapsed && active?.groupId === groupId) {
           const other = s.tabs.find((t) => t.groupId !== groupId)
-          if (other) activeId = other.id
+          if (other) activeId = switchedTo = other.id
           else return s
         }
         return { groups: s.groups.map((g) => (g.id === groupId ? { ...g, collapsed } : g)), activeId }
-      }),
+      })
+      // the tab now in front is selected like any other: a suspended one reloads instead of showing nothing
+      if (switchedTo) update(switchedTo, activate)
+    },
 
     closeGroup: (groupId) => {
       get().tabs.filter((t) => t.groupId === groupId).forEach((t) => get().closeTab(t.id))
@@ -537,7 +562,7 @@ export const useTabs = create<TabsState>()((set, get) => {
       const url = tabUrl(tab)
       if (isInternalUrl(url)) return
       if (tab.error || !proxy.hasFrame(tab.id) || tab.suspended) {
-        update(tab.id, (t) => ({ ...t, ...(t.frame && !t.suspended ? {} : wake(t)), error: null, loading: true, pendingCommit: true, expectReplace: true }))
+        update(tab.id, (t) => ({ ...t, ...(t.frame && !t.suspended ? {} : wakeFrame(t)), error: null, loading: true, pendingCommit: true, expectReplace: true }))
         if (proxy.hasFrame(tab.id)) proxy.go(tab.id, url)
         return
       }

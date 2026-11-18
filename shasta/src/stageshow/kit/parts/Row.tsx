@@ -37,28 +37,28 @@ export function Row({ lead, title, subtitle, meta, preview, unread, selected, pa
   return (
     <div
       {...rest}
-      className={`ss-row${className ? ` ${className}` : ''}`}
+      className={`sk-row${className ? ` ${className}` : ''}`}
       data-selected={selected || undefined}
       data-unread={unread || undefined}
       data-lead={lead ? '' : undefined}
-      style={{ '--ss-row-pad': `${pad}px`, ...style } as CSSProperties}
+      style={{ '--sk-row-pad': `${pad}px`, ...style } as CSSProperties}
     >
-      {unread && <span className="ss-row__dot" aria-hidden />}
-      {lead && <span className="ss-row__lead">{lead}</span>}
-      <span className="ss-row__body">
-        <span className="ss-row__head">
-          <span className="ss-row__title">{title}</span>
-          {meta && <span className="ss-row__meta">{meta}</span>}
+      {unread && <span className="sk-row__dot" aria-hidden />}
+      {lead && <span className="sk-row__lead">{lead}</span>}
+      <span className="sk-row__body">
+        <span className="sk-row__head">
+          <span className="sk-row__title">{title}</span>
+          {meta && <span className="sk-row__meta">{meta}</span>}
         </span>
-        {subtitle && <span className="ss-row__subtitle">{subtitle}</span>}
+        {subtitle && <span className="sk-row__subtitle">{subtitle}</span>}
       </span>
       {preview && (
         Array.isArray(preview) && preview.every((w) => typeof w === 'number') ? (
-          <span className="ss-row__preview" aria-hidden>
+          <span className="sk-row__preview" aria-hidden>
             {preview.map((w, i) => <Bar key={i} w={w} h={6} tone={2} />)}
           </span>
         ) : (
-          <span className="ss-row__preview" data-text>{preview}</span>
+          <span className="sk-row__preview" data-text>{preview}</span>
         )
       )}
       {children}

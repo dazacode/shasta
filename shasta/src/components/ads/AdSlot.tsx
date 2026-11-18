@@ -5,7 +5,7 @@
 // SPA note: an internal page is unmounted when its tab is not in front, so switching tabs mounts a fresh unit and
 // fires a fresh request — more impressions, and each push targets its own element. `data-ad-filled` guards against a
 // double AdSense push into the same element (React 19 StrictMode runs effects twice in dev).
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ADSENSE_CLIENT,
   ADSENSE_SLOT,
@@ -50,6 +50,9 @@ export function AdSlot({
   const ref = useRef<HTMLModElement>(null)
   const wrap = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
+  // the unit reported that nothing arrived (ad host blocked or no fill): collapse rather than keep an empty box
+  const [empty, setEmpty] = useState(false)
+  const onEmpty = useCallback(() => setEmpty(true), [])
 
   useEffect(() => {
     const el = ref.current
@@ -70,7 +73,7 @@ export function AdSlot({
     }
   }, [on])
 
-  if (!HAS_DISPLAY_ADS || !on) return null
+  if (!HAS_DISPLAY_ADS || !on || empty) return null
 
   if (!ADSENSE_CLIENT) {
     if (!adsAvailable()) return null
@@ -82,7 +85,7 @@ export function AdSlot({
             Ad
           </span>
         )}
-        {banner && <AdsterraFrame banner={banner} />}
+        {banner && <AdsterraFrame banner={banner} onEmpty={onEmpty} />}
       </div>
     )
   }

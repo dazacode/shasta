@@ -26,7 +26,7 @@ function ago(t: number | null | undefined, now: number) {
 
 type Tone = 'ok' | 'busy' | 'ready' | 'warn' | 'muted'
 const TONES: Record<Tone, string> = {
-  ok: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+  ok: 'bg-shasta-success/15 text-shasta-success',
   busy: 'bg-shasta-field text-shasta-muted',
   ready: 'bg-shasta-field text-shasta-accent',
   warn: 'bg-shasta-danger/15 text-shasta-danger',

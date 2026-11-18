@@ -1,32 +1,32 @@
 /* Tabs */
 
 @layer stageshow {
-  .ss-tabs {
+  .sk-tabs {
     position: relative;
     display: flex;
     gap: 18px;
-    border-bottom: 1px solid var(--ss-line);
+    border-bottom: 1px solid var(--sk-line);
   }
 
-  .ss-tabs__tab {
+  .sk-tabs__tab {
     padding-bottom: 9px;
     font-size: 12.5px;
     font-weight: 500;
-    color: var(--ss-text);
+    color: var(--sk-text);
     transition: color 0.2s ease;
   }
 
-  .ss-tabs__tab[data-on] {
-    color: var(--ss-text-strong);
+  .sk-tabs__tab[data-on] {
+    color: var(--sk-text-strong);
   }
 
-  .ss-tabs__bar {
+  .sk-tabs__bar {
     position: absolute;
     bottom: -1px;
     left: 0;
     width: 1px;
     height: 2px;
-    background: var(--ss-text-strong);
+    background: var(--sk-text-strong);
     transform-origin: 0 0;
     transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
   }

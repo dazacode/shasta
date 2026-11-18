@@ -120,7 +120,7 @@ export function Follow({ to, stiffness = 0.25, className, style, children, ...re
   }, [stiffness, reduced])
   useLayoutEffect(() => wake.current(), [to?.x, to?.y, to?.width, to?.height, !to])
   return (
-    <div {...rest} ref={el} className={`ss-follow${className ? ` ${className}` : ''}`} data-show={to ? true : undefined} style={{ ...style, ...(reduced ? { transition: 'none' } : null) }}>
+    <div {...rest} ref={el} className={`sk-follow${className ? ` ${className}` : ''}`} data-show={to ? true : undefined} style={{ ...style, ...(reduced ? { transition: 'none' } : null) }}>
       {children}
     </div>
   )

@@ -47,7 +47,7 @@ export function Connector({ from, to, route = 'h', show, radius = 8, dots, arrow
   // the 4/4 pattern a hair so a whole number of dashes fits
   const line = useRef<SVGPathElement>(null)
   const reveal = useRef<SVGPathElement>(null)
-  const revealId = `ss-connector-${useId().replace(/:/g, '')}`
+  const revealId = `sk-connector-${useId().replace(/:/g, '')}`
   const [arrived, setArrived] = useState(false)
   useLayoutEffect(() => {
     const el = line.current
@@ -98,17 +98,17 @@ export function Connector({ from, to, route = 'h', show, radius = 8, dots, arrow
   const at = along(pts, labelAt)
   return (
     <>
-      <svg className={`ss-connector${className ? ` ${className}` : ''}`} data-show={show || undefined} data-arrived={show && arrived || undefined} data-dashed={dashed || undefined} aria-hidden>
+      <svg className={`sk-connector${className ? ` ${className}` : ''}`} data-show={show || undefined} data-arrived={show && arrived || undefined} data-dashed={dashed || undefined} aria-hidden>
         {/* The reveal has its own normalized path. The visible dashed line
             keeps real dash spacing while its tip travels toward the target. */}
-        {dashed && <defs><mask id={revealId} maskUnits="userSpaceOnUse"><path ref={reveal} className="ss-connector__reveal" d={d} pathLength="1" style={{ fill: 'none', stroke: '#fff', strokeWidth: 8 }} /></mask></defs>}
-        <path ref={line} className="ss-connector__line" d={d} pathLength={dashed ? undefined : 1} mask={dashed ? `url(#${revealId})` : undefined} />
-        {arrow && directionLength > .001 && <path d={head} className="ss-connector__arrow" />}
-        {ends === 'both' && <circle cx={from.x} cy={from.y} r={3} className="ss-connector__dot ss-connector__dot--start" />}
-        {ends !== 'none' && <circle cx={to.x} cy={to.y} r={3} className="ss-connector__dot" />}
+        {dashed && <defs><mask id={revealId} maskUnits="userSpaceOnUse"><path ref={reveal} className="sk-connector__reveal" d={d} pathLength="1" style={{ fill: 'none', stroke: '#fff', strokeWidth: 8 }} /></mask></defs>}
+        <path ref={line} className="sk-connector__line" d={d} pathLength={dashed ? undefined : 1} mask={dashed ? `url(#${revealId})` : undefined} />
+        {arrow && directionLength > .001 && <path d={head} className="sk-connector__arrow" />}
+        {ends === 'both' && <circle cx={from.x} cy={from.y} r={3} className="sk-connector__dot sk-connector__dot--start" />}
+        {ends !== 'none' && <circle cx={to.x} cy={to.y} r={3} className="sk-connector__dot" />}
       </svg>
       {label !== undefined && (
-        <span className="ss-connector__label" data-show={show || undefined} data-arrived={show && arrived || undefined} data-step={typeof label === 'number' || undefined} style={{ left: at.x, top: at.y }}>
+        <span className="sk-connector__label" data-show={show || undefined} data-arrived={show && arrived || undefined} data-step={typeof label === 'number' || undefined} style={{ left: at.x, top: at.y }}>
           {label}
         </span>
       )}

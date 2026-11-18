@@ -86,16 +86,16 @@ export function Swap({ id, children, duration = 450, className, style, ...rest }
   // one the same size keeps its own edges
   const resizing = !!(prev && size && prev.w !== undefined && size.w !== prev.w)
   return (
-    <span {...rest} ref={box} className={`ss-swap${className ? ` ${className}` : ''}`} data-swapping={(!reduced && resizing) || undefined} style={{ width: size?.w, height: size?.h, transition: !reduced && prev ? `width ${duration}ms cubic-bezier(0.25, 0.8, 0.25, 1) ${shrink ? Math.round(duration * 0.5) : 0}ms, height ${duration}ms cubic-bezier(0.25, 0.8, 0.25, 1)` : 'none', ...style }}>
+    <span {...rest} ref={box} className={`sk-swap${className ? ` ${className}` : ''}`} data-swapping={(!reduced && resizing) || undefined} style={{ width: size?.w, height: size?.h, transition: !reduced && prev ? `width ${duration}ms cubic-bezier(0.25, 0.8, 0.25, 1) ${shrink ? Math.round(duration * 0.5) : 0}ms, height ${duration}ms cubic-bezier(0.25, 0.8, 0.25, 1)` : 'none', ...style }}>
       {!reduced && prev && (
-        <span key={`p${prev.id}`} className="ss-swap__out" style={{ animationDuration: `${duration * 0.5}ms`, width: prev.w, maxWidth: prev.w === undefined ? undefined : 'none' }}>
+        <span key={`p${prev.id}`} className="sk-swap__out" style={{ animationDuration: `${duration * 0.5}ms`, width: prev.w, maxWidth: prev.w === undefined ? undefined : 'none' }}>
           {prev.node}
         </span>
       )}
       {/* While the box eases, the new words are already at their final width:
           capped by the old box they would wrap until it caught up. The box
           clips them sideways meanwhile */}
-      <span key={`c${id}`} ref={inner} className="ss-swap__in" style={{ animationName: reduced ? 'none' : undefined, animationDuration: `${duration}ms`, ...(!reduced && prev && size ? { width: size.w, maxWidth: 'none' } : null) }}>
+      <span key={`c${id}`} ref={inner} className="sk-swap__in" style={{ animationName: reduced ? 'none' : undefined, animationDuration: `${duration}ms`, ...(!reduced && prev && size ? { width: size.w, maxWidth: 'none' } : null) }}>
         {children}
       </span>
     </span>

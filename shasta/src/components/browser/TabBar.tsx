@@ -37,38 +37,12 @@ import { keysFor, perform } from '@/lib/shortcuts'
 import { requestPrivateTab } from '@/lib/privateTab'
 import { useActiveTab } from '@/stores/tabsStore'
 import { cn } from '@/lib/utils'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { useShasuta, consoleLookOn, exitBrowser, SHASUTA_BUILT } from '@/shasuta/state'
-import { AvatarArt } from '@/shasuta/art'
-
-/** The console look's way home: a round button with the person's Shasuta picture, where the window dots were. */
-function ShasutaButton() {
-  const avatar = useShasuta((s) => s.prefs.avatar)
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <button
-            type="button"
-            aria-label="Return to Shasuta"
-            data-shasuta-home
-            onClick={() => exitBrowser()}
-            className="mr-1 mb-1 grid size-8 shrink-0 place-items-center self-center overflow-hidden rounded-full ring-2 ring-white/90 transition-transform duration-150 ease-shasta hover:scale-105 active:scale-95"
-          />
-        }
-      >
-        <AvatarArt avatar={avatar} />
-      </TooltipTrigger>
-      <TooltipContent>
-        Return to Shasuta <kbd className="ml-1.5 rounded-[4px] border border-current/20 px-1 font-mono text-[11px] leading-4 opacity-70">Alt+Shift+H</kbd>
-      </TooltipContent>
-    </Tooltip>
-  )
-}
+import { useShasuta, consoleLookOn, SHASUTA_BUILT } from '@/shasuta/state'
+import { ShasutaHomeButton } from '@/shasuta/host'
 
 function TrafficLights() {
   const console_ = useShasuta((s) => consoleLookOn(s.prefs))
-  if (SHASUTA_BUILT && console_) return <ShasutaButton />
+  if (SHASUTA_BUILT && console_) return <ShasutaHomeButton />
   return <WindowDots />
 }
 

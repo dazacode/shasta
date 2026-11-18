@@ -42,8 +42,8 @@ export function Camera({ focus, pad = 32, max = 2, duration = 1100, feather = 28
   }
   const ease = `${reduced ? 0 : duration}ms ${css(curve)}`
   return (
-    <div className="ss-camera-view" data-zoomed={transform === 'none' ? undefined : true} data-focus={transform === 'none' || !focus ? undefined : `${focus.x},${focus.y},${focus.width},${focus.height}`} data-feather={feather} style={{ ['--ss-feather' as string]: `${transform === 'none' ? 0 : feather}px`, transition: `--ss-feather ${ease}` }}>
-      <div ref={ref} className={`ss-camera${className ? ` ${className}` : ''}`} style={{ transform, transition: `transform ${ease}` }}>
+    <div className="sk-camera-view" data-zoomed={transform === 'none' ? undefined : true} data-focus={transform === 'none' || !focus ? undefined : `${focus.x},${focus.y},${focus.width},${focus.height}`} data-feather={feather} style={{ ['--sk-feather' as string]: `${transform === 'none' ? 0 : feather}px`, transition: `--sk-feather ${ease}` }}>
+      <div ref={ref} className={`sk-camera${className ? ` ${className}` : ''}`} style={{ transform, transition: `transform ${ease}` }}>
         {children}
       </div>
     </div>

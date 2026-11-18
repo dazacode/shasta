@@ -1,0 +1,43 @@
+{
+  "lockfileVersion": 2,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "project-shasta",
+      "dependencies": {
+        "pnpm": "^12.18.0",
+      },
+    },
+  },
+  "packages": {
+    "@pnpm/exe.android-arm64": ["@pnpm/exe.android-arm64@12.18.0", "", { "os": "android", "cpu": "arm64" }, "sha512-fOF6IwgvnUKEmVedGqiAsNPfN2Ry8GvaqzSQOiF3RJFbpBfPKO/6YT54s1GjToyYinRxw9preHHPe4y2N3SzhA=="],
+
+    "@pnpm/exe.android-x64": ["@pnpm/exe.android-x64@12.18.0", "", { "os": "android", "cpu": "x64" }, "sha512-6OiolnaCsB3/GcJ9XNrenbUH3zFHRJ+5QynrMUUEyThbgnnCzWxa199hpQlOmxN4rAXuYQ0IYgWFNUZxyzg31Q=="],
+
+    "@pnpm/exe.darwin-arm64": ["@pnpm/exe.darwin-arm64@12.18.0", "", { "os": "darwin", "cpu": "arm64" }, "sha512-zkq+4YzVIX39ETYLyC3W7LY7MpHEU/J3nRhHl4i2yPld2Cf2+rEKRh3ejJ4AmaQ77HHJLCktY4Z3jq0fpcxFXg=="],
+
+    "@pnpm/exe.darwin-x64": ["@pnpm/exe.darwin-x64@12.18.0", "", { "os": "darwin", "cpu": "x64" }, "sha512-qMsL9qx92unOTa6hgkfiTJv8ceZaTx0IQg7InhYDVX2ZrTECujaVEEVypnJK5m3eGUsP1KD7Y4qIgleCwfRsYw=="],
+
+    "@pnpm/exe.freebsd-x64": ["@pnpm/exe.freebsd-x64@12.18.0", "", { "os": "freebsd", "cpu": "x64" }, "sha512-/9vy/4ms52cU4MjZ5NhHd6N2d9L9W0kARf5/ff2tweAHu0VeUzs/0qp/7ZHFuddm2Wa/m0AKQoPum9AVUCqKsw=="],
+
+    "@pnpm/exe.linux-arm64": ["@pnpm/exe.linux-arm64@12.18.0", "", { "os": "linux", "cpu": "arm64", "libc": "glibc" }, "sha512-2dpyVBCHT+FfpuQh9i+7MXAqNWYLCvD5vYr5p6Eimxoga8USLnjbUgyj72AOrO0hjc5ri3TEFP3jiyBHjkSZpQ=="],
+
+    "@pnpm/exe.linux-arm64-musl": ["@pnpm/exe.linux-arm64-musl@12.18.0", "", { "os": "linux", "cpu": "arm64", "libc": "musl" }, "sha512-Vp+TIMPPyackVCXkOdEKH/RmAn/r07EcIyrgZYQK7VrkksqZOie0GnWIx+85mPqeFEYCRtXIZAFJ9L4ceTndDg=="],
+
+    "@pnpm/exe.linux-ppc64": ["@pnpm/exe.linux-ppc64@12.18.0", "", { "os": "linux", "cpu": "ppc64", "libc": "glibc" }, "sha512-BBOOOfNJ2QwIIya3eKqOjiN4WNTszfRz7HCvw9XggcT7+ftMjNP8XJ/GfW+ltCBeUFR9d8WBVsr2m/NLjX2CZQ=="],
+
+    "@pnpm/exe.linux-riscv64": ["@pnpm/exe.linux-riscv64@12.18.0", "", { "os": "linux", "cpu": "none", "libc": "glibc" }, "sha512-7kMN77xSOYJX8GPSH5RbNAc5oM61LMmcSUukDDUwllnZPXm8GRPskCNsTWy8SCw01Kr1FB+5SwGNMiTdiziLNQ=="],
+
+    "@pnpm/exe.linux-s390x": ["@pnpm/exe.linux-s390x@12.18.0", "", { "os": "linux", "cpu": "s390x", "libc": "glibc" }, "sha512-htuSCpEcmDzhKoJqXbPkvfr176dBHU0QIF5mWcRiqxRXAB/1JoYiMYotfjWpk+ztgpB9qlx4XnWlLFAf7gzc6g=="],
+
+    "@pnpm/exe.linux-x64": ["@pnpm/exe.linux-x64@12.18.0", "", { "os": "linux", "cpu": "x64", "libc": "glibc" }, "sha512-OJ+X2wcraldCwj75pCIerWARQSRpdfj0eBTs/2ODyhfeW46ylOnjTIE/GKra6Mn6E72/gBmXS8igrUioa+F9fQ=="],
+
+    "@pnpm/exe.linux-x64-musl": ["@pnpm/exe.linux-x64-musl@12.18.0", "", { "os": "linux", "cpu": "x64", "libc": "musl" }, "sha512-Uj+vzfIQ62kDP10x36yHZIXVs5ohdNtiPYwn5FhCLlNScHPo0OAI+ShGDtLofiBXKE7umu71Jmjm7N8a8zVcDw=="],
+
+    "@pnpm/exe.win32-arm64": ["@pnpm/exe.win32-arm64@12.18.0", "", { "os": "win32", "cpu": "arm64" }, "sha512-wEY6jiACGcbhhi5yD59doHqNTndS7AaujaPmtWAu1DKkHru2hy5fJ9yUGecW72Ypaw2/I3BEprfMOopap2NQtw=="],
+
+    "@pnpm/exe.win32-x64": ["@pnpm/exe.win32-x64@12.18.0", "", { "os": "win32", "cpu": "x64" }, "sha512-5FJkghO7RLRkQpWxeVEygW9XsmnNuxzPfXbgwFWCHsFyFhpDn/vOdL88ToQEM0Kt5igdW5s6U0/IDH8Dvkt3pg=="],
+
+    "pnpm": ["pnpm@12.18.0", "", { "optionalDependencies": { "@pnpm/exe.android-arm64": "12.18.0", "@pnpm/exe.android-x64": "12.18.0", "@pnpm/exe.darwin-arm64": "12.18.0", "@pnpm/exe.darwin-x64": "12.18.0", "@pnpm/exe.freebsd-x64": "12.18.0", "@pnpm/exe.linux-arm64": "12.18.0", "@pnpm/exe.linux-arm64-musl": "12.18.0", "@pnpm/exe.linux-ppc64": "12.18.0", "@pnpm/exe.linux-riscv64": "12.18.0", "@pnpm/exe.linux-s390x": "12.18.0", "@pnpm/exe.linux-x64": "12.18.0", "@pnpm/exe.linux-x64-musl": "12.18.0", "@pnpm/exe.win32-arm64": "12.18.0", "@pnpm/exe.win32-x64": "12.18.0" }, "hasInstallScript": true, "bin": { "pn": "pn", "pnx": "pnx", "pnpm": "pnpm", "pnpx": "pnpx" } }, "sha512-nXiC1dyCFH7PxOBiqjSDTgrQKWcQoYN6ERWuASEn02txCeMhrBWYod0KZVl2gbHpmRfhLtDXSerpEYeUM2O+sw=="],
+  }
+}

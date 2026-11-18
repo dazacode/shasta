@@ -1,0 +1,5 @@
+Stickers: SVG images from Noto Emoji (https://github.com/googlefonts/noto-emoji), tag v2.047, folder svg/,
+renamed to Shasta's sticker ids (shasta/src/social/stickers.ts). Unmodified otherwise.
+Copyright Google LLC. Noto Emoji's README: "Tools and most image resources are under the Apache license,
+version 2.0"; the repository's LICENSE file at that tag is the SIL Open Font License 1.1. Both texts are in
+/licenses/Noto-Emoji-Apache-2.0.txt and /licenses/Noto-Emoji-OFL-1.1.txt.

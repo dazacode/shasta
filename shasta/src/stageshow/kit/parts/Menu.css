@@ -1,34 +1,34 @@
 /* Menu */
 
 @layer stageshow {
-  .ss-menu {
+  .sk-menu {
     display: flex;
     flex-direction: column;
   }
 
-  .ss-menu__item {
+  .sk-menu__item {
     display: flex;
     align-items: center;
     gap: 8px;
-    height: var(--ss-row);
+    height: var(--sk-row);
     padding: 0 8px;
-    border-radius: var(--ss-radius-sm);
+    border-radius: var(--sk-radius-sm);
     font-size: 12px;
-    color: var(--ss-text-strong);
+    color: var(--sk-text-strong);
     transition: background-color 0.12s ease;
   }
 
-  .ss-menu__item[data-active] {
-    background-color: var(--ss-ink-2);
+  .sk-menu__item[data-active] {
+    background-color: var(--sk-ink-2);
   }
 
   /* The item under the cursor highlights, as in a real menu; fast in, eased out */
-  .ss-menu__item {
+  .sk-menu__item {
     transition: background-color 0.15s ease;
   }
 
-  .ss-menu__item[data-hover] {
-    background-color: var(--ss-ink-2);
+  .sk-menu__item[data-hover] {
+    background-color: var(--sk-ink-2);
     transition-duration: 0s;
   }
 }

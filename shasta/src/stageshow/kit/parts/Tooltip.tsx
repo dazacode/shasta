@@ -13,8 +13,8 @@ export function Tooltip({ show, at, side = 'below', gap = 6, children, className
   const x = at.x + at.width / 2
   const y = side === 'below' ? at.y + at.height + gap : at.y - gap
   return (
-    <span {...rest} className={`ss-tooltip${className ? ` ${className}` : ''}`} data-show={(show && at.width > 0) || undefined} data-side={side} style={{ left: x, top: y, ...style }} role="tooltip">
-      <span className="ss-tooltip__label">{children}</span>
+    <span {...rest} className={`sk-tooltip${className ? ` ${className}` : ''}`} data-show={(show && at.width > 0) || undefined} data-side={side} style={{ left: x, top: y, ...style }} role="tooltip">
+      <span className="sk-tooltip__label">{children}</span>
     </span>
   )
 }

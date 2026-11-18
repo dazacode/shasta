@@ -34,3 +34,6 @@ vendor/
 shasta/tmp-*.mjs
 shasta/.cloud.mjs
 *.tmp.mjs
+
+# Shasuta design reference footage (docs/notes/shasuta.md): never commit or publish
+shasta/src/shasuta/referencesfordesign/

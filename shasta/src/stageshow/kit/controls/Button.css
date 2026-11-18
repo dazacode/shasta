@@ -1,0 +1,122 @@
+/* Button */
+
+@layer stageshow {
+  .sk-button {
+    /* A box with text keeps a layer of its own, so a press or a row moving
+       it never steps its label a whole pixel inside the fill */
+    will-change: transform;
+
+    --sk-button-height: 28px;
+    --sk-button-pad: 12px;
+    /* The side with a glyph: a glyph reads as further in than words do */
+    --sk-button-pad-icon: 9px;
+    --sk-button-icon: 14px;
+
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    --sk-button-gap: 6px;
+    gap: var(--sk-button-gap);
+    box-sizing: border-box;
+    min-height: var(--sk-button-height);
+    padding: 0 var(--sk-button-pad);
+    border-radius: var(--sk-radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    line-height: 1.25;
+    white-space: nowrap;
+    color: var(--sk-text-strong);
+    background: var(--sk-surface);
+    /* The ring is drawn inside, so it never adds to the padding */
+    box-shadow: inset 0 0 0 1px var(--sk-ink-4);
+    transition:
+      transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      background-color 160ms ease,
+      color 160ms ease,
+      padding 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .sk-button[data-size="small"] {
+    --sk-button-height: 24px;
+    --sk-button-pad: 8px;
+    --sk-button-pad-icon: 6px;
+    --sk-button-icon: 12px;
+    --sk-button-gap: 5px;
+    font-size: 12px;
+  }
+
+  .sk-button[data-size="large"] {
+    --sk-button-height: 32px;
+    --sk-button-pad: 14px;
+    --sk-button-pad-icon: 11px;
+    --sk-button-icon: 16px;
+    --sk-button-gap: 7px;
+    border-radius: var(--sk-radius-md);
+    font-size: 14px;
+  }
+
+  .sk-button[data-leading] { padding-left: var(--sk-button-pad-icon); }
+  .sk-button[data-trailing] { padding-right: var(--sk-button-pad-icon); }
+
+  /* Variants: hover is one step of the button's own color, never a gray swap */
+  .sk-button[data-hover] { background: color-mix(in srgb, var(--sk-surface), #000 4%); }
+
+  .sk-button[data-variant="primary"] { background: var(--sk-accent); color: #fff; box-shadow: none; }
+  .sk-button[data-variant="primary"][data-hover] { background: color-mix(in srgb, var(--sk-accent), #000 10%); }
+
+  .sk-button[data-variant="danger"] { background: var(--sk-danger); color: #fff; box-shadow: none; }
+  .sk-button[data-variant="danger"][data-hover] { background: color-mix(in srgb, var(--sk-danger), #000 10%); }
+
+  .sk-button[data-variant="tertiary"] { background: var(--sk-ink-2); box-shadow: none; }
+  .sk-button[data-variant="tertiary"][data-hover] { background: var(--sk-ink-3); }
+
+  .sk-button[data-variant="ghost"] { background: transparent; box-shadow: none; }
+  .sk-button[data-variant="ghost"][data-hover] { background: var(--sk-ink-2); }
+
+  /* The press: a small scale on pointer-down, the label stays put inside it */
+  .sk-button[data-pressed] { transform: scale(0.97); }
+
+  .sk-button__icon {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: var(--sk-button-icon);
+    height: var(--sk-button-icon);
+  }
+
+  /* The leading slot opens and closes its own width, taking the gap with it,
+     and the icon fades and grows in as it opens */
+  .sk-button__lead {
+    margin-right: calc(-1 * var(--sk-button-gap, 6px));
+    width: 0;
+    opacity: 0;
+    scale: 0.6;
+    transition:
+      width 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      margin 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 160ms ease,
+      scale 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .sk-button__lead[data-open] {
+    margin-right: 0;
+    width: var(--sk-button-icon);
+    opacity: 1;
+    scale: 1;
+  }
+
+  .sk-button__icon > svg {
+    flex: none;
+    width: var(--sk-button-icon);
+    height: var(--sk-button-icon);
+  }
+
+  /* The label's line box trimmed to cap height and baseline, so the words
+     center on their own ink beside an icon instead of sitting low */
+  .sk-button__label {
+    display: block;
+    text-box: trim-both cap alphabetic;
+  }
+}

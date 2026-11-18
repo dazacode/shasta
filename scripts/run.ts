@@ -297,18 +297,20 @@ if (mode === "build") {
 	await Promise.race([server.exited, tunnel.exited]);
 	stop();
 } else if (mode === "dev") {
-	needServer();
+	// `bun run dev` works from the repo root and from shasta/ (shasta's `dev` script calls this file; plain Vite is `dev:vite`).
+	const hasServer = existsSync(SERVER);
+	if (!hasServer) console.log("\x1b[33mNo server/ in this checkout (the public source snapshot omits it): starting Vite alone. Browsing and the Store need the backend.\x1b[0m");
 	await ensureEngine(false);
 	await ensureDeps();
-	// Vite proxies /wisp to this server, so the frontend's same-origin default URL just works.
-	const wisp = Bun.spawn(["bun", "server.mjs"], { cwd: SERVER, env: { ...env, PORT: "8080" }, stdio: ["inherit", "inherit", "inherit"] });
-	const vite = Bun.spawn(["bun", "run", "dev", "--host", "localhost"], { cwd: SHASTA, env, stdio: ["inherit", "inherit", "inherit"] });
+	// Vite proxies /wisp, /api and friends to this server, so the frontend's same-origin default URLs just work.
+	const wisp = hasServer ? Bun.spawn(["bun", "server.mjs"], { cwd: SERVER, env: { ...env, PORT: "8080" }, stdio: ["inherit", "inherit", "inherit"] }) : null;
+	const vite = Bun.spawn(["bun", "run", "dev:vite", "--host", "localhost"], { cwd: SHASTA, env, stdio: ["inherit", "inherit", "inherit"] });
 	const stop = () => {
-		wisp.kill();
+		wisp?.kill();
 		vite.kill();
 	};
 	for (const sig of ["SIGINT", "SIGTERM"] as const) process.on(sig, stop);
-	await Promise.race([wisp.exited, vite.exited]);
+	await Promise.race([wisp ? wisp.exited : vite.exited, vite.exited]);
 	stop();
 } else {
 	fail("usage: bun scripts/run.ts <dev|start|build|share|pages-backend>");

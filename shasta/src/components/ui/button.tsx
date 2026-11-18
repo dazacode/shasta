@@ -1,5 +1,6 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
+import { Loader2 } from "lucide-react"
 import { cn } from "cn"
 
 const buttonVariants = cva(
@@ -43,14 +44,31 @@ function Button({
   className,
   variant = "default",
   size = "default",
+  busy = false,
+  disabled,
+  children,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants> & {
+  /** working: the label stays (so the button keeps its size and name), a spinner covers it and aria-busy is set */
+  busy?: boolean
+}) {
   return (
     <ButtonPrimitive
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(buttonVariants({ variant, size, className }), busy && "relative")}
+      disabled={disabled || busy}
+      aria-busy={busy || undefined}
       {...props}
-    />
+    >
+      {busy ? (
+        <>
+          <span className="inline-flex items-center gap-[inherit] opacity-0">{children}</span>
+          <Loader2 aria-hidden className="absolute inset-0 m-auto animate-spin" />
+        </>
+      ) : (
+        children
+      )}
+    </ButtonPrimitive>
   )
 }
 

@@ -17,6 +17,7 @@ import { openControls } from '@/stores/gameControlsStore'
 import { MEDIA_CORS } from '@/lib/appApi'
 import { usePhonePads } from '@/lib/phonePad'
 import { PhonePadCard } from './PhonePadCard'
+import { useImmersive } from '@/shasuta/state'
 
 export type SplashStage = 'connecting' | 'loading' | 'starting' | 'ready'
 
@@ -46,6 +47,8 @@ export function GameSplash({ app, stage, tabId, onDone, onReload }: { app: Splas
   const { banner, developer, icon, slug } = useArt(app)
   const reducedMotion = document.documentElement.dataset.motion === 'reduced'
   const pad = usePads((s) => s.name)
+  // started from Shasuta, filling the window: the way back is the top edge, not a shortcut
+  const immersive = useImmersive()
   const shownAt = useRef(Date.now())
   const [leaving, setLeaving] = useState(false)
   const [slow, setSlow] = useState(false)
@@ -153,7 +156,7 @@ export function GameSplash({ app, stage, tabId, onDone, onReload }: { app: Splas
                   <Keyboard className="size-3.5" aria-hidden /> Keys can be remapped
                 </span>
               )}
-              <span className="rounded-md bg-white/[0.08] px-2.5 py-1">{keysFor('toggleGameMode')} leaves game mode</span>
+              <span className="rounded-md bg-white/[0.08] px-2.5 py-1">{immersive ? 'Move to the top for the browser' : `${keysFor('toggleGameMode')} leaves game mode`}</span>
             </div>
           )}
         </div>

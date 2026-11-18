@@ -1,6 +1,8 @@
 // Pure model of the media hub (components/browser/MediaHub.tsx): what is playing in each tab, which one to show,
 // and where its playhead is right now. No DOM, so it is unit-testable (tests/media.test.ts).
 
+import { serviceForHost } from './musicServices'
+
 /** The actions a page registered with navigator.mediaSession (or that Shasta can do on the element itself). */
 export interface MediaActions {
   previoustrack: boolean
@@ -116,4 +118,54 @@ export function trackIdentity(m: Pick<MediaInfo, 'key' | 'title' | 'artist' | 'p
  */
 export function pageTitleAsTrack(title: string): string {
   return title.replace(/^\s*(?:[▶►⏵⏸❚▮|]+\s*)+/u, '').replace(/^\(\d+\+?\)\s*/, '').trim()
+}
+
+/** How long a paused session stays the "front" one (the island still offers its play button): ten minutes. */
+export const FRONT_PAUSED_MS = 10 * 60_000
+
+/**
+ * The session the now-playing island shows: whatever is playing (the newest play if several), else the one that played last
+ * if that was recent. `now` is performance.now(), the clock `lastPlayed` uses.
+ */
+export function pickFront(list: readonly MediaInfo[], now: number): MediaInfo | null {
+  const playing = list.filter((m) => m.playing)
+  if (playing.length) return [...playing].sort((a, b) => b.lastPlayed - a.lastPlayed)[0]
+  const recent = list.filter((m) => m.lastPlayed > 0 && now - m.lastPlayed < FRONT_PAUSED_MS)
+  return [...recent].sort((a, b) => b.lastPlayed - a.lastPlayed)[0] ?? null
+}
+
+/** What the OS is told about a session: nothing that changes every second, so it is only re-sent when the track or the actions change. */
+export function bridgeIdentity(m: MediaInfo | null, title: string): string {
+  if (!m) return ''
+  return [m.key, title, m.artist, m.album, m.artwork ?? '', m.actions.previoustrack, m.actions.nexttrack, m.actions.seekto].join('\u0000')
+}
+
+
+// ---- music or video? --------------------------------------------------------------------------------------------------------
+// An element's tag is not the answer: YouTube Music plays its songs (and the music videos mixed into its playlists) in a <video>,
+// with a picture. The people playing it are listening, so for music sites everything is music, and a "video" that carries an album
+// is a track whatever site it is on. Anything else with a picture is a video (Shasuta sends those back to the browser).
+
+/** Sites where whatever plays is music, even in a <video> (the list is lib/musicServices.ts). A host matches itself and its subdomains. */
+export const isMusicHost = (host: string): boolean => serviceForHost(host) !== null
+
+/** What a session is, given what its element is and where it plays. */
+export function classifyKind(raw: MediaInfo['kind'], ctx: { host: string; album: string }): MediaInfo['kind'] {
+  if (raw === 'audio') return 'audio'
+  if (isMusicHost(ctx.host)) return 'audio'
+  if (ctx.album.trim()) return 'audio'
+  return 'video'
+}
+
+/**
+ * One session per tab: a page that swaps between elements (YouTube Music hands a song and its video to different elements) is one
+ * player, so its newest session stands for the tab. Playing first, then the newest.
+ */
+export function onePerTab(list: readonly MediaInfo[]): MediaInfo[] {
+  const best = new Map<string, MediaInfo>()
+  for (const m of list) {
+    const cur = best.get(m.tabId)
+    if (!cur || Number(m.playing) > Number(cur.playing) || (m.playing === cur.playing && m.lastPlayed > cur.lastPlayed)) best.set(m.tabId, m)
+  }
+  return orderSessions([...best.values()])
 }

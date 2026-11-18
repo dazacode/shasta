@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyFrameUrl, makeTab, normalizeOrder, pickNeighbour, pushEntry, setEntryTitle, tabUrl, type Tab } from '@/lib/tabModel'
+import { activateTab, applyFrameUrl, makeTab, normalizeOrder, pickNeighbour, pushEntry, releaseFrame, setEntryTitle, tabUrl, wakeFrame, type Tab } from '@/lib/tabModel'
 
 const page = (url: string, extra: Partial<Tab> = {}) => makeTab(url, extra)
 
@@ -76,5 +76,44 @@ describe('pickNeighbour', () => {
     const b = page('https://b.test/', { groupId: 'g' })
     const c = page('https://c.test/')
     expect(pickNeighbour([a, b, c], b.id)).toBe(a.id)
+  })
+})
+
+describe('frame lifecycle (wakeFrame / activateTab / releaseFrame)', () => {
+  const live = (url: string) => page(url, { frame: true, frameUrl: url })
+
+  it('releasing a background site suspends it, and selecting it again reloads it in a fresh frame', () => {
+    const t = releaseFrame(live('https://a.test/'))
+    expect(t).toMatchObject({ frame: false, suspended: true, frameUrl: '' })
+    const back = activateTab(t, 5)
+    expect(back).toMatchObject({ frame: true, suspended: false, loading: true, pendingCommit: true, expectReplace: true, frameKey: t.frameKey + 1, lastActiveAt: 5 })
+  })
+
+  it('a Shasta page with a site kept behind it loses only that frame; selecting it shows the page without a spinner', () => {
+    // a site, then the new tab page: the site's frame is kept for Back
+    const t = pushEntry(live('https://a.test/'), 'shasta://newtab', 'New Tab')
+    expect(t.frame).toBe(true)
+    const released = releaseFrame(t)
+    expect(released).toMatchObject({ frame: false, suspended: false })
+    const shown = activateTab(released, 7)
+    expect(shown).toMatchObject({ frame: false, suspended: false, loading: false, pendingCommit: false, lastActiveAt: 7 })
+  })
+
+  it('a Shasta page marked suspended (older state) is cleared instead of loading forever', () => {
+    const t = page('shasta://settings', { suspended: true })
+    expect(activateTab(t)).toMatchObject({ suspended: false, loading: false })
+  })
+
+  it('a live tab is only stamped when selected', () => {
+    const t = live('https://a.test/')
+    const next = activateTab(t, 9)
+    expect(next).toMatchObject({ frame: true, loading: false, frameKey: t.frameKey, lastActiveAt: 9 })
+    expect(wakeFrame(t)).toBe(t)
+  })
+
+  it('every combination the functions produce is one of the documented states', () => {
+    const ok = (t: Tab) => !(t.frame && t.suspended) && !(t.suspended && !/^https?:/.test(tabUrl(t)))
+    const starts = [page('https://a.test/'), live('https://a.test/'), page('shasta://newtab'), pushEntry(live('https://a.test/'), 'shasta://newtab', 'New Tab')]
+    for (const s of starts) for (const t of [releaseFrame(s), activateTab(s), wakeFrame(s), activateTab(releaseFrame(s)), releaseFrame(activateTab(s))]) expect(ok(t)).toBe(true)
   })
 })

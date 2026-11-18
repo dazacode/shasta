@@ -24,8 +24,9 @@ export default function PrivacyPage() {
     >
       <div className="max-w-2xl">
         <p className="text-sm text-shasta-muted">
-          Shasta has no accounts and no sign-in. Nothing about you is tied to an identity, because there is no identity
-          to tie it to. This page explains the few times something does leave your device, and how to turn each one off.
+          Shasta works without an account or sign-in, and browsing is never tied to an identity. The one exception you
+          can choose is a friends account on your phone (below). This page explains the few times something does leave
+          your device, and how to turn each one off.
         </p>
 
         <Section id="device" title="What stays on this device">
@@ -99,6 +100,34 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
+        <Section id="social" title="Friends and messages (optional)">
+          <p>
+            Friends are opt-in and for 13 and up. Your phone becomes the account when you scan a code; a computer can be
+            linked to it. Shasta's server then keeps your handle, your age group (13-15, 16-17 or 18+, never your
+            birthday), your profile, who your friends are, your posts for 90 days and your messages for 30 days. A
+            session records which kind of device it is and the name you see in your devices list, never its IP address
+            or other details about the device.
+          </p>
+          <p>
+            Messages are encrypted on Shasta's server and in its backups. Shasta's staff can read a conversation only
+            when someone in it reports it; a report carries the last messages, and you see exactly which ones before
+            you send it.
+          </p>
+          <p>
+            "What I'm playing" is off until you turn it on. Then only your friends see it, and only the name of a Shasta
+            Store game: never a website, page title or address. It is not stored.
+          </p>
+          <p>
+            What a computer passes to your phone while linking (your Library, settings and the game in front) goes
+            straight between the two, sealed so the server can't read it. Your browsing history, tabs and cookies are
+            never part of it.
+          </p>
+          <p>
+            Deleting your account (on your phone) deletes all of it at once. Copies may stay in Shasta's encrypted server
+            backups until those expire.
+          </p>
+        </Section>
+
         <Section id="school" title="Schools and Chromebooks">
           <p>
             The school's own web filter and network can still see and block traffic, and if a device is managed the
@@ -108,7 +137,7 @@ export default function PrivacyPage() {
         </Section>
 
         <Section id="changes" title="Changes">
-          <p>This policy is honest by design and changes when the app does. Last updated 31 October 2026.</p>
+          <p>This policy is honest by design and changes when the app does. Last updated 8 November 2026.</p>
         </Section>
       </div>
     </PageShell>

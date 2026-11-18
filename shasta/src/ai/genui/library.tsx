@@ -65,7 +65,7 @@ const Table = defineComponent({
 
 const TONES = {
   info: { icon: Info, cls: 'border-sky-500/40 bg-sky-500/10' },
-  tip: { icon: Lightbulb, cls: 'border-emerald-500/40 bg-emerald-500/10' },
+  tip: { icon: Lightbulb, cls: 'border-shasta-success/40 bg-shasta-success/10' },
   warning: { icon: TriangleAlert, cls: 'border-amber-500/50 bg-amber-500/10' },
 } as const
 
@@ -160,49 +160,58 @@ const BarChart = defineComponent({
   },
 })
 
+const quizProps = z.object({ question: str, options: strs, answer: z.number(), explanation: str.optional() })
+
+// named components (not inline arrows) so the hooks inside follow the rules of hooks
+function QuizCard({ props }: { props: z.infer<typeof quizProps> }) {
+  const [picked, setPicked] = useState<number | null>(null)
+  const options = props.options ?? []
+  const right = Math.round(Number(props.answer))
+  return (
+    <div className="rounded-xl border border-shasta-line p-3">
+      <p className="mb-2 flex gap-2 text-sm font-medium"><CircleHelp className="mt-0.5 size-4 shrink-0 text-shasta-muted" aria-hidden />{ok(props.question)}</p>
+      <div className="space-y-1.5">
+        {options.map((o, i) => {
+          const done = picked !== null
+          const state = !done ? '' : i === right ? 'border-shasta-success bg-shasta-success/15' : i === picked ? 'border-shasta-danger bg-shasta-danger/15' : 'opacity-60'
+          return (
+            <button key={i} type="button" disabled={done} onClick={() => setPicked(i)} className={cn('flex w-full items-center gap-2 rounded-lg border border-shasta-line px-3 py-2 text-left text-sm transition-colors', !done && 'hover:bg-shasta-hover', state)}>
+              <span className="flex-1">{ok(o)}</span>
+              {done && i === right && <Check className="size-4 text-shasta-success" aria-label="Correct" />}
+              {done && i === picked && i !== right && <X className="size-4 text-shasta-danger" aria-label="Not quite" />}
+            </button>
+          )
+        })}
+      </div>
+      {picked !== null && <p className="mt-2 text-sm text-shasta-muted" role="status">{picked === right ? 'Correct. ' : 'Not quite. '}{props.explanation ? ok(props.explanation) : options[right] ? `The answer is “${ok(options[right])}”.` : ''}</p>}
+    </div>
+  )
+}
+
 const Quiz = defineComponent({
   name: 'Quiz',
   description: 'A multiple-choice question with instant feedback',
-  props: z.object({ question: str, options: strs, answer: z.number(), explanation: str.optional() }),
-  component: ({ props }) => {
-    const [picked, setPicked] = useState<number | null>(null)
-    const options = props.options ?? []
-    const right = Math.round(Number(props.answer))
-    return (
-      <div className="rounded-xl border border-shasta-line p-3">
-        <p className="mb-2 flex gap-2 text-sm font-medium"><CircleHelp className="mt-0.5 size-4 shrink-0 text-shasta-muted" aria-hidden />{ok(props.question)}</p>
-        <div className="space-y-1.5">
-          {options.map((o, i) => {
-            const done = picked !== null
-            const state = !done ? '' : i === right ? 'border-emerald-500 bg-emerald-500/15' : i === picked ? 'border-red-500 bg-red-500/15' : 'opacity-60'
-            return (
-              <button key={i} type="button" disabled={done} onClick={() => setPicked(i)} className={cn('flex w-full items-center gap-2 rounded-lg border border-shasta-line px-3 py-2 text-left text-sm transition-colors', !done && 'hover:bg-shasta-hover', state)}>
-                <span className="flex-1">{ok(o)}</span>
-                {done && i === right && <Check className="size-4 text-emerald-500" aria-label="Correct" />}
-                {done && i === picked && i !== right && <X className="size-4 text-red-500" aria-label="Not quite" />}
-              </button>
-            )
-          })}
-        </div>
-        {picked !== null && <p className="mt-2 text-sm text-shasta-muted" role="status">{picked === right ? 'Correct. ' : 'Not quite. '}{props.explanation ? ok(props.explanation) : options[right] ? `The answer is “${ok(options[right])}”.` : ''}</p>}
-      </div>
-    )
-  },
+  props: quizProps,
+  component: QuizCard,
 })
+
+const flashcardProps = z.object({ front: str, back: str })
+
+function FlashcardCard({ props }: { props: z.infer<typeof flashcardProps> }) {
+  const [flipped, setFlipped] = useState(false)
+  return (
+    <button type="button" onClick={() => setFlipped((f) => !f)} aria-pressed={flipped} className={cn('w-full rounded-xl border p-4 text-left text-sm transition-[color,background-color,box-shadow] duration-150 ease-shasta', flipped ? 'sh-selected border-transparent' : 'border-shasta-line bg-shasta-field/60 hover:bg-shasta-hover')}>
+      <span className="mb-1 block text-xs text-shasta-faint">{flipped ? 'Answer' : 'Question · tap to flip'}</span>
+      {flipped ? ok(props.back) : ok(props.front)}
+    </button>
+  )
+}
 
 const Flashcard = defineComponent({
   name: 'Flashcard',
   description: 'A card that flips from a question to its answer',
-  props: z.object({ front: str, back: str }),
-  component: ({ props }) => {
-    const [flipped, setFlipped] = useState(false)
-    return (
-      <button type="button" onClick={() => setFlipped((f) => !f)} aria-pressed={flipped} className={cn('w-full rounded-xl border p-4 text-left text-sm transition-[color,background-color,box-shadow] duration-150 ease-shasta', flipped ? 'sh-selected border-transparent' : 'border-shasta-line bg-shasta-field/60 hover:bg-shasta-hover')}>
-        <span className="mb-1 block text-xs text-shasta-faint">{flipped ? 'Answer' : 'Question · tap to flip'}</span>
-        {flipped ? ok(props.back) : ok(props.front)}
-      </button>
-    )
-  },
+  props: flashcardProps,
+  component: FlashcardCard,
 })
 
 const Event = defineComponent({

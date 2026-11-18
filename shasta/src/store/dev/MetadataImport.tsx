@@ -185,14 +185,14 @@ export function MetadataImport({ app, draft, onApplied }: { app: DevApp; draft: 
                 ))}
               </fieldset>
               <div className="mt-4 flex gap-2">
-                <Button disabled={!picked.size || applying} onClick={() => void apply()}>{applying ? 'Applying…' : 'Apply selected'}</Button>
+                <Button busy={applying} disabled={!picked.size || applying} onClick={() => void apply()}>Apply selected</Button>
                 <Button variant="ghost" onClick={reset}>Cancel</Button>
               </div>
             </div>
           )}
 
           {outcome && (
-            <p role="status" className={cn('text-sm', outcome.applied.length ? 'text-emerald-600 dark:text-emerald-400' : 'text-shasta-warn')}>
+            <p role="status" className={cn('text-sm', outcome.applied.length ? 'text-shasta-success' : 'text-shasta-warn')}>
               {outcome.applied.length ? `Imported: ${outcome.applied.join(', ')}.` : 'Nothing was imported.'}
               {outcome.skipped.length > 0 && ` Could not import: ${outcome.skipped.join(', ')}.`}
             </p>

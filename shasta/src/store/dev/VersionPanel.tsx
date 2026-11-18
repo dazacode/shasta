@@ -15,7 +15,7 @@ function Report({ r }: { r: PackageReport }) {
       <ProblemList title="This package can't be used yet" items={r.errors} />
       <ProblemList tone="warn" title="Worth a look" items={r.warnings} />
       {r.ok && (
-        <p className="text-sm text-emerald-600 dark:text-emerald-400">
+        <p className="text-sm text-shasta-success">
           Package accepted: {r.fileCount} files, {formatBytes(r.totalBytes)} unpacked, entry point <code>{r.entry}</code>.
         </p>
       )}
@@ -116,7 +116,7 @@ function NewVersion({ app, onApp }: { app: DevApp; onApp: (a: DevApp) => void })
         <textarea className={textareaClass} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={4000} placeholder={last ? 'What changed in this version?' : 'Initial release.'} />
       </Field>
       {error && <p role="alert" className="text-sm text-shasta-danger">{error}</p>}
-      <Button type="submit" className="w-fit" disabled={busy || !version.trim()}>{busy ? 'Creating…' : 'Create draft version'}</Button>
+      <Button busy={busy} type="submit" className="w-fit" disabled={busy || !version.trim()}>Create draft version</Button>
     </form>
   )
 }
@@ -176,7 +176,7 @@ function DraftEditor({ app, v, onApp }: { app: DevApp; v: DevVersion; onApp: (a:
         <textarea className={textareaClass} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={4000} />
       </Field>
       {error && <p role="alert" className="text-sm text-shasta-danger">{error}</p>}
-      <Button className="w-fit" disabled={!dirty || saving} onClick={() => void save()}>{saving ? 'Saving…' : 'Save version'}</Button>
+      <Button busy={saving} className="w-fit" disabled={!dirty || saving} onClick={() => void save()}>Save version</Button>
     </div>
   )
 }

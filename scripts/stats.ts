@@ -119,7 +119,7 @@ if (cmd === "sites") {
 	pushDashboard();
 	console.log(`\nTracker for ${domain}:
   a Shasta build: VITE_STATS_URL=${STATS_URL} VITE_STATS_WEBSITE_ID=${site.id} at BUILD time
-    (the deploy script for that host sets them, like scripts/deploy-base44.ts; the Pages site reads the root .env)
+    (the deploy script for that host sets them, like scripts/deploy-vercel-lite.ts; the Pages site reads the root .env)
   any other page: <script defer src="${STATS_URL}/s.js" data-website-id="${site.id}"></script>
 If that host is a Shasta frontend on another origin, it also needs APP_ORIGINS on the VPS for the Store and chat.`);
 } else if (cmd === "dashboard") {

@@ -13,6 +13,9 @@ interface LaunchQueue {
 /** The phone controller page (pad.html, or /pad after a host strips the extension). */
 export const isControllerUrl = (url: URL) => /\/pad(\.html)?$/.test(url.pathname)
 
+/** The phone app (me.html, at /me): a scanned link QR (`/me#l=...`) or friend code (`/me#f=...`). */
+export const isPhoneAppUrl = (url: URL) => /^\/me(\.html|\/)?$/.test(url.pathname)
+
 /**
  * Calls `handle` with every address the installed app is launched with (not the one this page already shows).
  * Returns false when the browser has no launch queue.

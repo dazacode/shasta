@@ -4,49 +4,49 @@
   /* The box never grows past the width it was given: a chip opening, or any
      content, clips inside the text area instead of pushing the trailing
      control and the box edge out into whatever sits next to the field */
-  .ss-field {
+  .sk-field {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 6px;
   }
 
-  .ss-field__label {
+  .sk-field__label {
     font-size: 11.5px;
     font-weight: 500;
-    color: var(--ss-text-strong);
+    color: var(--sk-text-strong);
   }
 
   /* The ring is a shadow, so focusing never moves the text */
-  .ss-field__box {
+  .sk-field__box {
     display: flex;
     align-items: center;
     gap: 8px;
-    height: var(--ss-control);
+    height: var(--sk-control);
     padding: 0 11px;
-    border-radius: var(--ss-radius-md);
-    background: var(--ss-surface);
-    box-shadow: inset 0 0 0 1px var(--ss-ink-4), 0 0 0 0 transparent;
+    border-radius: var(--sk-radius-md);
+    background: var(--sk-surface);
+    box-shadow: inset 0 0 0 1px var(--sk-ink-4), 0 0 0 0 transparent;
     font-size: 13px;
-    color: var(--ss-text-strong);
+    color: var(--sk-text-strong);
     transition: box-shadow 0.2s ease, padding 0.35s cubic-bezier(0.45, 0, 0.1, 1);
   }
 
   /* A chip sits the same distance from every edge of the field: the box gives
      up its left padding to the chip's own, at the same pace, so the text
      inside never moves while the chip opens around it */
-  .ss-field__box:has(.ss-field__value[data-chip]) {
-    padding-left: calc((var(--ss-control) - 24px) / 2);
+  .sk-field__box:has(.sk-field__value[data-chip]) {
+    padding-left: calc((var(--sk-control) - 24px) / 2);
   }
 
-  .ss-field[data-focused] .ss-field__box {
-    box-shadow: inset 0 0 0 1px var(--ss-accent), 0 0 0 3px var(--ss-accent-soft);
+  .sk-field[data-focused] .sk-field__box {
+    box-shadow: inset 0 0 0 1px var(--sk-accent), 0 0 0 3px var(--sk-accent-soft);
   }
 
-  .ss-field[data-status="error"] .ss-field__box {
-    box-shadow: inset 0 0 0 1px var(--ss-danger), 0 0 0 3px var(--ss-danger-soft);
+  .sk-field[data-status="error"] .sk-field__box {
+    box-shadow: inset 0 0 0 1px var(--sk-danger), 0 0 0 3px var(--sk-danger-soft);
   }
 
-  .ss-field__text {
+  .sk-field__text {
     position: relative;
     display: flex;
     flex: 1;
@@ -58,34 +58,34 @@
   }
 
   /* Leaves the moment the first character lands; fades back when emptied */
-  .ss-field__placeholder {
+  .sk-field__placeholder {
     position: absolute;
     top: 50%;
     left: 0;
-    color: var(--ss-text-faint);
+    color: var(--sk-text-faint);
     translate: 0 -50%;
     transition: opacity 0.2s ease;
   }
 
-  .ss-field[data-filled] .ss-field__placeholder {
+  .sk-field[data-filled] .sk-field__placeholder {
     opacity: 0;
     transition: none;
   }
 
-  .ss-field__value[data-password] {
+  .sk-field__value[data-password] {
     letter-spacing: 1.5px;
   }
 
   /* Committed as a chip in place: the text never swaps or changes weight; the
      surface fades in around it, the padding opens it out, and the x grows in
      beside it. Cleared, the whole chip fades holding its text. */
-  .ss-field__value {
+  .sk-field__value {
     display: inline-flex;
     flex: none;
     align-items: center;
     height: 24px;
     padding: 0;
-    border-radius: var(--ss-radius-pill);
+    border-radius: var(--sk-radius-pill);
     background-color: transparent;
     /* Released once it has faded: out of sight, so nothing needs to move */
     transition: none;
@@ -95,42 +95,42 @@
      x-height (which reads high once the words have ascenders: an email, a
      name). Cap to baseline is what a real text field centers. The
      placeholder is centered the same way, so they share a line. */
-  .ss-field__chars,
-  .ss-field__placeholder {
+  .sk-field__chars,
+  .sk-field__placeholder {
     line-height: 1;
     text-box: trim-both cap alphabetic;
   }
 
-  .ss-field__chars {
+  .sk-field__chars {
     display: block;
   }
 
-  .ss-field__value[data-chip] {
-    padding: 0 calc(11px - (var(--ss-control) - 24px) / 2);
-    background-color: var(--ss-chip-bg, var(--ss-accent-soft));
-    color: var(--ss-chip-text, var(--ss-text-strong));
+  .sk-field__value[data-chip] {
+    padding: 0 calc(11px - (var(--sk-control) - 24px) / 2);
+    background-color: var(--sk-chip-bg, var(--sk-accent-soft));
+    color: var(--sk-chip-text, var(--sk-text-strong));
     transition:
       padding 0.35s cubic-bezier(0.45, 0, 0.1, 1),
       background-color 0.3s ease,
       color 0.3s ease;
   }
 
-  .ss-field__value[data-chip][data-removable] {
+  .sk-field__value[data-chip][data-removable] {
     padding-right: 4px;
   }
 
-  .ss-field__value[data-leaving] {
+  .sk-field__value[data-leaving] {
     opacity: 0;
     transition: opacity 0.25s ease;
   }
 
   /* The placeholder waits for a cleared chip to finish fading, never crossing it */
-  .ss-field:has(.ss-field__value[data-leaving]) .ss-field__placeholder {
+  .sk-field:has(.sk-field__value[data-leaving]) .sk-field__placeholder {
     opacity: 0;
     transition: none;
   }
 
-  .ss-field__x {
+  .sk-field__x {
     display: inline-grid;
     flex: none;
     place-items: center;
@@ -145,7 +145,7 @@
     transition: background-color 0.15s ease;
   }
 
-  .ss-field__value[data-chip] .ss-field__x {
+  .sk-field__value[data-chip] .sk-field__x {
     margin-left: 4px;
     opacity: 0.75;
     transition:
@@ -154,48 +154,48 @@
       background-color 0.15s ease;
   }
 
-  .ss-field__x[data-hover] {
+  .sk-field__x[data-hover] {
     opacity: 1;
-    background-color: var(--ss-ink-2);
+    background-color: var(--sk-ink-2);
     transition-duration: 0s;
   }
 
-  .ss-field__value[data-chip] + .ss-field__caret {
+  .sk-field__value[data-chip] + .sk-field__caret {
     margin-left: 6px;
   }
 
   /* Solid while typing (each keystroke remounts it), blinking once it rests */
-  .ss-field__caret {
+  .sk-field__caret {
     flex-shrink: 0;
     transition: margin 0.35s cubic-bezier(0.45, 0, 0.1, 1);
     width: 1.5px;
     height: 16px;
     margin-left: 1px;
     border-radius: 1px;
-    background: var(--ss-accent);
-    animation: ss-caret 1.06s steps(1) 0.5s infinite;
+    background: var(--sk-accent);
+    animation: sk-caret 1.06s steps(1) 0.5s infinite;
   }
 
-  @keyframes ss-caret {
+  @keyframes sk-caret {
     50% { opacity: 0; }
   }
 
-  .ss-field__ok {
+  .sk-field__ok {
     flex-shrink: 0;
   }
 
-  .ss-field__ok path {
+  .sk-field__ok path {
     fill: none;
-    stroke: var(--ss-success);
+    stroke: var(--sk-success);
     stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
     stroke-dasharray: 1;
     /* Drawn at rest, so a still (animations off) still shows it */
-    animation: ss-draw 0.35s cubic-bezier(0.65, 0, 0.35, 1) both;
+    animation: sk-draw 0.35s cubic-bezier(0.65, 0, 0.35, 1) both;
   }
 
-  @keyframes ss-draw {
+  @keyframes sk-draw {
     from { stroke-dashoffset: 1; }
   }
 }

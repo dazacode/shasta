@@ -1,13 +1,13 @@
 /* The empty-Library demo (LibraryDemo.tsx). Scoped under .ld; Shasta's own tokens colour the page so it follows the
    theme. The page is the ground: no plate, the window fades out at its foot. */
-.ld .ss-stage {
+.ld .sk-stage {
   --g: 28px;
-  --bg: var(--color-shasta-bg, var(--ss-surface));
-  --field: var(--color-shasta-field, var(--ss-canvas));
-  --line: var(--color-shasta-line, var(--ss-line));
-  --fg: var(--color-shasta-fg, var(--ss-text-strong));
-  --muted: var(--color-shasta-muted, var(--ss-text));
-  --accent: var(--color-shasta-accent, var(--ss-accent));
+  --bg: var(--color-shasta-bg, var(--sk-surface));
+  --field: var(--color-shasta-field, var(--sk-canvas));
+  --line: var(--color-shasta-line, var(--sk-line));
+  --fg: var(--color-shasta-fg, var(--sk-text-strong));
+  --muted: var(--color-shasta-muted, var(--sk-text));
+  --accent: var(--color-shasta-accent, var(--sk-accent));
   --accent-fg: var(--color-shasta-accent-fg, #fff);
   overflow: hidden;
   background: transparent;
@@ -20,7 +20,7 @@
   top: var(--g);
   width: 476px;
   height: 380px;
-  box-shadow: var(--ss-shadow-hero);
+  box-shadow: var(--sk-shadow-hero);
 }
 .ld .ld-page { position: absolute; inset: 0; background: var(--bg); color: var(--fg); overflow: hidden; }
 
@@ -78,7 +78,7 @@
   border-radius: 16px;
   background: color-mix(in oklab, var(--bg), var(--fg) 4%);
   color: var(--fg);
-  box-shadow: var(--ss-shadow-satellite), 0 24px 40px -18px rgb(0 0 0 / 0.35), inset 0 0 0 1px var(--line);
+  box-shadow: var(--sk-shadow-satellite), 0 24px 40px -18px rgb(0 0 0 / 0.35), inset 0 0 0 1px var(--line);
 }
 .ld .ld-lib__title { font-size: 15px; font-weight: 600; line-height: 1.3; }
 .ld .ld-lib__sub { font-size: 11.5px; color: var(--muted); line-height: 1.35; margin-top: 2px; }
@@ -107,12 +107,12 @@
 .ld .ld-rest { position: absolute; left: 470px; top: 300px; width: 1px; height: 1px; }
 
 /* compact: the card stands lower over the window's right side, the screenshots go */
-.ld .ss-stage[data-layout='compact'] { --g: 16px; }
-.ld .ss-stage[data-layout='compact'] .ld-window { width: 420px; }
-.ld .ss-stage[data-layout='compact'] .ld-shots { display: none; }
-.ld .ss-stage[data-layout='compact'] .ld-lib { top: 212px; }
-.ld .ss-stage[data-layout='compact'] .ld-window { height: 440px; }
-.ld .ss-stage[data-layout='compact'] .ld-game { place-items: start center; padding: 34px 0 0; }
-.ld .ss-stage[data-layout='compact'] .ld-score { left: 48px; }
-.ld .ss-stage[data-layout='compact'] .ld-rest { left: 60px; top: 330px; }
-.ld .ss-stage[data-layout='compact'] .ld-hex--game { margin-right: 0; }
+.ld .sk-stage[data-layout='compact'] { --g: 16px; }
+.ld .sk-stage[data-layout='compact'] .ld-window { width: 420px; }
+.ld .sk-stage[data-layout='compact'] .ld-shots { display: none; }
+.ld .sk-stage[data-layout='compact'] .ld-lib { top: 212px; }
+.ld .sk-stage[data-layout='compact'] .ld-window { height: 440px; }
+.ld .sk-stage[data-layout='compact'] .ld-game { place-items: start center; padding: 34px 0 0; }
+.ld .sk-stage[data-layout='compact'] .ld-score { left: 48px; }
+.ld .sk-stage[data-layout='compact'] .ld-rest { left: 60px; top: 330px; }
+.ld .sk-stage[data-layout='compact'] .ld-hex--game { margin-right: 0; }

@@ -1,16 +1,16 @@
 /* What's new, Welcome slide (WelcomeDemo.tsx). Shasta's own window, drawn with Shasta's own tokens (--sh-*, set by
    the app for light and dark), so the demo is the real look in either theme. The page is the ground: no plate; the
    window is whole across and fades out at its foot. */
-.wd .ss-stage {
+.wd .sk-stage {
   --g: 28px;
-  --ss-canvas: var(--sh-chrome);
-  --ss-chrome: var(--sh-surface);
-  --ss-surface: var(--sh-page);
-  --ss-text-strong: var(--sh-fg);
-  --ss-text: var(--sh-fg);
-  --ss-text-faint: var(--sh-muted);
-  --ss-accent: var(--sh-accent);
-  --ss-line: var(--sh-line);
+  --sk-canvas: var(--sh-chrome);
+  --sk-chrome: var(--sh-surface);
+  --sk-surface: var(--sh-page);
+  --sk-text-strong: var(--sh-fg);
+  --sk-text: var(--sh-fg);
+  --sk-text-faint: var(--sh-muted);
+  --sk-accent: var(--sh-accent);
+  --sk-line: var(--sh-line);
   overflow: hidden;
   background: transparent;
   mask-image: linear-gradient(to bottom, #000 calc(100% - 60px), transparent);
@@ -22,24 +22,24 @@
   right: var(--g);
   top: 22px;
   height: 420px;
-  box-shadow: var(--ss-shadow-hero);
+  box-shadow: var(--sk-shadow-hero);
   color: var(--sh-fg);
 }
 
 /* ── tab strip: the kit's strip, its active look driven by our own tab state ── */
-.wd .ss-window__favicon { display: none; }
-.wd .ss-window__tab[data-active] { background: transparent; color: var(--sh-muted); }
-.wd .ss-window__tab {
+.wd .sk-window__favicon { display: none; }
+.wd .sk-window__tab[data-active] { background: transparent; color: var(--sh-muted); }
+.wd .sk-window__tab {
   width: 150px;
   overflow: hidden;
   color: var(--sh-muted);
   font-size: 11.5px;
   transition: width 360ms cubic-bezier(0.45, 0, 0.1, 1), padding 360ms cubic-bezier(0.45, 0, 0.1, 1), opacity 240ms ease, background-color 160ms ease;
 }
-.wd .ss-window__tab:has(.wd-tab[data-on]) { background: var(--sh-surface); color: var(--sh-fg); }
-.wd .ss-window__tab:has(.wd-tab[data-hidden]) { width: 0; padding: 0; opacity: 0; }
-.wd .ss-window__tab:has(.wd-plus) { width: 28px; padding: 0; justify-content: center; align-self: center; height: 28px; border-radius: 8px; }
-.wd .ss-window__tab:has(.wd-plus) .ss-window__tab-label { overflow: visible; }
+.wd .sk-window__tab:has(.wd-tab[data-on]) { background: var(--sh-surface); color: var(--sh-fg); }
+.wd .sk-window__tab:has(.wd-tab[data-hidden]) { width: 0; padding: 0; opacity: 0; }
+.wd .sk-window__tab:has(.wd-plus) { width: 28px; padding: 0; justify-content: center; align-self: center; height: 28px; border-radius: 8px; }
+.wd .sk-window__tab:has(.wd-plus) .sk-window__tab-label { overflow: visible; }
 .wd .wd-tab { display: flex; align-items: center; gap: 7px; min-width: 0; white-space: nowrap; }
 .wd .wd-fav { width: 14px; height: 14px; flex: none; display: block; }
 .wd .wd-favbox { flex: none; display: inline-flex; }
@@ -48,8 +48,8 @@
 .wd .wd-plus[data-hover] { background: var(--sh-hover); color: var(--sh-fg); }
 
 /* ── toolbar ── */
-.wd .ss-window__bar { background: var(--sh-surface); border-bottom: 1px solid var(--sh-line); }
-.wd .ss-window__url { background: var(--sh-field); color: var(--sh-fg); }
+.wd .sk-window__bar { background: var(--sh-surface); border-bottom: 1px solid var(--sh-line); }
+.wd .sk-window__url { background: var(--sh-field); color: var(--sh-fg); }
 .wd .wd-url { font-size: 12px; color: var(--sh-fg); white-space: nowrap; }
 .wd .wd-url[data-empty] { color: var(--sh-muted); }
 .wd .wd-tools { display: flex; align-items: center; gap: 12px; margin-left: 12px; color: var(--sh-muted); }
@@ -59,7 +59,7 @@
 .wd .wd-ai-btn[data-on] { background: color-mix(in oklab, var(--sh-accent) 16%, transparent); color: var(--sh-accent); }
 
 /* ── page area ── */
-.wd .ss-window__body { position: relative; overflow: hidden; background: var(--sh-page); }
+.wd .sk-window__body { position: relative; overflow: hidden; background: var(--sh-page); }
 .wd .wd-body { position: absolute; inset: 0; transition: right 520ms cubic-bezier(0.45, 0, 0.1, 1); }
 .wd .wd-body[data-ai] { right: 196px; }
 .wd .wd-page { position: absolute; inset: 0; opacity: 0; transition: opacity 320ms ease; }
@@ -101,8 +101,8 @@
 /* watch */
 .wd .wd-watch { position: absolute; inset: 0; background: var(--sh-page); color: var(--sh-fg); }
 .wd .wd-hero { display: grid; gap: 10px; align-content: end; height: 96px; padding: 0 20px 14px; background: linear-gradient(90deg, rgb(11 13 20 / 0.85) 10%, transparent 70%), linear-gradient(135deg, #3a2a5a, #b0503c 60%, #e09a4a); }
-.wd .wd-hero .ss-bar { background: rgb(255 255 255 / 0.85) !important; }
-.wd .wd-hero .ss-bar + .ss-bar { background: rgb(255 255 255 / 0.4) !important; }
+.wd .wd-hero .sk-bar { background: rgb(255 255 255 / 0.85) !important; }
+.wd .wd-hero .sk-bar + .sk-bar { background: rgb(255 255 255 / 0.4) !important; }
 .wd .wd-row { padding: 14px 20px 0; }
 .wd .wd-row__label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 600; }
 .wd .wd-posters { display: flex; gap: 8px; }
@@ -148,12 +148,12 @@
 .wd .wd-rest { position: absolute; left: 40%; top: 230px; width: 1px; height: 1px; }
 
 /* ── compact: narrower window, smaller tabs, the panel covers more of the page ── */
-.wd .ss-stage[data-layout='compact'] { --g: 14px; }
-.wd .ss-stage[data-layout='compact'] .ss-window__tab { width: 114px; padding: 0 10px; font-size: 11px; }
-.wd .ss-stage[data-layout='compact'] .ss-window__tab:has(.wd-tab[data-hidden]) { width: 0; }
-.wd .ss-stage[data-layout='compact'] .ss-window__tab:has(.wd-plus) { width: 28px; }
-.wd .ss-stage[data-layout='compact'] .wd-tools > svg { display: none; }
-.wd .ss-stage[data-layout='compact'] .wd-body[data-ai] { right: 0; }
-.wd .ss-stage[data-layout='compact'] .wd-panel { width: 178px; box-shadow: -12px 0 24px -16px rgb(0 0 0 / 0.5); }
-.wd .ss-stage[data-layout='compact'] .wd-tiles { gap: 8px; }
-.wd .ss-stage[data-layout='compact'] .wd-tile:nth-child(n + 4) { display: none; }
+.wd .sk-stage[data-layout='compact'] { --g: 14px; }
+.wd .sk-stage[data-layout='compact'] .sk-window__tab { width: 114px; padding: 0 10px; font-size: 11px; }
+.wd .sk-stage[data-layout='compact'] .sk-window__tab:has(.wd-tab[data-hidden]) { width: 0; }
+.wd .sk-stage[data-layout='compact'] .sk-window__tab:has(.wd-plus) { width: 28px; }
+.wd .sk-stage[data-layout='compact'] .wd-tools > svg { display: none; }
+.wd .sk-stage[data-layout='compact'] .wd-body[data-ai] { right: 0; }
+.wd .sk-stage[data-layout='compact'] .wd-panel { width: 178px; box-shadow: -12px 0 24px -16px rgb(0 0 0 / 0.5); }
+.wd .sk-stage[data-layout='compact'] .wd-tiles { gap: 8px; }
+.wd .sk-stage[data-layout='compact'] .wd-tile:nth-child(n + 4) { display: none; }

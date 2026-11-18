@@ -11,11 +11,11 @@
 		"doctor": "bun scripts/doctor.ts",
 		"deobfuscate": "bun scripts/deobfuscate.ts",
 		"deploy": "bun scripts/deploy.ts",
-		"deploy:base44": "bun scripts/deploy-base44.ts",
 		"deploy:vercel-lite": "bun scripts/deploy-vercel-lite.ts",
 		"deploy:jsdelivr": "bun scripts/deploy-jsdelivr.ts",
-		"deploy:bunny": "bun scripts/deploy-bunny.ts",
+		"mirrors:deploy": "bun scripts/mirrors/deploy.ts",
 		"stats": "bun scripts/stats.ts",
+		"backup:verify": "bun server/scripts/backup-verify.ts",
 		"check": "bun scripts/check.ts",
 		"engine": "bun scripts/engine.ts",
 		"wisp": "bun scripts/wisp.ts",
@@ -53,5 +53,8 @@
 		"release:vps": "bun scripts/release-vps.ts",
 		"publish:cli": "bun scripts/publish-cli.ts",
 		"publish:source": "bun scripts/publish-source.ts"
+	},
+	"dependencies": {
+		"pnpm": "^12.18.0"
 	}
 }

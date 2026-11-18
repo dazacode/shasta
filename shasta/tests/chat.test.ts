@@ -95,7 +95,7 @@ describe('chat grouping', () => {
   })
 })
 
-test('shasta://chat is an internal page', () => {
-  expect(internalPage('shasta://chat')).toBe('chat')
-  expect(titleFor('shasta://chat')).toBe('Chat')
+test('shasta://chat still opens: it is the Chat section of Social now', () => {
+  expect(internalPage('shasta://chat')).toBe('social')
+  expect(titleFor('shasta://chat')).toBe('Social')
 })

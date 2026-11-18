@@ -165,20 +165,20 @@ function RollNow({
   // Characters for numbers, whole words (with their spaces) for text
   const units = numeric ? now.split('') : now.split(/(?<=\s)/)
   return (
-    <span ref={root} className={`ss-roll${className ? ` ${className}` : ''}`} data-variant={variant} data-align={side} style={style}>
+    <span ref={root} className={`sk-roll${className ? ` ${className}` : ''}`} data-variant={variant} data-align={side} style={style}>
       {text.slice(0, head)}
-      <span ref={mid} className="ss-roll__mid">
+      <span ref={mid} className="sk-roll__mid">
         {old && (
-          <span key={`o${key}`} className="ss-roll__item" data-out>
+          <span key={`o${key}`} className="sk-roll__item" data-out>
             {old}
           </span>
         )}
-        <span key={`n${key}`} className="ss-roll__item" data-live>
+        <span key={`n${key}`} className="sk-roll__item" data-live>
           {key > 0 && variant === 'fade'
-            ? <span className="ss-roll__char">{now}</span>
+            ? <span className="sk-roll__char">{now}</span>
             : key > 0
             ? units.map((c, i) => (
-                <span key={i} className="ss-roll__char" style={{ animationDelay: `${110 + i * stagger}ms` }}>
+                <span key={i} className="sk-roll__char" style={{ animationDelay: `${i * stagger}ms` }}>
                   {c}
                 </span>
               ))

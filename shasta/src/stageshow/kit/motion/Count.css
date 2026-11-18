@@ -1,14 +1,14 @@
 /* Count */
 
 @layer stageshow {
-  .ss-count {
+  .sk-count {
     display: inline-flex;
     align-items: baseline;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
 
-  .ss-count__char {
+  .sk-count__char {
     display: inline-block;
   }
 
@@ -16,19 +16,19 @@
      digit (a word space when the format writes one), so "21°" and "240ms"
      read as one figure without the unit sitting on the digit. Restyle it
      here (a smaller, lighter degree sign); widen the hair with the token */
-  .ss-count__unit {
+  .sk-count__unit {
     display: inline-block;
-    margin-left: var(--ss-count-unit-gap, 0.08em);
+    margin-left: var(--sk-count-unit-gap, 0.08em);
   }
 
-  .ss-count__unit[data-space] {
+  .sk-count__unit[data-space] {
     margin-left: 0.28em;
   }
 
   /* One digit: a window one line tall over a strip of 0 to 9. The strip
      slides to the figure it shows; a change rolls it through the figures
      in between, so 4 to 9 passes 5, 6, 7 and 8 */
-  .ss-count__digit {
+  .sk-count__digit {
     display: inline-block;
     /* Sized by its figures, so the number's letter-spacing counts as it does
        in plain text; a fixed 1ch box set tracked figures wider than the text */
@@ -41,7 +41,7 @@
     mask-image: linear-gradient(to bottom, transparent, #000 8%, #000 92%, transparent);
   }
 
-  .ss-count__strip {
+  .sk-count__strip {
     display: flex;
     flex-direction: column;
     will-change: transform;
@@ -49,19 +49,19 @@
     transition-timing-function: cubic-bezier(0.3, 0.75, 0.1, 1);
   }
 
-  .ss-count__strip > span {
+  .sk-count__strip > span {
     display: block;
     height: 1em;
     line-height: 1;
     text-align: left; /* a digit sits on its cell's left like set type; centered, a leading 1 drifts off the column */
   }
 
-  .ss-count[data-snap] .ss-count__strip {
+  .sk-count[data-snap] .sk-count__strip {
     transition: none;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .ss-count__strip {
+    .sk-count__strip {
       transition: none;
     }
   }

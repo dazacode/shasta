@@ -1,7 +1,7 @@
 /* BrandMark */
 
 @layer stageshow {
-  .ss-brand {
+  .sk-brand {
     display: inline-flex;
     flex: none;
     align-items: center;
@@ -9,18 +9,18 @@
     overflow: hidden;
   }
 
-  .ss-brand[data-tile] {
-    background: var(--ss-surface);
-    box-shadow: inset 0 0 0 1px var(--ss-line);
+  .sk-brand[data-tile] {
+    background: var(--sk-surface);
+    box-shadow: inset 0 0 0 1px var(--sk-line);
   }
 
-  .ss-brand[data-tile][data-light-tile] {
+  .sk-brand[data-tile][data-light-tile] {
     background: #fff;
     box-shadow: inset 0 0 0 1px rgb(0 0 0 / 8%);
   }
 
   /* Logos are optically smaller than their tile, aspect kept */
-  .ss-brand img {
+  .sk-brand img {
     display: block;
     flex: none;
     min-width: 0;
@@ -30,15 +30,15 @@
     object-fit: contain;
   }
 
-  .ss-brand__initial {
-    color: var(--ss-text-strong);
+  .sk-brand__initial {
+    color: var(--sk-text-strong);
     font-weight: 600;
   }
 }
 
 @layer stageshow {
   /* Bare, the mark is the whole footprint */
-  .ss-brand:not([data-tile]) img {
+  .sk-brand:not([data-tile]) img {
     width: 100%;
     height: 100%;
   }

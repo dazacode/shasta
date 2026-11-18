@@ -7,11 +7,12 @@ import { useSettings } from '@/stores/settingsStore'
 import { useSupporter, useSupporterStore } from '@/stores/supporterStore'
 import { useTabs } from '@/stores/tabsStore'
 import { useUi } from '@/stores/uiStore'
-import { DISCORD_INVITE, termText } from '@/lib/supporter'
+import { DISCORD_INVITE, termText, tourEnds } from '@/lib/supporter'
+import { currentNotice, keptThings, noticeBody, noticeTitle } from '@/lib/perkNotice'
 import { DiscordQrButton } from '@/components/DiscordQr'
 
 function statusText(s: ReturnType<typeof useSupporter>): string {
-  if (s.perks) return `${s.kind === 'trial' ? 'Free trial' : 'Supporter'} · ${termText(s.until, s.daysLeft)}`
+  if (s.pass) return `${s.kind === 'trial' ? 'Free trial' : 'Supporter'} · ${termText(s.until, s.daysLeft)}`
   if (!s.code) return 'Not a Supporter on this device. Everything in Shasta still works.'
   if (s.note === 'ended') return 'This code has ended (it expired or the membership stopped). Ads are back and the perks are off; everything else still works.'
   if (s.note === 'unsupported') return "This browser can't check Supporter passes (it lacks Ed25519 in WebCrypto), so ads stay on and the perks stay off here. Everything else works. A recent Chrome, Edge, Firefox or Safari can check them."
@@ -35,16 +36,32 @@ export function SupporterSection() {
     useUi.getState().toast('Code added, thank you for supporting Shasta', { tone: 'success' })
   }
 
+  // ad-free time ending or ended: what happened, that it all comes back with a code, and where to get one
+  const settings = useSettings((x) => x.settings)
+  const notice = currentNotice()
   return (
     <>
+      {notice && (
+        <section role="status" className="mb-2 rounded-xl border border-shasta-line bg-shasta-field p-4" aria-labelledby="sup-notice">
+          <h3 id="sup-notice" className="text-sm font-medium text-shasta-fg">{noticeTitle(notice)}</h3>
+          <p className="mt-1 max-w-2xl text-sm text-shasta-muted">{noticeBody(notice, keptThings(settings))}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button onClick={() => useTabs.getState().openInternal('support')}>
+              <Heart /> Support Shasta
+            </Button>
+            <Button variant="outline" onClick={() => document.getElementById('sup-code')?.focus()}>I have a code</Button>
+          </div>
+        </section>
+      )}
       <Row title="Status" desc={statusText(s)}>
-        {s.perks && <span className="inline-flex items-center gap-1.5 text-sm text-shasta-muted"><Heart className="size-3.5 fill-current text-shasta-faint" aria-hidden /> {s.kind === 'trial' ? 'Trial' : 'Supporter'}</span>}
-        {s.code && !s.perks && (
-          <Button variant="outline" disabled={s.busy} onClick={() => void useSupporterStore.getState().refresh({ force: true })}>
-            <RefreshCw /> {s.busy ? 'Checking…' : 'Check again'}
+        {s.pass && <span className="inline-flex items-center gap-1.5 text-sm text-shasta-muted"><Heart className="size-3.5 fill-current text-shasta-faint" aria-hidden /> {s.kind === 'trial' ? 'Trial' : 'Supporter'}</span>}
+        {s.code && !s.pass && (
+          <Button busy={s.busy} variant="outline" disabled={s.busy} onClick={() => void useSupporterStore.getState().refresh({ force: true })}>
+            <RefreshCw /> Check again
           </Button>
         )}
       </Row>
+      {s.tour && <Row title="Ad-free day" desc={`Ad-free day from the tour: ends ${tourEnds(s.tourUntil)}. Supporter codes work as usual.`} />}
       {s.code && (
         <Row title="Code on this device" desc={s.code}>
           <Button variant="outline" onClick={() => { if (confirm('Remove the Supporter code from this device? Ads come back and the perks turn off here. You can add the code again later while it is still valid.')) useSupporterStore.getState().remove() }}>
@@ -56,7 +73,7 @@ export function SupporterSection() {
       <Row title={s.code ? 'Use a different code' : 'Add a code'} desc="Codes look like SHASTA-XXXX-XXXX-XXXX. Letters are not case-sensitive." htmlFor="sup-code">
         <form className="flex items-center gap-2" onSubmit={(e) => { e.preventDefault(); void redeem() }}>
           <Input id="sup-code" value={code} onChange={(e) => { setCode(e.target.value); setError('') }} placeholder="SHASTA-XXXX-XXXX-XXXX" className="w-64 font-mono" spellCheck={false} autoComplete="off" aria-invalid={!!error} />
-          <Button type="submit" disabled={!code.trim() || s.busy}>{s.busy ? 'Checking…' : 'Redeem'}</Button>
+          <Button busy={s.busy} type="submit" disabled={!code.trim() || s.busy}>Redeem</Button>
         </form>
         {error && <p role="alert" className="basis-full text-sm text-shasta-danger">{error}</p>}
       </Row>

@@ -28,10 +28,10 @@ export function Popover({ show, origin = 'top left', className, style, children,
   return (
     <div
       {...rest}
-      className={`ss-popover${className ? ` ${className}` : ''}`}
+      className={`sk-popover${className ? ` ${className}` : ''}`}
       data-show={show || undefined}
       data-instant={(!show && released) || undefined}
-      style={{ ['--ss-popover-origin' as string]: shown.origin, ...shown.style }}>
+      style={{ ['--sk-popover-origin' as string]: shown.origin, ...shown.style }}>
       {shown.children}
     </div>
   )

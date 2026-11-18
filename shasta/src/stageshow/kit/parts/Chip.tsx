@@ -15,11 +15,11 @@ export function Chip({ show = true, remove, gap = 0, children, className, style,
     if (chip.current) setW(chip.current.offsetWidth)
   }, [children])
   return (
-    <span {...rest} className={`ss-chip-slot${className ? ` ${className}` : ''}`} data-show={show || undefined} style={{ width: show ? (w ?? 'auto') : 0, marginRight: show ? 0 : -gap, ...style }}>
-      <span ref={chip} className="ss-chip" data-removable={remove !== undefined || undefined}>
-        <span className="ss-chip__label">{children}</span>
+    <span {...rest} className={`sk-chip-slot${className ? ` ${className}` : ''}`} data-show={show || undefined} style={{ width: show ? (w ?? 'auto') : 0, marginRight: show ? 0 : -gap, ...style }}>
+      <span ref={chip} className="sk-chip" data-removable={remove !== undefined || undefined}>
+        <span className="sk-chip__label">{children}</span>
         {remove !== undefined && (
-          <span className="ss-chip__x" data-target={remove || undefined}>
+          <span className="sk-chip__x" data-target={remove || undefined}>
             <Icon name="close" size={10} stroke={1.8} />
           </span>
         )}

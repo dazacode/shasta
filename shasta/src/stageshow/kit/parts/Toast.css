@@ -1,14 +1,14 @@
 /* Toast */
 
 @layer stageshow {
-  .ss-toast {
+  .sk-toast {
     display: inline-flex;
     align-items: center;
     gap: 8px;
     padding: 8px 12px;
-    border-radius: var(--ss-radius-lg);
+    border-radius: var(--sk-radius-lg);
     background: #1c1c1f;
-    box-shadow: var(--ss-shadow-satellite);
+    box-shadow: var(--sk-shadow-satellite);
     color: #fff;
     font-size: 12px;
     opacity: 0;
@@ -17,19 +17,19 @@
        nothing around it moves. The layer moves box and text as one picture;
        without it the text steps whole pixels inside the gliding box */
     will-change: transform;
-    margin-block: var(--ss-toast-rise, 10px) calc(-1 * var(--ss-toast-rise, 10px));
+    margin-block: var(--sk-toast-rise, 10px) calc(-1 * var(--sk-toast-rise, 10px));
     transition: opacity 0.35s ease, margin 0.6s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  .ss-toast[data-show] { opacity: 1; margin-block: 0; }
+  .sk-toast[data-show] { opacity: 1; margin-block: 0; }
 
-  .ss-toast__icon { display: grid; opacity: 0.8; }
+  .sk-toast__icon { display: grid; opacity: 0.8; }
 
-  .ss-toast__action { margin-left: 6px; color: rgba(255, 255, 255, 0.6); font-weight: 500; }
+  .sk-toast__action { margin-left: 6px; color: rgba(255, 255, 255, 0.6); font-weight: 500; }
 
-  [data-theme='dark'] .ss-toast,
-  .ss-stage[data-theme='dark'] .ss-toast {
-    background: var(--ss-raised);
-    color: var(--ss-text-strong);
+  [data-theme='dark'] .sk-toast,
+  .sk-stage[data-theme='dark'] .sk-toast {
+    background: var(--sk-raised);
+    color: var(--sk-text-strong);
   }
 }
