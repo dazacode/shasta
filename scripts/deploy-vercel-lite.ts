@@ -10,6 +10,9 @@ import { buildLite, ROOT, run } from "./lib/liteBuild";
 const OUT = join(ROOT, ".deploy/vercel-lite");
 const project = process.env.SHASTA_LITE_PROJECT ?? "shasta-lite";
 const scope = process.env.VERCEL_SCOPE ?? "dazaseals-projects";
+// The deploy folder is a prebuilt site inside this repo: keep the Vercel CLI from attaching the repo's last commit,
+// whose author must otherwise be a member of the team (a Mac commit with no git identity was refused).
+process.env.GIT_CEILING_DIRECTORIES = join(ROOT, ".deploy");
 const dry = process.argv.includes("--dry-run");
 // --preview: a private preview deployment (Vercel Authentication) instead of production, e.g. to test the Wisp relay
 const preview = process.argv.includes("--preview");
